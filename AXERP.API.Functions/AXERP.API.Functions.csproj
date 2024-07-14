@@ -7,6 +7,14 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="google-credentials.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="google-credentials.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="AutoMapper" Version="13.0.1" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="1.22.0" />
@@ -23,9 +31,6 @@
     <ProjectReference Include="..\AXERP.API.GoogleHelper\AXERP.API.GoogleHelper.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <None Update="google-credentials.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Update="host.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
