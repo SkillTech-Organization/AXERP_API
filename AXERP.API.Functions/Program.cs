@@ -3,8 +3,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
+
+// Solution for sql collection disposed exception.
+// Solution: https://github.com/Azure/azure-functions-dotnet-worker/issues/2397#issuecomment-2059233262
+// TODO: alternate solution
+#pragma warning disable AZFW0014 // Missing expected registration of ASP.NET Core Integration services
 var host = new HostBuilder()
-    .ConfigureFunctionsWebApplication()
+    .ConfigureFunctionsWorkerDefaults()
     .ConfigureServices(services =>
     {
         services.AddApplicationInsightsTelemetryWorkerService();
@@ -25,5 +30,6 @@ var host = new HostBuilder()
         });
     })
     .Build();
+#pragma warning restore AZFW0014 // Missing expected registration of ASP.NET Core Integration services
 
 host.Run();
