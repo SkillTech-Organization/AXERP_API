@@ -1,6 +1,7 @@
 ﻿using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
+using Newtonsoft.Json;
 
 namespace AXERP.API.GoogleHelper.Managers
 {
@@ -46,7 +47,7 @@ namespace AXERP.API.GoogleHelper.Managers
                 rows.Add(row);
             }
 
-            var dataJson = System.Text.Json.JsonSerializer.Serialize(rows);
+            var dataJson = JsonConvert.SerializeObject(rows);
 
             return dataJson;
         }
@@ -65,16 +66,19 @@ namespace AXERP.API.GoogleHelper.Managers
         {
             var values = await ReadGoogleSheetRaw(spreadSheetId, range);
 
-            var dataJson = Newtonsoft.Json.JsonConvert.SerializeObject(values);
+            var dataJson = JsonConvert.SerializeObject(values);
 
             return dataJson;
         }
 
-        public async Task<List<T>> ReadGoogleSheet<T>(string spreadSheetId, string range)
+        public async Task<List<T>> ReadGoogleSheet<T>(string spreadSheetId, string range, string sheetCulture)
         {
             var dataJson = SheetJsonToObjectJson(await ReadGoogleSheetRaw(spreadSheetId, range));
 
-            var data = System.Text.Json.JsonSerializer.Deserialize<List<T>>(dataJson);
+            var data =JsonConvert.DeserializeObject<List<T>>(dataJson, new JsonSerializerSettings
+            {
+                Culture = new System.Globalization.CultureInfo(sheetCulture)
+            });
 
             return data;
         }

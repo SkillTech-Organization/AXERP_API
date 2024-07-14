@@ -29,9 +29,10 @@ namespace AXERP.API.Functions.Transactions
             var sheet_id = Environment.GetEnvironmentVariable("BulkDeliveriesSheetData:SheetId");
             var tab_name = Environment.GetEnvironmentVariable("BulkDeliveriesSheetData:GasTransactionsTab");
             var range = Environment.GetEnvironmentVariable("BulkDeliveriesSheetData:GasTransactionRange");
+            var sheetCulture = Environment.GetEnvironmentVariable("SheetCulture") ?? "fr-FR";
 
             var sheetService = new GoogleSheetManager();
-            var sheetData = await sheetService.ReadGoogleSheet<GasTransaction>(sheet_id, $"{tab_name}!{range}");
+            var sheetData = await sheetService.ReadGoogleSheet<GasTransaction>(sheet_id, $"{tab_name}!{range}", sheetCulture);
 
             var stats = $"GasTransactions imported. Row count: {sheetData.Count}";
             _logger.LogInformation(stats);
