@@ -82,10 +82,10 @@ namespace AXERP.API.Domain.Entities
         [JsonPropertyName("Customer note")]
         public string CustomerNote { get; set; }
 
-        [JsonPropertyName("id")]
+        [JsonPropertyName("Customer")]
         public string Customer { get; set; }
 
-        [JsonPropertyName("id")]
+        [JsonPropertyName("Reference")]
         public string Reference { get; set; }
 
         [JsonPropertyName("Reference 2")]
