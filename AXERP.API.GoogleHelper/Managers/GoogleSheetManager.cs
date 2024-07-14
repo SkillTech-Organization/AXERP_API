@@ -1,4 +1,5 @@
-﻿using Google.Apis.Auth.OAuth2;
+﻿using AXERP.API.Business.JsonConverters;
+using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
 using Newtonsoft.Json;
@@ -75,9 +76,14 @@ namespace AXERP.API.GoogleHelper.Managers
         {
             var dataJson = SheetJsonToObjectJson(await ReadGoogleSheetRaw(spreadSheetId, range));
 
-            var data =JsonConvert.DeserializeObject<List<T>>(dataJson, new JsonSerializerSettings
+            var data = JsonConvert.DeserializeObject<List<T>>(dataJson, new JsonSerializerSettings
             {
-                Culture = new System.Globalization.CultureInfo(sheetCulture)
+                Culture = new System.Globalization.CultureInfo(sheetCulture),
+                Converters = new List<JsonConverter>
+                {
+                    new DoubleConverter(),
+                    new LongConverter()
+                }
             });
 
             return data;

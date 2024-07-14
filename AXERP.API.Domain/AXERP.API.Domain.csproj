@@ -11,4 +11,8 @@
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Sql" Version="3.0.534" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\AXERP.API.Business\AXERP.API.Business.csproj" />
+  </ItemGroup>
+
 </Project>
