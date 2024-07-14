@@ -8,7 +8,7 @@ namespace AXERP.API.Domain.Entities
         public long DeliveryID { get; set; }
 
         [JsonPropertyName("Date loaded (end)")]
-        public DateTime? DateLoaded { get; set; }
+        public DateTime? DateLoadedEnd { get; set; }
 
         [JsonPropertyName("Date delivered")]
         public DateTime? DateDelivered { get; set; }
