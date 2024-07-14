@@ -1,4 +1,6 @@
+using AutoMapper;
 using AXERP.API.Domain.Entities;
+using AXERP.API.Domain.GoogleSheetModels;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.GoogleHelper.Managers;
 using Microsoft.Azure.Functions.Worker;
@@ -14,9 +16,12 @@ namespace AXERP.API.Functions.Transactions
     {
         private readonly ILogger<GasTransactionFunctions> _logger;
 
-        public GasTransactionFunctions(ILogger<GasTransactionFunctions> logger)
+        private readonly IMapper _mapper;
+
+        public GasTransactionFunctions(ILogger<GasTransactionFunctions> logger, IMapper mapper)
         {
             _logger = logger;
+            _mapper = mapper;
         }
 
         [Function(nameof(ImportGasTransactions))]
@@ -32,14 +37,16 @@ namespace AXERP.API.Functions.Transactions
             var sheetCulture = Environment.GetEnvironmentVariable("SheetCulture") ?? "fr-FR";
 
             var sheetService = new GoogleSheetManager();
-            var sheetData = await sheetService.ReadGoogleSheet<GasTransaction>(sheet_id, $"{tab_name}!{range}", sheetCulture);
+            var sheetData = await sheetService.ReadGoogleSheet<GasTransactionSheetModel>(sheet_id, $"{tab_name}!{range}", sheetCulture);
 
-            var stats = $"GasTransactions imported. Row count: {sheetData.Count}";
+            var result = _mapper.Map<List<GasTransaction>>(sheetData);
+
+            var stats = $"GasTransactions imported. Row count: {result.Count}";
             _logger.LogInformation(stats);
 
             return new GasTransactionImportResponse
             {
-                Transactions = sheetData,
+                Transactions = result,
                 HttpResponse = req.CreateResponse(HttpStatusCode.OK),
                 Message = stats
             };
