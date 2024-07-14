@@ -10,5 +10,7 @@ namespace AXERP.API.Domain.ServiceContracts.Responses
         public List<GasTransaction> Transactions { get; set; }
 
         public HttpResponseData HttpResponse { get; set; }
+
+        public string Message { get; set; }
     }
 }

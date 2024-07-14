@@ -33,10 +33,14 @@ namespace AXERP.API.Functions.Transactions
             var sheetService = new GoogleSheetManager();
             var sheetData = await sheetService.ReadGoogleSheet<GasTransaction>(sheet_id, $"{tab_name}!{range}");
 
+            var stats = $"GasTransactions imported. Row count: {sheetData.Count}";
+            _logger.LogInformation(stats);
+
             return new GasTransactionImportResponse
             {
                 Transactions = sheetData,
-                HttpResponse = req.CreateResponse(HttpStatusCode.OK)
+                HttpResponse = req.CreateResponse(HttpStatusCode.OK),
+                Message = stats
             };
         }
     }
