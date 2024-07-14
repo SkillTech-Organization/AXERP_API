@@ -46,7 +46,7 @@ namespace AXERP.API.GoogleHelper.Managers
                 rows.Add(row);
             }
 
-            var dataJson = Newtonsoft.Json.JsonConvert.SerializeObject(rows);
+            var dataJson = System.Text.Json.JsonSerializer.Serialize(rows);
 
             return dataJson;
         }
@@ -74,7 +74,7 @@ namespace AXERP.API.GoogleHelper.Managers
         {
             var dataJson = SheetJsonToObjectJson(await ReadGoogleSheetRaw(spreadSheetId, range));
 
-            var data = Newtonsoft.Json.JsonConvert.DeserializeObject<List<T>>(dataJson);
+            var data = System.Text.Json.JsonSerializer.Deserialize<List<T>>(dataJson);
 
             return data;
         }
