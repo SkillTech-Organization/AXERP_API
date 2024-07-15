@@ -2,7 +2,7 @@
 {
     public class GasTransaction
     {
-        public long DeliveryID { get; set; }
+        public string DeliveryID { get; set; }
 
         public DateTime? DateLoadedEnd { get; set; }
 

@@ -1,103 +1,105 @@
-﻿using System.Text.Json.Serialization;
+﻿
+using Newtonsoft.Json;
 
 namespace AXERP.API.Domain.GoogleSheetModels
 {
     public class GasTransactionSheetModel
     {
-        [JsonPropertyName("Delivery ID")]
-        public long DeliveryID { get; set; }
+        [JsonProperty("Delivery ID")]
+        [JsonRequired]
+        public string DeliveryID { get; set; }
 
-        [JsonPropertyName("Date loaded (end)")]
+        [JsonProperty("Date loaded (end)")]
         public DateTime? DateLoadedEnd { get; set; }
 
-        [JsonPropertyName("Date delivered")]
+        [JsonProperty("Date delivered")]
         public DateTime? DateDelivered { get; set; }
 
-        [JsonPropertyName("Sales Contract ID")]
+        [JsonProperty("Sales Contract ID")]
         public string SalesContractID { get; set; }
 
-        [JsonPropertyName("Sales status")]
+        [JsonProperty("Sales status")]
         public string SalesStatus { get; set; }
 
-        [JsonPropertyName("Terminal")]
+        [JsonProperty("Terminal")]
         public string Terminal { get; set; }
 
-        [JsonPropertyName("Qty loaded")]
+        [JsonProperty("Qty loaded")]
         public double? QtyLoaded { get; set; }
 
-        [JsonPropertyName("To delivery ID")]
+        [JsonProperty("To delivery ID")]
         public long? ToDeliveryID { get; set; }
 
-        [JsonPropertyName("Status")]
+        [JsonProperty("Status")]
         public string Status { get; set; }
 
-        [JsonPropertyName("Specific Delivery Point")]
+        [JsonProperty("Specific Delivery Point")]
         public string SpecificDeliveryPoint { get; set; }
 
-        [JsonPropertyName("Delivery Point")]
+        [JsonProperty("Delivery Point")]
         public string DeliveryPoint { get; set; }
 
-        [JsonPropertyName("Transporter")]
+        [JsonProperty("Transporter")]
         public string Transporter { get; set; }
 
-        [JsonPropertyName("Delivery U.P.")]
+        [JsonProperty("Delivery U.P.")]
         public double? DeliveryUP { get; set; }
 
-        [JsonPropertyName("Transport Charges")]
+        [JsonProperty("Transport Charges")]
         public double? TransportCharges { get; set; }
 
-        [JsonPropertyName("Unit service charge")]
+        [JsonProperty("Unit service charge")]
         public double? UnitSlotCharge { get; set; }
 
-        [JsonPropertyName("Service Charge")]
+        [JsonProperty("Service Charge")]
         public double? ServiceCharges { get; set; }
 
-        [JsonPropertyName("Unit storage charge")]
+        [JsonProperty("Unit storage charge")]
         public double? UnitStorageCharge { get; set; }
 
-        [JsonPropertyName("Storage charge")]
+        [JsonProperty("Storage charge")]
         public double? StorageCharge { get; set; }
 
-        [JsonPropertyName("Other Charges")]
+        [JsonProperty("Other Charges")]
         public double? OtherCharges { get; set; }
 
-        [JsonPropertyName("Sales")]
+        [JsonProperty("Sales")]
         public double? Sales { get; set; }
 
-        [JsonPropertyName("CMR")]
+        [JsonProperty("CMR")]
         public DateTime? CMR { get; set; }
 
-        [JsonPropertyName("Bio MWh")]
+        [JsonProperty("Bio MWh")]
         public double? BioMWh { get; set; }
 
-        [JsonPropertyName("Bill of Lading")]
+        [JsonProperty("Bill of Lading")]
         public DateTime? BillOfLading { get; set; }
 
-        [JsonPropertyName("Bio addendum")]
+        [JsonProperty("Bio addendum")]
         public string BioAddendum { get; set; }
 
-        [JsonPropertyName("Comment")]
+        [JsonProperty("Comment")]
         public string Comment { get; set; }
 
-        [JsonPropertyName("Customer note")]
+        [JsonProperty("Customer note")]
         public string CustomerNote { get; set; }
 
-        [JsonPropertyName("Customer")]
+        [JsonProperty("Customer")]
         public string Customer { get; set; }
 
-        [JsonPropertyName("Reference")]
+        [JsonProperty("Reference")]
         public string Reference { get; set; }
 
-        [JsonPropertyName("Reference 2")]
+        [JsonProperty("Reference 2")]
         public string Reference2 { get; set; }
 
-        [JsonPropertyName("Reference 3")]
+        [JsonProperty("Reference 3")]
         public string Reference3 { get; set; }
 
-        [JsonPropertyName("Truck Loading Customer Comment")]
+        [JsonProperty("Truck Loading Customer Comment")]
         public string TruckLoadingCompanyComment { get; set; }
 
-        [JsonPropertyName("Truck company")]
+        [JsonProperty("Truck company")]
         public string TruckCompany { get; set; }
     }
 }

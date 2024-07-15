@@ -1,4 +1,5 @@
 ﻿using AXERP.API.Business.JsonConverters;
+using AXERP.API.GoogleHelper.Models;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
@@ -53,7 +54,7 @@ namespace AXERP.API.GoogleHelper.Managers
             return dataJson;
         }
 
-        private async Task<IList<IList<object>>> ReadGoogleSheetRaw(string spreadSheetId, string range)
+        public async Task<IList<IList<object>>> ReadGoogleSheetRaw(string spreadSheetId, string range)
         {
             SpreadsheetsResource.ValuesResource.GetRequest getRequest = _sheetsService.Spreadsheets.Values.Get(spreadSheetId, range);
 
@@ -72,21 +73,37 @@ namespace AXERP.API.GoogleHelper.Managers
             return dataJson;
         }
 
-        public async Task<List<T>> ReadGoogleSheet<T>(string spreadSheetId, string range, string sheetCulture)
+        public async Task<ReadGoogleSheetResult<RowType>> ReadGoogleSheet<RowType>(string spreadSheetId, string range, string sheetCulture)
         {
             var dataJson = SheetJsonToObjectJson(await ReadGoogleSheetRaw(spreadSheetId, range));
 
-            var data = JsonConvert.DeserializeObject<List<T>>(dataJson, new JsonSerializerSettings
+            var result = new ReadGoogleSheetResult<RowType>
+            {
+                Data = new List<RowType>(),
+                Errors = new List<string>(),
+                InvalidRows = 0
+            };
+
+            result.Data = JsonConvert.DeserializeObject<List<RowType>>(dataJson, new JsonSerializerSettings
             {
                 Culture = new System.Globalization.CultureInfo(sheetCulture),
                 Converters = new List<JsonConverter>
                 {
                     new DoubleConverter(),
                     new LongConverter()
-                }
-            });
+                },
+                Error = (obj, args) =>
+                {
+                    var error = args.ErrorContext;
 
-            return data;
+                    result.InvalidRows++;
+                    result.Errors.Add(error.Error.Message);
+                    
+                    error.Handled = true;
+                }
+            }) ?? new List<RowType>();
+
+            return result;
         }
     }
 }

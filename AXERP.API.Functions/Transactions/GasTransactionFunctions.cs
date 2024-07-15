@@ -9,6 +9,7 @@ using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using System.Net;
+using System.Runtime.InteropServices;
 
 namespace AXERP.API.Functions.Transactions
 {
@@ -37,11 +38,14 @@ namespace AXERP.API.Functions.Transactions
             var sheetCulture = Environment.GetEnvironmentVariable("SheetCulture") ?? "fr-FR";
 
             var sheetService = new GoogleSheetManager();
-            var sheetData = await sheetService.ReadGoogleSheet<GasTransactionSheetModel>(sheet_id, $"{tab_name}!{range}", sheetCulture);
+            var importResult = await sheetService.ReadGoogleSheet<GasTransactionSheetModel>(sheet_id, $"{tab_name}{(range?.Length > 0 ? "!" : "")}{range}", sheetCulture);
 
-            var result = _mapper.Map<List<GasTransaction>>(sheetData);
+            var postImportMiscInvalidCount = importResult.Data.Count(x => string.IsNullOrWhiteSpace(x.DeliveryID?.Trim()));
+            importResult.InvalidRows += postImportMiscInvalidCount;
 
-            var stats = $"GasTransactions imported. Row count: {result.Count}";
+            var result = _mapper.Map<List<GasTransaction>>(importResult.Data.Where(x => !string.IsNullOrWhiteSpace(x.DeliveryID?.Trim())));
+
+            var stats = $"GasTransactions imported. Row count: {importResult.RowCount}. Failed to import: {importResult.InvalidRows}";
             _logger.LogInformation(stats);
 
             return new GasTransactionImportResponse
