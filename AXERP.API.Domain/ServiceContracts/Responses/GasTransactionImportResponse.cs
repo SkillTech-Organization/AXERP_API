@@ -1,4 +1,5 @@
 ﻿using AXERP.API.Domain.Entities;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker.Extensions.Sql;
 using Microsoft.Azure.Functions.Worker.Http;
 
@@ -9,8 +10,6 @@ namespace AXERP.API.Domain.ServiceContracts.Responses
         [SqlOutput("dbo.GasTransactions", connectionStringSetting: "SqlConnectionString")]
         public List<GasTransaction> Transactions { get; set; }
 
-        public HttpResponseData HttpResponse { get; set; }
-
-        public string Message { get; set; }
+        public IActionResult HttpResponse { get; set; }
     }
 }
