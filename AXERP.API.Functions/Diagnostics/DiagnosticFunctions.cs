@@ -17,8 +17,8 @@ namespace AXERP.API.Functions.Diagnostics
         }
 
         [Function(nameof(GetVersionInfo))]
-        [OpenApiOperation(operationId: nameof(GetVersionInfo), tags: new[] { "diagnostics" })]
-        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
+        //[OpenApiOperation(operationId: nameof(GetVersionInfo), tags: new[] { "diagnostics" })]
+        //[OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
         public IActionResult GetVersionInfo([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req)
         {
             _logger.LogInformation("Calling {name}", nameof(GetVersionInfo));
