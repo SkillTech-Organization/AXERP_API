@@ -7,6 +7,7 @@ using AXERP.API.GoogleHelper.Models;
 using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Extensions.Sql;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
 using Microsoft.Data.SqlClient;
@@ -228,6 +229,35 @@ namespace AXERP.API.Functions.Transactions
             _logger.LogInformation("GasTransactions imported. Stats: {stats}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
 
             return new OkObjectResult(result);
+        }
+
+        [Function(nameof(GetAllGasTransactions))]
+        [OpenApiOperation(operationId: nameof(GetAllGasTransactions), tags: new[] { "gas-transactions" })]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
+        public IActionResult GetAllGasTransactions(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req,
+            [SqlInput("%Sql_Query_GasTransactions%", "SqlConnectionString")] IEnumerable<GasTransaction> items)
+        {
+            _logger.LogInformation("Querying GasTransactions...");
+
+            return new OkObjectResult(items);
+        }
+
+        [Function(nameof(QueryGasTransactions))]
+        [OpenApiOperation(operationId: nameof(QueryGasTransactions), tags: new[] { "gas-transactions" })]
+        [OpenApiParameter(name: "PageSize", In = ParameterLocation.Query, Type = typeof(int), Description = "Returned row count")]
+        [OpenApiParameter(name: "Page", In = ParameterLocation.Query, Type = typeof(int), Description = "Page")]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
+        public IActionResult QueryGasTransactions(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req,
+            [SqlInput(
+                commandText: "SELECT TOP(@PageSize) * FROM GasTransactions OFFSET @Skip ROWS",
+                parameters: "@PageSize={Query.PageSize},@Skip=({Query.PageSize}*{Query.Page})",
+                connectionStringSetting: "SqlConnectionString")] IEnumerable<GasTransaction> items)
+        {
+            _logger.LogInformation("Querying GasTransactions...");
+
+            return new OkObjectResult(items);
         }
     }
 }
