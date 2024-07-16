@@ -5,6 +5,7 @@
     <OutputType>Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Version>$(VersionPrefix)0.0.1</Version>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="google-credentials.json" />

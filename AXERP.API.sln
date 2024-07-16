@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AXERP.API.GoogleHelper", "A
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AXERP.API.Domain", "AXERP.API.Domain\AXERP.API.Domain.csproj", "{4CB0084A-4C80-49A2-A2DC-DA748495EEE0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AXERP.API.Business", "AXERP.API.Business\AXERP.API.Business.csproj", "{696D330C-24E1-4676-AE10-D3E1B01F6406}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AXERP.API.Business", "AXERP.API.Business\AXERP.API.Business.csproj", "{696D330C-24E1-4676-AE10-D3E1B01F6406}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
