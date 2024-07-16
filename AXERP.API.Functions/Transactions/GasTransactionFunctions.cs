@@ -3,24 +3,22 @@ using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.GoogleSheetModels;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.GoogleHelper.Managers;
+using AXERP.API.GoogleHelper.Models;
+using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Extensions.Sql;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using System.Net;
-using System.Runtime.InteropServices;
-using Dapper;
-using Microsoft.Data.SqlClient;
 
 namespace AXERP.API.Functions.Transactions
 {
     public class GasTransactionFunctions
     {
         private readonly ILogger<GasTransactionFunctions> _logger;
-
         private readonly IMapper _mapper;
 
         public GasTransactionFunctions(ILogger<GasTransactionFunctions> logger, IMapper mapper)
@@ -29,30 +27,9 @@ namespace AXERP.API.Functions.Transactions
             _mapper = mapper;
         }
 
-        [Function(nameof(ImportGasTransactions))]
-        [OpenApiOperation(operationId: nameof(ImportGasTransactions), tags: new[] { "gas-transactions" })]
-        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
-        public async Task<IActionResult> ImportGasTransactions([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
-        {
-            _logger.LogInformation("Importing GasTransactions...");
+        #region SQL Scripts
 
-            var sheet_id = Environment.GetEnvironmentVariable("BulkDeliveriesSheetDataSheetId");
-            var tab_name = Environment.GetEnvironmentVariable("BulkDeliveriesSheetDataGasTransactionsTab");
-            var range = Environment.GetEnvironmentVariable("BulkDeliveriesSheetDataGasTransactionRange");
-            var sheetCulture = Environment.GetEnvironmentVariable("SheetCulture") ?? "fr-FR";
-
-            var sheetService = new GoogleSheetManager();
-            var importResult = await sheetService.ReadGoogleSheet<GasTransactionSheetModel>(sheet_id, $"{tab_name}{(range?.Length > 0 ? "!" : "")}{range}", sheetCulture);
-
-            var postImportMiscInvalidCount = importResult.Data.Count(x => string.IsNullOrWhiteSpace(x.DeliveryID?.Trim()));
-            importResult.InvalidRows += postImportMiscInvalidCount;
-
-            var result = _mapper.Map<List<GasTransaction>>(importResult.Data.Where(x => !string.IsNullOrWhiteSpace(x.DeliveryID?.Trim())));
-
-            var stats = $"GasTransactions imported. Row count: {importResult.RowCount}. Failed to import: {importResult.InvalidRows}";
-            _logger.LogInformation(stats);
-
-            var insert_sql = @"
+        public readonly string Sql_Insert_GasTransaction = @"
                 INSERT INTO GasTransactions
                        (DeliveryID
                        ,DateLoadedEnd
@@ -121,7 +98,7 @@ namespace AXERP.API.Functions.Transactions
                        ,@TruckCompany)
             ";
 
-            var update_sql = @"
+        public readonly string Sql_Update_GasTransaction = @"
                 UPDATE GasTransactions
                    SET DeliveryID = @DeliveryID
                       ,DateLoadedEnd = @DateLoadedEnd
@@ -158,61 +135,99 @@ namespace AXERP.API.Functions.Transactions
                 where DeliveryID = '{0}'
             ";
 
-            var select_sql = @"
+        public readonly string Sql_Select_GasTransaction = @"
                 select * from GasTransactions where DeliveryID = '{0}'
             ";
 
-            var newRecords = 0;
-            var updatedRecords = 0;
+        #endregion
+
+        private ImportGasTransactionResponse ProcessRecords(ReadGoogleSheetResult<GasTransactionSheetModel> importResult)
+        {
+            var res = new ImportGasTransactionResponse
+            {
+                ImportedRows = importResult.RowCount,
+                InvalidRows = importResult.InvalidRows,
+                NewRows = 0,
+                UpdatedRows = 0
+            };
+
+            if (importResult == null || importResult.Data == null)
+            {
+                throw new Exception("Failed google sheet import.");
+            }
+
+            // Invalid ids count
+            res.InvalidRows += importResult.Data.Count(x => string.IsNullOrWhiteSpace(x.DeliveryID?.Trim()));
+
+            // Only valid ids
+            var filtered = importResult.Data.Where(x => !string.IsNullOrWhiteSpace(x.DeliveryID?.Trim()));
+
+            var minSqlYear = 1753;
 
             try
             {
-
                 using (var conn = new SqlConnection(Environment.GetEnvironmentVariable("SqlConnectionString")))
                 {
-                    foreach (var row in result)
+                    foreach (var row in filtered)
                     {
-                        if (row.DateDelivered?.Year < 1753 || row.DateLoadedEnd?.Year < 1753 || row.CMR?.Year < 1753 || row.BillOfLading?.Year < 1753) // row.DeliveryID == "1028b" || 
+                        try
+                        {
+                            if (row.DateDelivered?.Year < minSqlYear || row.DateLoadedEnd?.Year < minSqlYear || row.CMR?.Year < minSqlYear || row.BillOfLading?.Year < minSqlYear)
+                            {
+                                importResult.InvalidRows++;
+                                continue;
+                            }
+                            var oldRow = conn.QuerySingleOrDefault<GasTransaction>(string.Format(Sql_Select_GasTransaction, row.DeliveryID));
+                            if (oldRow != null)
+                            {
+                                res.UpdatedRows++;
+                                var affectedRows = conn.Execute(string.Format(Sql_Update_GasTransaction, row.DeliveryID), row);
+                            }
+                            else
+                            {
+                                res.NewRows++;
+                                var affectedRows = conn.Execute(Sql_Insert_GasTransaction, row);
+                            }
+                        }
+                        catch (Exception ex)
                         {
                             importResult.InvalidRows++;
-                            continue;
-                        }
-                        var oldRow = conn.QuerySingleOrDefault<GasTransaction>(string.Format(select_sql, row.DeliveryID));
-                        if (oldRow != null)
-                        {
-                            updatedRecords++;
-                            var affectedRows = conn.Execute(string.Format(update_sql, row.DeliveryID), row);
-                        }
-                        else
-                        {
-                            newRecords++;
-                            var affectedRows = conn.Execute(insert_sql, row);
+                            _logger.LogError(ex, $"Cannot import record with id: {row.DeliveryID}");
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                throw;
+                _logger.LogError(ex, "Error while importing GasTransactions");
             }
 
-            return new OkObjectResult(new ImportGasTransactionResponse
-            {
-                ImportedRows = importResult.RowCount,
-                InvalidRows = importResult.InvalidRows,
-                NewRows = newRecords,
-                UpdatedRows = updatedRecords
-            });
+            return res;
+        }
 
-            //return new GasTransactionImportResponse
-            //{
-            //    Transactions = result,
-            //    HttpResponse = new OkObjectResult(new ImportGasTransactionResponse
-            //    {
-            //        ImportedRows = importResult.RowCount,
-            //        InvalidRows = importResult.InvalidRows,
-            //    })
-            //};
+        [Function(nameof(ImportGasTransactions))]
+        [OpenApiOperation(operationId: nameof(ImportGasTransactions), tags: new[] { "gas-transactions" })]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
+        public async Task<IActionResult> ImportGasTransactions([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
+        {
+            _logger.LogInformation("Importing GasTransactions...");
+
+            // Get parameters
+            var sheet_id = Environment.GetEnvironmentVariable("BulkDeliveriesSheetDataSheetId");
+            var tab_name = Environment.GetEnvironmentVariable("BulkDeliveriesSheetDataGasTransactionsTab");
+            var range = Environment.GetEnvironmentVariable("BulkDeliveriesSheetDataGasTransactionRange");
+            var sheetCulture = Environment.GetEnvironmentVariable("SheetCulture") ?? "fr-FR";
+
+            // Sheet import
+            var sheetService = new GoogleSheetManager();
+            var importResult = await sheetService.ReadGoogleSheet<GasTransactionSheetModel>(sheet_id, $"{tab_name}{(range?.Length > 0 ? "!" : "")}{range}", sheetCulture);
+
+            // Process
+            var result = ProcessRecords(importResult);
+
+            _logger.LogInformation("GasTransactions imported. Stats: {stats}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
+
+            return new OkObjectResult(result);
         }
     }
 }
