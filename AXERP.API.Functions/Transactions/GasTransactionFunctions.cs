@@ -1,11 +1,9 @@
-using AutoMapper;
-using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.GoogleSheetModels;
 using AXERP.API.Domain.ServiceContracts.Responses;
+using AXERP.API.Functions.SheetProcessors;
 using AXERP.API.GoogleHelper.Managers;
 using AXERP.API.GoogleHelper.Models;
 using Dapper;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -13,21 +11,19 @@ using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
-using Newtonsoft.Json;
 using System.Net;
-using System.Web.Http;
 
 namespace AXERP.API.Functions.Transactions
 {
     public class GasTransactionFunctions
     {
         private readonly ILogger<GasTransactionFunctions> _logger;
-        private readonly IMapper _mapper;
+        private readonly GasTransactionSheetProcessor _processor;
 
-        public GasTransactionFunctions(ILogger<GasTransactionFunctions> logger, IMapper mapper)
+        public GasTransactionFunctions(ILogger<GasTransactionFunctions> logger, GasTransactionSheetProcessor processor)
         {
             _logger = logger;
-            _mapper = mapper;
+            _processor = processor;
         }
 
         #region SQL Scripts
@@ -101,58 +97,16 @@ namespace AXERP.API.Functions.Transactions
                        ,@TruckCompany)
             ";
 
-        public readonly string Sql_Update_GasTransaction = @"
-                UPDATE GasTransactions
-                   SET DeliveryID = @DeliveryID
-                      ,DateLoadedEnd = @DateLoadedEnd
-                      ,DateDelivered = @DateDelivered
-                      ,SalesContractID = @SalesContractID
-                      ,SalesStatus = @SalesStatus
-                      ,Terminal = @Terminal
-                      ,QtyLoaded = @QtyLoaded
-                      ,ToDeliveryID = @ToDeliveryID
-                      ,Status = @Status
-                      ,SpecificDeliveryPoint = @SpecificDeliveryPoint
-                      ,DeliveryPoint = @DeliveryPoint
-                      ,Transporter = @Transporter
-                      ,DeliveryUP = @DeliveryUP
-                      ,TransportCharges = @TransportCharges
-                      ,UnitSlotCharge = @UnitSlotCharge
-                      ,ServiceCharges = @ServiceCharges
-                      ,UnitStorageCharge = @UnitStorageCharge
-                      ,StorageCharge = @StorageCharge
-                      ,OtherCharges = @OtherCharges
-                      ,Sales = @Sales
-                      ,CMR = @CMR
-                      ,BioMWh = @BioMWh
-                      ,BillOfLading = @BillOfLading
-                      ,BioAddendum = @BioAddendum
-                      ,Comment = @Comment
-                      ,CustomerNote = @CustomerNote
-                      ,Customer = @Customer
-                      ,Reference = @Reference
-                      ,Reference2 = @Reference2
-                      ,Reference3 = @Reference3
-                      ,TruckLoadingCompanyComment = @TruckLoadingCompanyComment
-                      ,TruckCompany = @TruckCompany
-                where DeliveryID = '{0}'
-            ";
-
-        public readonly string Sql_Select_GasTransaction_ID = @"
-                select DeliveryID from GasTransactions where DeliveryID = '{0}'
-            ";
-
         public readonly string Sql_Select_GasTransaction_IDs = @"
                 select DeliveryID from GasTransactions
             ";
 
         #endregion
 
-        private ImportGasTransactionResponse ProcessRecords(ReadGoogleSheetResult<GasTransactionSheetModel> importResult)
+        private ImportGasTransactionResponse ProcessRecords(GenericSheetImportResult<GasTransactionSheetModel> importResult)
         {
             var res = new ImportGasTransactionResponse
             {
-                ImportedRows = importResult.ImportedRowCount,
                 InvalidRows = importResult.InvalidRows,
                 NewRowsInsertedIntoDatabase = 0,
                 TotalDataRowsInSheet = importResult.TotalRowsInSheet
@@ -163,38 +117,22 @@ namespace AXERP.API.Functions.Transactions
                 throw new Exception("Failed google sheet import.");
             }
 
-            // Invalid ids count
-            res.InvalidRows += importResult.Data.Count(x => string.IsNullOrWhiteSpace(x.DeliveryID?.Trim()));
-
-            // Only valid ids
-            var filtered = importResult.Data.Where(x => !string.IsNullOrWhiteSpace(x.DeliveryID?.Trim()));
-
+            // Invalid rows count
             var minSqlYear = 1753;
+            res.InvalidRows += importResult.Data.Count(x =>
+                string.IsNullOrWhiteSpace(x.DeliveryID?.Trim()) ||
+                (x.DateDelivered?.Year < minSqlYear || x.DateLoadedEnd?.Year < minSqlYear || x.CMR?.Year < minSqlYear || x.BillOfLading?.Year < minSqlYear));
+
+            // Only valid rows
+            var filtered = importResult.Data.Where(x =>
+                !string.IsNullOrWhiteSpace(x.DeliveryID?.Trim()) &&
+                !(x.DateDelivered?.Year < minSqlYear || x.DateLoadedEnd?.Year < minSqlYear || x.CMR?.Year < minSqlYear || x.BillOfLading?.Year < minSqlYear));
 
             using (var conn = new SqlConnection(Environment.GetEnvironmentVariable("SqlConnectionString")))
             {
                 var ids = conn.Query<string>(Sql_Select_GasTransaction_IDs);
-                foreach (var row in filtered)
-                {
-                    try
-                    {
-                        if (row.DateDelivered?.Year < minSqlYear || row.DateLoadedEnd?.Year < minSqlYear || row.CMR?.Year < minSqlYear || row.BillOfLading?.Year < minSqlYear)
-                        {
-                            importResult.InvalidRows++;
-                            continue;
-                        }
-                        if (!ids.Contains(row.DeliveryID))
-                        {
-                            res.NewRowsInsertedIntoDatabase++;
-                            var affectedRows = conn.Execute(Sql_Insert_GasTransaction, row);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        importResult.InvalidRows++;
-                        _logger.LogError(ex, $"Cannot import record with id: {row.DeliveryID}");
-                    }
-                }
+                var newRows = filtered.Where(x => !ids.Contains(x.DeliveryID));
+                res.NewRowsInsertedIntoDatabase += conn.Execute(Sql_Insert_GasTransaction, newRows);
             }
 
             return res;
@@ -226,7 +164,9 @@ namespace AXERP.API.Functions.Transactions
 
                 // Sheet import
                 var sheetService = new GoogleSheetManager(credentials: credentialsJson, format: CredentialsFormats.Text);
-                var importResult = await sheetService.ReadGoogleSheet<GasTransactionSheetModel>(sheet_id, $"{tab_name}{(range?.Length > 0 ? "!" : "")}{range}", sheetCulture);
+
+                var rows = await sheetService.ReadGoogleSheetRaw(sheet_id, $"{tab_name}{(range?.Length > 0 ? "!" : "")}{range}");
+                var importResult = _processor.ProcessRows(rows, sheetCulture);
 
                 // Process
                 var result = ProcessRecords(importResult);
