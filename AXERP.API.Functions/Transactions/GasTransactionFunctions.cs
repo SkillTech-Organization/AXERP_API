@@ -210,13 +210,22 @@ namespace AXERP.API.Functions.Transactions
             try
             {
                 // Get parameters
+                var credentialsJson = Environment.GetEnvironmentVariable("GoogleCredentials");
+
+                if (string.IsNullOrWhiteSpace(credentialsJson))
+                {
+                    var msg = "GoogleCredentials environment variable is missing.";
+                    _logger.LogError(msg);
+                    return new BadRequestObjectResult(msg);
+                }
+
                 var sheet_id = Environment.GetEnvironmentVariable("BulkDeliveriesSheetDataSheetId");
                 var tab_name = Environment.GetEnvironmentVariable("BulkDeliveriesSheetDataGasTransactionsTab");
                 var range = Environment.GetEnvironmentVariable("BulkDeliveriesSheetDataGasTransactionRange");
                 var sheetCulture = Environment.GetEnvironmentVariable("SheetCulture") ?? "fr-FR";
 
                 // Sheet import
-                var sheetService = new GoogleSheetManager();
+                var sheetService = new GoogleSheetManager(credentials: credentialsJson, format: CredentialsFormats.Text);
                 var importResult = await sheetService.ReadGoogleSheet<GasTransactionSheetModel>(sheet_id, $"{tab_name}{(range?.Length > 0 ? "!" : "")}{range}", sheetCulture);
 
                 // Process
@@ -229,11 +238,15 @@ namespace AXERP.API.Functions.Transactions
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error while importing GasTransactions");
-                return new ObjectResult(new ImportGasTransactionResponse
+                var res = new ObjectResult(new ImportGasTransactionResponse
                 {
                     HttpStatusCode = HttpStatusCode.InternalServerError,
                     Error = ex.Message
-                });
+                })
+                {
+                    StatusCode = 500
+                };
+                return res;
             }
         }
     }
