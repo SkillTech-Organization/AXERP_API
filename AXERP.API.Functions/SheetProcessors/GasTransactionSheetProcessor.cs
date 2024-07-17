@@ -1,4 +1,4 @@
-﻿using AXERP.API.Domain.GoogleSheetModels;
+﻿using AXERP.API.Domain.Entities;
 using AXERP.API.GoogleHelper.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -7,7 +7,7 @@ using System.Reflection;
 
 namespace AXERP.API.Functions.SheetProcessors
 {
-    public class GasTransactionSheetProcessor : BaseSheetProcessors<GasTransactionSheetModel>
+    public class GasTransactionSheetProcessor : BaseSheetProcessors<GasTransaction>
     {
         private readonly ILogger<GasTransactionSheetProcessor> _logger;
 
@@ -16,14 +16,14 @@ namespace AXERP.API.Functions.SheetProcessors
             _logger = logger;
         }
 
-        public override GenericSheetImportResult<GasTransactionSheetModel> ProcessRows(IList<IList<object>> sheet_value_range, string culture_code)
+        public override GenericSheetImportResult<GasTransaction> ProcessRows(IList<IList<object>> sheet_value_range, string culture_code)
         {
             var headers = sheet_value_range[0];
             var sheet_rows = sheet_value_range.Skip(1).ToList();
 
             // Eg. DeliveryID -> 0 (indexof Delivery ID in sheet headers)
             var field_names = new Dictionary<string, int>();
-            foreach (var property in typeof(GasTransactionSheetModel).GetProperties())
+            foreach (var property in typeof(GasTransaction).GetProperties())
             {
                 var jsonAttribute = property.GetCustomAttribute<JsonPropertyAttribute>(true);
                 if (jsonAttribute != null)
@@ -33,7 +33,7 @@ namespace AXERP.API.Functions.SheetProcessors
                 }
             }
 
-            var result = new List<GasTransactionSheetModel>();
+            var result = new List<GasTransaction>();
             var invalidRows = 0;
 
             for (var i = 0; i < sheet_rows.Count; i++)
@@ -48,7 +48,7 @@ namespace AXERP.API.Functions.SheetProcessors
                         continue;
                     }
 
-                    var gasTransaction = new GasTransactionSheetModel();
+                    var gasTransaction = new GasTransaction();
                     var field_idx = 0;
 
                     // DeliveryID
@@ -429,7 +429,7 @@ namespace AXERP.API.Functions.SheetProcessors
                 }
             }
 
-            return new GenericSheetImportResult<GasTransactionSheetModel>
+            return new GenericSheetImportResult<GasTransaction>
             {
                 Data = result,
                 InvalidRows = invalidRows,

@@ -1,4 +1,4 @@
-using AXERP.API.Domain.GoogleSheetModels;
+using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.Functions.SheetProcessors;
 using AXERP.API.GoogleHelper.Managers;
@@ -103,7 +103,7 @@ namespace AXERP.API.Functions.Transactions
 
         #endregion
 
-        private ImportGasTransactionResponse ProcessRecords(GenericSheetImportResult<GasTransactionSheetModel> importResult)
+        private ImportGasTransactionResponse ProcessRecords(GenericSheetImportResult<GasTransaction> importResult)
         {
             var res = new ImportGasTransactionResponse
             {
