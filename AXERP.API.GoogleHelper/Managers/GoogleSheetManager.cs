@@ -4,7 +4,6 @@ using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
 using Newtonsoft.Json;
-using System.IO;
 
 namespace AXERP.API.GoogleHelper.Managers
 {
@@ -112,12 +111,12 @@ namespace AXERP.API.GoogleHelper.Managers
             return dataJson;
         }
 
-        public async Task<ReadGoogleSheetResult<RowType>> ReadGoogleSheet<RowType>(string spreadSheetId, string range, string sheetCulture)
+        public async Task<GenericSheetImportResult<RowType>> ReadGoogleSheet<RowType>(string spreadSheetId, string range, string sheetCulture)
         {
             var raw = await ReadGoogleSheetRaw(spreadSheetId, range);
             var dataJson = SheetJsonToObjectJson(raw);
 
-            var result = new ReadGoogleSheetResult<RowType>
+            var result = new GenericSheetImportResult<RowType>
             {
                 Data = new List<RowType>(),
                 Errors = new List<string>(),
@@ -139,7 +138,7 @@ namespace AXERP.API.GoogleHelper.Managers
 
                     result.InvalidRows++;
                     result.Errors.Add(error.Error.Message);
-                    
+
                     error.Handled = true;
                 }
             }) ?? new List<RowType>();

@@ -4,7 +4,7 @@
     {
         public int TotalDataRowsInSheet { get; set; }
 
-        public int ImportedRows { get; set; }
+        public int ImportedRows => TotalDataRowsInSheet - InvalidRows;
 
         public int InvalidRows { get; set; }
 

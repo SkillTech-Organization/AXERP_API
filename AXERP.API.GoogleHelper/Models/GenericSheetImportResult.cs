@@ -1,6 +1,6 @@
 ﻿namespace AXERP.API.GoogleHelper.Models
 {
-    public class ReadGoogleSheetResult<T>
+    public class GenericSheetImportResult<T>
     {
         public List<T>? Data { get; set; }
 
