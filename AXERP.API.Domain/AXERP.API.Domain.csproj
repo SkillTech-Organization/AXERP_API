@@ -17,4 +17,8 @@
     <ProjectReference Include="..\AXERP.API.Business\AXERP.API.Business.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="GoogleSheetModels\" />
+  </ItemGroup>
+
 </Project>
