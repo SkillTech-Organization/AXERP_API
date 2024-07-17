@@ -4,27 +4,66 @@ using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
 using Newtonsoft.Json;
+using System.IO;
 
 namespace AXERP.API.GoogleHelper.Managers
 {
+    public enum CredentialsFormats
+    {
+        None, FileName, Text
+    }
+
     public class GoogleSheetManager
     {
         public const string DEFAULT_CREDENTIALS_FILENAME = "google-credentials.json";
 
         private SheetsService _sheetsService;
 
-        public GoogleSheetManager(string appName = "AXERP.API", string credentialsFileName = DEFAULT_CREDENTIALS_FILENAME)
+        public GoogleSheetManager(string appName = "AXERP.API", string credentials = DEFAULT_CREDENTIALS_FILENAME, CredentialsFormats format = CredentialsFormats.FileName)
         {
             GoogleCredential credential;
-            using (var stream = new FileStream(credentialsFileName, FileMode.Open, FileAccess.Read))
+            switch (format)
             {
-                credential = GoogleCredential.FromStream(stream).CreateScoped(SheetsService.Scope.Spreadsheets);
+                case CredentialsFormats.FileName:
+                    {
+                        using (var stream = new FileStream(credentials, FileMode.Open, FileAccess.Read))
+                        {
+                            credential = GoogleCredential.FromStream(stream).CreateScoped(SheetsService.Scope.Spreadsheets);
+                        }
+
+                        _sheetsService = new SheetsService(new BaseClientService.Initializer()
+                        {
+                            HttpClientInitializer = credential,
+                            ApplicationName = appName
+                        });
+
+                        break;
+                    }
+                case CredentialsFormats.Text:
+                    {
+                        using (var stream = new MemoryStream())
+                        {
+                            using (var writer = new StreamWriter(stream))
+                            {
+                                writer.Write(credentials);
+                                writer.Flush();
+                                stream.Position = 0;
+                                credential = GoogleCredential.FromStream(stream).CreateScoped(SheetsService.Scope.Spreadsheets);
+                            }
+                        }
+
+                        _sheetsService = new SheetsService(new BaseClientService.Initializer()
+                        {
+                            HttpClientInitializer = credential,
+                            ApplicationName = appName
+                        });
+
+                        break;
+                    }
+                case CredentialsFormats.None:
+                default:
+                    throw new Exception("Google Sheet Service validation / initialization failed.");
             }
-            _sheetsService = new SheetsService(new BaseClientService.Initializer()
-            {
-                HttpClientInitializer = credential,
-                ApplicationName = appName
-            });
         }
 
         private string SheetJsonToObjectJson(IList<IList<object>> values)
