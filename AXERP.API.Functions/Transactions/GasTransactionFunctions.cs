@@ -5,6 +5,7 @@ using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.GoogleHelper.Managers;
 using AXERP.API.GoogleHelper.Models;
 using Dapper;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -13,6 +14,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using System.Net;
+using System.Web.Http;
 
 namespace AXERP.API.Functions.Transactions
 {
@@ -164,42 +166,35 @@ namespace AXERP.API.Functions.Transactions
 
             var minSqlYear = 1753;
 
-            try
+            using (var conn = new SqlConnection(Environment.GetEnvironmentVariable("SqlConnectionString")))
             {
-                using (var conn = new SqlConnection(Environment.GetEnvironmentVariable("SqlConnectionString")))
+                foreach (var row in filtered)
                 {
-                    foreach (var row in filtered)
+                    try
                     {
-                        try
-                        {
-                            if (row.DateDelivered?.Year < minSqlYear || row.DateLoadedEnd?.Year < minSqlYear || row.CMR?.Year < minSqlYear || row.BillOfLading?.Year < minSqlYear)
-                            {
-                                importResult.InvalidRows++;
-                                continue;
-                            }
-                            var oldRow = conn.QuerySingleOrDefault<GasTransaction>(string.Format(Sql_Select_GasTransaction, row.DeliveryID));
-                            if (oldRow != null)
-                            {
-                                res.UpdatedRows++;
-                                var affectedRows = conn.Execute(string.Format(Sql_Update_GasTransaction, row.DeliveryID), row);
-                            }
-                            else
-                            {
-                                res.NewRows++;
-                                var affectedRows = conn.Execute(Sql_Insert_GasTransaction, row);
-                            }
-                        }
-                        catch (Exception ex)
+                        if (row.DateDelivered?.Year < minSqlYear || row.DateLoadedEnd?.Year < minSqlYear || row.CMR?.Year < minSqlYear || row.BillOfLading?.Year < minSqlYear)
                         {
                             importResult.InvalidRows++;
-                            _logger.LogError(ex, $"Cannot import record with id: {row.DeliveryID}");
+                            continue;
+                        }
+                        var oldRow = conn.QuerySingleOrDefault<GasTransaction>(string.Format(Sql_Select_GasTransaction, row.DeliveryID));
+                        if (oldRow != null)
+                        {
+                            res.UpdatedRows++;
+                            var affectedRows = conn.Execute(string.Format(Sql_Update_GasTransaction, row.DeliveryID), row);
+                        }
+                        else
+                        {
+                            res.NewRows++;
+                            var affectedRows = conn.Execute(Sql_Insert_GasTransaction, row);
                         }
                     }
+                    catch (Exception ex)
+                    {
+                        importResult.InvalidRows++;
+                        _logger.LogError(ex, $"Cannot import record with id: {row.DeliveryID}");
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error while importing GasTransactions");
             }
 
             return res;
@@ -212,22 +207,34 @@ namespace AXERP.API.Functions.Transactions
         {
             _logger.LogInformation("Importing GasTransactions...");
 
-            // Get parameters
-            var sheet_id = Environment.GetEnvironmentVariable("BulkDeliveriesSheetDataSheetId");
-            var tab_name = Environment.GetEnvironmentVariable("BulkDeliveriesSheetDataGasTransactionsTab");
-            var range = Environment.GetEnvironmentVariable("BulkDeliveriesSheetDataGasTransactionRange");
-            var sheetCulture = Environment.GetEnvironmentVariable("SheetCulture") ?? "fr-FR";
+            try
+            {
+                // Get parameters
+                var sheet_id = Environment.GetEnvironmentVariable("BulkDeliveriesSheetDataSheetId");
+                var tab_name = Environment.GetEnvironmentVariable("BulkDeliveriesSheetDataGasTransactionsTab");
+                var range = Environment.GetEnvironmentVariable("BulkDeliveriesSheetDataGasTransactionRange");
+                var sheetCulture = Environment.GetEnvironmentVariable("SheetCulture") ?? "fr-FR";
 
-            // Sheet import
-            var sheetService = new GoogleSheetManager();
-            var importResult = await sheetService.ReadGoogleSheet<GasTransactionSheetModel>(sheet_id, $"{tab_name}{(range?.Length > 0 ? "!" : "")}{range}", sheetCulture);
+                // Sheet import
+                var sheetService = new GoogleSheetManager();
+                var importResult = await sheetService.ReadGoogleSheet<GasTransactionSheetModel>(sheet_id, $"{tab_name}{(range?.Length > 0 ? "!" : "")}{range}", sheetCulture);
 
-            // Process
-            var result = ProcessRecords(importResult);
+                // Process
+                var result = ProcessRecords(importResult);
 
-            _logger.LogInformation("GasTransactions imported. Stats: {stats}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
+                _logger.LogInformation("GasTransactions imported. Stats: {stats}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
 
-            return new OkObjectResult(result);
+                return new OkObjectResult(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while importing GasTransactions");
+                return new ObjectResult(new ImportGasTransactionResponse
+                {
+                    HttpStatusCode = HttpStatusCode.InternalServerError,
+                    Error = ex.Message
+                });
+            }
         }
     }
 }
