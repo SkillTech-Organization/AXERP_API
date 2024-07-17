@@ -114,13 +114,15 @@ namespace AXERP.API.GoogleHelper.Managers
 
         public async Task<ReadGoogleSheetResult<RowType>> ReadGoogleSheet<RowType>(string spreadSheetId, string range, string sheetCulture)
         {
-            var dataJson = SheetJsonToObjectJson(await ReadGoogleSheetRaw(spreadSheetId, range));
+            var raw = await ReadGoogleSheetRaw(spreadSheetId, range);
+            var dataJson = SheetJsonToObjectJson(raw);
 
             var result = new ReadGoogleSheetResult<RowType>
             {
                 Data = new List<RowType>(),
                 Errors = new List<string>(),
-                InvalidRows = 0
+                InvalidRows = 0,
+                TotalRowsInSheet = raw.Count - 1 // First row is header so it doesn't count
             };
 
             result.Data = JsonConvert.DeserializeObject<List<RowType>>(dataJson, new JsonSerializerSettings

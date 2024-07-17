@@ -13,6 +13,7 @@ using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
+using Newtonsoft.Json;
 using System.Net;
 using System.Web.Http;
 
@@ -137,8 +138,12 @@ namespace AXERP.API.Functions.Transactions
                 where DeliveryID = '{0}'
             ";
 
-        public readonly string Sql_Select_GasTransaction = @"
-                select * from GasTransactions where DeliveryID = '{0}'
+        public readonly string Sql_Select_GasTransaction_ID = @"
+                select DeliveryID from GasTransactions where DeliveryID = '{0}'
+            ";
+
+        public readonly string Sql_Select_GasTransaction_IDs = @"
+                select DeliveryID from GasTransactions
             ";
 
         #endregion
@@ -147,10 +152,10 @@ namespace AXERP.API.Functions.Transactions
         {
             var res = new ImportGasTransactionResponse
             {
-                ImportedRows = importResult.RowCount,
+                ImportedRows = importResult.ImportedRowCount,
                 InvalidRows = importResult.InvalidRows,
-                NewRows = 0,
-                UpdatedRows = 0
+                NewRowsInsertedIntoDatabase = 0,
+                TotalDataRowsInSheet = importResult.TotalRowsInSheet
             };
 
             if (importResult == null || importResult.Data == null)
@@ -168,6 +173,7 @@ namespace AXERP.API.Functions.Transactions
 
             using (var conn = new SqlConnection(Environment.GetEnvironmentVariable("SqlConnectionString")))
             {
+                var ids = conn.Query<string>(Sql_Select_GasTransaction_IDs);
                 foreach (var row in filtered)
                 {
                     try
@@ -177,15 +183,9 @@ namespace AXERP.API.Functions.Transactions
                             importResult.InvalidRows++;
                             continue;
                         }
-                        var oldRow = conn.QuerySingleOrDefault<GasTransaction>(string.Format(Sql_Select_GasTransaction, row.DeliveryID));
-                        if (oldRow != null)
+                        if (!ids.Contains(row.DeliveryID))
                         {
-                            res.UpdatedRows++;
-                            var affectedRows = conn.Execute(string.Format(Sql_Update_GasTransaction, row.DeliveryID), row);
-                        }
-                        else
-                        {
-                            res.NewRows++;
+                            res.NewRowsInsertedIntoDatabase++;
                             var affectedRows = conn.Execute(Sql_Insert_GasTransaction, row);
                         }
                     }
