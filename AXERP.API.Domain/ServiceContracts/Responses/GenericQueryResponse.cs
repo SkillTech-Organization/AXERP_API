@@ -1,6 +1,6 @@
 ﻿namespace AXERP.API.Domain.ServiceContracts.Responses
 {
-    public class GenericQueryResponse<RowType>
+    public class GenericQueryResponse<RowType> : BaseResponse
     {
         public IEnumerable<RowType> Data { get; set; }
 
