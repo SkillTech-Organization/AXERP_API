@@ -34,17 +34,22 @@ namespace AXERP.API.Functions.SheetProcessors
             }
 
             var result = new List<GasTransaction>();
+            var errors = new List<string>();
             var invalidRows = 0;
+
+            var minSqlYear = 1753;
 
             for (var i = 0; i < sheet_rows.Count; i++)
             {
+                var sheet_row_index = i + 2;
+                var row = sheet_rows[i];
+
                 try
                 {
-                    var row = sheet_rows[i];
-
                     if (row.Count == 0)
                     {
                         invalidRows++;
+                        errors.Add($"Empty row. Row index: {sheet_row_index}");
                         continue;
                     }
 
@@ -54,9 +59,10 @@ namespace AXERP.API.Functions.SheetProcessors
                     // DeliveryID
                     field_idx = field_names[nameof(gasTransaction.DeliveryID)];
 
-                    if (row.Count <= field_idx)
+                    if (row.Count <= field_idx || row[field_idx] == null || string.IsNullOrWhiteSpace(row[field_idx].ToString()))
                     {
                         invalidRows++;
+                        errors.Add($"Missing Delivery ID. Row index: {sheet_row_index}");
                         continue;
                     }
 
@@ -72,6 +78,12 @@ namespace AXERP.API.Functions.SheetProcessors
 
                     if (DateTime.TryParse(row[field_idx]?.ToString(), new CultureInfo(culture_code), out DateTime DateLoadedEnd))
                     {
+                        if (DateLoadedEnd.Year < minSqlYear)
+                        {
+                            invalidRows++;
+                            errors.Add($"DateLoadedEnd date is too small: {DateLoadedEnd} for row with Delivery ID: {gasTransaction.DeliveryID}. Row index: {sheet_row_index}");
+                            continue;
+                        }
                         gasTransaction.DateLoadedEnd = DateLoadedEnd;
                     }
 
@@ -85,6 +97,12 @@ namespace AXERP.API.Functions.SheetProcessors
 
                     if (DateTime.TryParse(row[field_idx]?.ToString(), new CultureInfo(culture_code), out DateTime DateDelivered))
                     {
+                        if (DateDelivered.Year < minSqlYear)
+                        {
+                            invalidRows++;
+                            errors.Add($"DateDelivered date is too small: {DateDelivered} for row with Delivery ID: {gasTransaction.DeliveryID}. Row index: {sheet_row_index}");
+                            continue;
+                        }
                         gasTransaction.DateDelivered = DateDelivered;
                     }
 
@@ -299,6 +317,12 @@ namespace AXERP.API.Functions.SheetProcessors
 
                     if (DateTime.TryParse(row[field_idx]?.ToString(), new CultureInfo(culture_code), out DateTime CMR))
                     {
+                        if (CMR.Year < minSqlYear)
+                        {
+                            invalidRows++;
+                            errors.Add($"CMR date is too small: {CMR} for row with Delivery ID: {gasTransaction.DeliveryID}. Row index: {sheet_row_index}");
+                            continue;
+                        }
                         gasTransaction.CMR = CMR;
                     }
 
@@ -424,7 +448,8 @@ namespace AXERP.API.Functions.SheetProcessors
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error while processing sheet rows");
+                    _logger.LogError(ex, $"Exception while processing row with index: {sheet_row_index}.");
+                    errors.Add($"Exception while processing row with index: {sheet_row_index}. Error: " + ex.Message);
                     invalidRows++;
                 }
             }
@@ -433,7 +458,8 @@ namespace AXERP.API.Functions.SheetProcessors
             {
                 Data = result,
                 InvalidRows = invalidRows,
-                TotalRowsInSheet = sheet_value_range.Count - 1
+                TotalRowsInSheet = sheet_value_range.Count - 1,
+                Errors = errors
             };
         }
     }

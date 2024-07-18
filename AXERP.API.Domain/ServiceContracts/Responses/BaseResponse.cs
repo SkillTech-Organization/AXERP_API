@@ -8,6 +8,6 @@ namespace AXERP.API.Domain.ServiceContracts.Responses
 
         public bool IsSuccess => HttpStatusCode == HttpStatusCode.OK;
 
-        public string? Error { get; set; }
+        public string? RequestError { get; set; }
     }
 }

@@ -9,5 +9,7 @@
         public int InvalidRows { get; set; }
 
         public int NewRowsInsertedIntoDatabase { get; set; }
+
+        public List<string> ImportErrors { get; set; }
     }
 }
