@@ -8,14 +8,6 @@
     <Version>$(VersionPrefix)0.0.1</Version>
   </PropertyGroup>
   <ItemGroup>
-    <None Remove="google-credentials.json" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="google-credentials.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-  <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="AutoMapper" Version="13.0.1" />
     <PackageReference Include="Dapper" Version="2.1.35" />
