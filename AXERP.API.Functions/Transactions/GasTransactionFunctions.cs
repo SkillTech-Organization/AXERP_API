@@ -257,7 +257,7 @@ namespace AXERP.API.Functions.Transactions
         public IActionResult QueryGasTransactions(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
-            var queryTemplate = Environment.GetEnvironmentVariable("Sql_Query_Paged_GasTransactions_Dapper") ?? Sql_Query_Paged_GasTransactions;
+            var queryTemplate = Environment.GetEnvironmentVariable("Sql_Query_Paged_GasTransactions") ?? Sql_Query_Paged_GasTransactions;
             var countTemplate = Environment.GetEnvironmentVariable("Sql_Query_Count_GasTransactions") ?? Sql_Query_Count_GasTransactions;
 
             //var cols = req.Query["Columns"]?.ToString() ?? "";
