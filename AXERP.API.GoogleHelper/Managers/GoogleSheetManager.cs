@@ -7,24 +7,62 @@ using Newtonsoft.Json;
 
 namespace AXERP.API.GoogleHelper.Managers
 {
+    public enum CredentialsFormats
+    {
+        None, FileName, Text
+    }
+
     public class GoogleSheetManager
     {
         public const string DEFAULT_CREDENTIALS_FILENAME = "google-credentials.json";
 
         private SheetsService _sheetsService;
 
-        public GoogleSheetManager(string appName = "AXERP.API", string credentialsFileName = DEFAULT_CREDENTIALS_FILENAME)
+        public GoogleSheetManager(string appName = "AXERP.API", string credentials = DEFAULT_CREDENTIALS_FILENAME, CredentialsFormats format = CredentialsFormats.FileName)
         {
             GoogleCredential credential;
-            using (var stream = new FileStream(credentialsFileName, FileMode.Open, FileAccess.Read))
+            switch (format)
             {
-                credential = GoogleCredential.FromStream(stream).CreateScoped(SheetsService.Scope.Spreadsheets);
+                case CredentialsFormats.FileName:
+                    {
+                        using (var stream = new FileStream(credentials, FileMode.Open, FileAccess.Read))
+                        {
+                            credential = GoogleCredential.FromStream(stream).CreateScoped(SheetsService.Scope.Spreadsheets);
+                        }
+
+                        _sheetsService = new SheetsService(new BaseClientService.Initializer()
+                        {
+                            HttpClientInitializer = credential,
+                            ApplicationName = appName
+                        });
+
+                        break;
+                    }
+                case CredentialsFormats.Text:
+                    {
+                        using (var stream = new MemoryStream())
+                        {
+                            using (var writer = new StreamWriter(stream))
+                            {
+                                writer.Write(credentials);
+                                writer.Flush();
+                                stream.Position = 0;
+                                credential = GoogleCredential.FromStream(stream).CreateScoped(SheetsService.Scope.Spreadsheets);
+                            }
+                        }
+
+                        _sheetsService = new SheetsService(new BaseClientService.Initializer()
+                        {
+                            HttpClientInitializer = credential,
+                            ApplicationName = appName
+                        });
+
+                        break;
+                    }
+                case CredentialsFormats.None:
+                default:
+                    throw new Exception("Google Sheet Service validation / initialization failed.");
             }
-            _sheetsService = new SheetsService(new BaseClientService.Initializer()
-            {
-                HttpClientInitializer = credential,
-                ApplicationName = appName
-            });
         }
 
         private string SheetJsonToObjectJson(IList<IList<object>> values)
@@ -73,15 +111,17 @@ namespace AXERP.API.GoogleHelper.Managers
             return dataJson;
         }
 
-        public async Task<ReadGoogleSheetResult<RowType>> ReadGoogleSheet<RowType>(string spreadSheetId, string range, string sheetCulture)
+        public async Task<GenericSheetImportResult<RowType>> ReadGoogleSheet<RowType>(string spreadSheetId, string range, string sheetCulture)
         {
-            var dataJson = SheetJsonToObjectJson(await ReadGoogleSheetRaw(spreadSheetId, range));
+            var raw = await ReadGoogleSheetRaw(spreadSheetId, range);
+            var dataJson = SheetJsonToObjectJson(raw);
 
-            var result = new ReadGoogleSheetResult<RowType>
+            var result = new GenericSheetImportResult<RowType>
             {
                 Data = new List<RowType>(),
                 Errors = new List<string>(),
-                InvalidRows = 0
+                InvalidRows = 0,
+                TotalRowsInSheet = raw.Count - 1 // First row is header so it doesn't count
             };
 
             result.Data = JsonConvert.DeserializeObject<List<RowType>>(dataJson, new JsonSerializerSettings
@@ -98,7 +138,7 @@ namespace AXERP.API.GoogleHelper.Managers
 
                     result.InvalidRows++;
                     result.Errors.Add(error.Error.Message);
-                    
+
                     error.Handled = true;
                 }
             }) ?? new List<RowType>();

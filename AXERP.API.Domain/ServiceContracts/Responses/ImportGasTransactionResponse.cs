@@ -1,13 +1,15 @@
 ﻿namespace AXERP.API.Domain.ServiceContracts.Responses
 {
-    public class ImportGasTransactionResponse
+    public class ImportGasTransactionResponse : BaseResponse
     {
-        public int ImportedRows { get; set; }
+        public int TotalDataRowsInSheet { get; set; }
+
+        public int ImportedRows => TotalDataRowsInSheet - InvalidRows;
 
         public int InvalidRows { get; set; }
 
-        public int NewRows { get; set; }
+        public int NewRowsInsertedIntoDatabase { get; set; }
 
-        public int UpdatedRows { get; set; }
+        public List<string> ImportErrors { get; set; }
     }
 }
