@@ -1,6 +1,4 @@
 ﻿using AutoMapper;
-using AXERP.API.Domain.Entities;
-using AXERP.API.Domain.GoogleSheetModels;
 
 namespace AXERP.API.Domain.AutoMapperProfiles
 {
@@ -8,7 +6,7 @@ namespace AXERP.API.Domain.AutoMapperProfiles
     {
         public ModelProfile()
         {
-            CreateMap<GasTransaction, GasTransactionSheetModel>().ReverseMap();
+            //CreateMap<GasTransaction, GasTransaction>().ReverseMap();
         }
     }
 }
