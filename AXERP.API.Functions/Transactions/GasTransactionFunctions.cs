@@ -6,24 +6,34 @@ using AXERP.API.GoogleHelper.Models;
 using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Extensions.Sql;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using System.Net;
+using static Microsoft.ApplicationInsights.MetricDimensionNames.TelemetryContext;
+using YamlDotNet.Core;
+using AXERP.API.Persistence.Repositories;
+using AXERP.API.Persistence.ServiceContracts.Requests;
 
 namespace AXERP.API.Functions.Transactions
 {
     public class GasTransactionFunctions
     {
         private readonly ILogger<GasTransactionFunctions> _logger;
-        private readonly GasTransactionSheetProcessor _processor;
+        private readonly GasTransactionSheetProcessor _gasTransactionSheetProcessor;
+        private readonly GenericRepository _genericRepository;
 
-        public GasTransactionFunctions(ILogger<GasTransactionFunctions> logger, GasTransactionSheetProcessor processor)
+        public GasTransactionFunctions(
+            ILogger<GasTransactionFunctions> logger,
+            GasTransactionSheetProcessor gasTransactionSheetProcessor,
+            GenericRepository genericRepository)
         {
             _logger = logger;
-            _processor = processor;
+            _gasTransactionSheetProcessor = gasTransactionSheetProcessor;
+            _genericRepository = genericRepository;
         }
 
         #region SQL Scripts
@@ -101,6 +111,10 @@ namespace AXERP.API.Functions.Transactions
                 select DeliveryID from GasTransactions
             ";
 
+        public readonly string Sql_Query_Paged_GasTransactions = "select @columns from (select _table.*, ROW_NUMBER() OVER (/**orderby**/) AS RowNumber from GasTransactions _table /**where**/) as X where RowNumber between @start and @finish";
+
+        public readonly string Sql_Query_Count_GasTransactions = "SELECT COUNT(*) FROM GasTransactions";
+
         #endregion
 
         private ImportGasTransactionResponse InsertTransactions(GenericSheetImportResult<GasTransaction> importResult)
@@ -156,7 +170,7 @@ namespace AXERP.API.Functions.Transactions
                 var sheetService = new GoogleSheetManager(credentials: credentialsJson, format: CredentialsFormats.Text);
 
                 var rows = await sheetService.ReadGoogleSheetRaw(sheet_id, $"{tab_name}{(range?.Length > 0 ? "!" : "")}{range}");
-                var importResult = _processor.ProcessRows(rows, sheetCulture);
+                var importResult = _gasTransactionSheetProcessor.ProcessRows(rows, sheetCulture);
 
                 // Process
                 var result = InsertTransactions(importResult);
@@ -179,5 +193,100 @@ namespace AXERP.API.Functions.Transactions
                 return res;
             }
         }
+
+        /*
+        [Function(nameof(GetAllGasTransactions))]
+        [OpenApiOperation(operationId: nameof(GetAllGasTransactions), tags: new[] { "gas-transactions" })]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
+        public IActionResult GetAllGasTransactions(
+                [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req,
+                [SqlInput("%Sql_Query_All_GasTransactions%", "SqlConnectionString")] IEnumerable<GasTransaction> items)
+        {
+            _logger.LogInformation("Querying GasTransactions. Row count: {count}", items.Count());
+
+            return new OkObjectResult(items);
+        }
+
+        [Function(nameof(QueryPagedGasTransactions))]
+        [OpenApiOperation(operationId: nameof(QueryPagedGasTransactions), tags: new[] { "gas-transactions" })]
+        [OpenApiParameter(name: "PageSize", In = ParameterLocation.Query, Required = true, Type = typeof(int), Description = "Returned row count")]
+        //[OpenApiParameter(name: "OrderBy", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "Order by")]
+        [OpenApiParameter(name: "Page", In = ParameterLocation.Query, Required = true, Type = typeof(int), Description = "Page")]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
+        public IActionResult QueryPagedGasTransactions(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req,
+            //[SqlInput("%Sql_Query_Count_GasTransactions%", "SqlConnectionString")] Dictionary<string, int> totalCount, // cannot be int or string!
+            [SqlInput(
+                commandText: "%Sql_Query_Paged_GasTransactions%",
+                parameters: "@PageSize={Query.PageSize},@Page={Query.Page}", // @OrderBy={Query.OrderBy},
+                connectionStringSetting: "SqlConnectionString")] IEnumerable<GasTransaction> items)
+        {
+            _logger.LogInformation("Querying GasTransactions. Row count: {count}, Page: {page}, PageSize: {pageSize}", items.Count(), req.Query["Page"], req.Query["PageSize"]);
+
+            var totalCount = CountTableRows("GasTransactions");
+
+            _logger.LogInformation("Querying GasTransactions. TotalCount: {totalCount}", totalCount);
+
+            return new OkObjectResult(new GenericQueryResponse<GasTransaction>
+            {
+                Data = items,
+                PageIndex = int.Parse(req.Query["Page"]),
+                PageSize = int.Parse(req.Query["PageSize"]),
+                TotalCount = totalCount
+            });
+        }
+        */
+
+        [Function(nameof(CountGasTransactions))]
+        [OpenApiOperation(operationId: nameof(CountGasTransactions), tags: new[] { "gas-transactions" })]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/plain", bodyType: typeof(string), Description = "The OK response")]
+        public int CountGasTransactions(
+                [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
+        {
+            return _genericRepository.Count(Environment.GetEnvironmentVariable("Sql_Query_Count_GasTransactions") ?? Sql_Query_Count_GasTransactions);
+        }
+
+        [Function(nameof(QueryGasTransactions))]
+        [OpenApiOperation(operationId: nameof(QueryGasTransactions), tags: new[] { "gas-transactions" })]
+        //[OpenApiParameter(name: "Columns", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "List of columns, separated by ',' character")]
+        [OpenApiParameter(name: "OrderBy", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "Order by column eg. DeliveryID")]
+        [OpenApiParameter(name: "OrderByDesc", In = ParameterLocation.Query, Required = false, Type = typeof(bool), Description = "Descending order, false by default")]
+        [OpenApiParameter(name: "PageSize", In = ParameterLocation.Query, Required = true, Type = typeof(int), Description = "Returned row count")]
+        [OpenApiParameter(name: "Page", In = ParameterLocation.Query, Required = true, Type = typeof(int), Description = "Page index, starting from 1 (0 will be interpreted as 1)")]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
+        public IActionResult QueryGasTransactions(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
+        {
+            var queryTemplate = Environment.GetEnvironmentVariable("Sql_Query_Paged_GasTransactions_Dapper") ?? Sql_Query_Paged_GasTransactions;
+            var countTemplate = Environment.GetEnvironmentVariable("Sql_Query_Count_GasTransactions") ?? Sql_Query_Count_GasTransactions;
+
+            //var cols = req.Query["Columns"]?.ToString() ?? "";
+
+            var page = int.Parse(req.Query["Page"]);
+            if (page <= 0)
+            {
+                page = 1;
+            }
+
+            var pageSize = int.Parse(req.Query["PageSize"]);
+            if (pageSize <= 0)
+            {
+                pageSize = 1;
+            }
+
+            var result = _genericRepository.PagedQuery<GasTransaction>(new PagedQueryRequest
+            {
+                QueryTemplate = queryTemplate,
+                CountTemplate = countTemplate,
+                //Columns = cols.Split(",").ToList(),
+                OrderBy = req.Query["OrderBy"],
+                OrderDesc = bool.Parse(req.Query["OrderByDesc"] ?? "false"),
+                Page = page,
+                PageSize = pageSize,
+            });
+
+            return new OkObjectResult(result);
+        }
+
     }
 }
