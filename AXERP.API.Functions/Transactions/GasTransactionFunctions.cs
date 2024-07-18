@@ -249,10 +249,10 @@ namespace AXERP.API.Functions.Transactions
         [Function(nameof(QueryGasTransactions))]
         [OpenApiOperation(operationId: nameof(QueryGasTransactions), tags: new[] { "gas-transactions" })]
         //[OpenApiParameter(name: "Columns", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "List of columns, separated by ',' character")]
-        [OpenApiParameter(name: "OrderBy", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "Order by column eg. DeliveryID")]
+        [OpenApiParameter(name: "OrderBy", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Order by column, default is DeliveryID")]
         [OpenApiParameter(name: "OrderByDesc", In = ParameterLocation.Query, Required = false, Type = typeof(bool), Description = "Descending order, false by default")]
-        [OpenApiParameter(name: "PageSize", In = ParameterLocation.Query, Required = true, Type = typeof(int), Description = "Returned row count")]
-        [OpenApiParameter(name: "Page", In = ParameterLocation.Query, Required = true, Type = typeof(int), Description = "Page index, starting from 1 (0 will be interpreted as 1)")]
+        [OpenApiParameter(name: "PageSize", In = ParameterLocation.Query, Required = false, Type = typeof(int), Description = "Returned row count, default is 5")]
+        [OpenApiParameter(name: "Page", In = ParameterLocation.Query, Required = false, Type = typeof(int), Description = "Page index, starting from 1 (0 will be interpreted as 1), default is 1")]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
         public IActionResult QueryGasTransactions(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
@@ -262,13 +262,13 @@ namespace AXERP.API.Functions.Transactions
 
             //var cols = req.Query["Columns"]?.ToString() ?? "";
 
-            var page = int.Parse(req.Query["Page"]);
+            var page = int.Parse(req.Query["Page"] ?? "1");
             if (page <= 0)
             {
                 page = 1;
             }
 
-            var pageSize = int.Parse(req.Query["PageSize"]);
+            var pageSize = int.Parse(req.Query["PageSize"] ?? "5");
             if (pageSize <= 0)
             {
                 pageSize = 1;
@@ -279,7 +279,7 @@ namespace AXERP.API.Functions.Transactions
                 QueryTemplate = queryTemplate,
                 CountTemplate = countTemplate,
                 //Columns = cols.Split(",").ToList(),
-                OrderBy = req.Query["OrderBy"],
+                OrderBy = req.Query["OrderBy"] ?? "DeliveryID",
                 OrderDesc = bool.Parse(req.Query["OrderByDesc"] ?? "false"),
                 Page = page,
                 PageSize = pageSize,
