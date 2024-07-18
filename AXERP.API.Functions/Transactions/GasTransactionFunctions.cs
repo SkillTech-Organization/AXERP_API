@@ -103,13 +103,14 @@ namespace AXERP.API.Functions.Transactions
 
         #endregion
 
-        private ImportGasTransactionResponse ProcessRecords(GenericSheetImportResult<GasTransaction> importResult)
+        private ImportGasTransactionResponse InsertTransactions(GenericSheetImportResult<GasTransaction> importResult)
         {
             var res = new ImportGasTransactionResponse
             {
                 InvalidRows = importResult.InvalidRows,
                 NewRowsInsertedIntoDatabase = 0,
-                TotalDataRowsInSheet = importResult.TotalRowsInSheet
+                TotalDataRowsInSheet = importResult.TotalRowsInSheet,
+                ImportErrors = importResult.Errors
             };
 
             if (importResult == null || importResult.Data == null)
@@ -117,21 +118,10 @@ namespace AXERP.API.Functions.Transactions
                 throw new Exception("Failed google sheet import.");
             }
 
-            // Invalid rows count
-            var minSqlYear = 1753;
-            res.InvalidRows += importResult.Data.Count(x =>
-                string.IsNullOrWhiteSpace(x.DeliveryID?.Trim()) ||
-                (x.DateDelivered?.Year < minSqlYear || x.DateLoadedEnd?.Year < minSqlYear || x.CMR?.Year < minSqlYear || x.BillOfLading?.Year < minSqlYear));
-
-            // Only valid rows
-            var filtered = importResult.Data.Where(x =>
-                !string.IsNullOrWhiteSpace(x.DeliveryID?.Trim()) &&
-                !(x.DateDelivered?.Year < minSqlYear || x.DateLoadedEnd?.Year < minSqlYear || x.CMR?.Year < minSqlYear || x.BillOfLading?.Year < minSqlYear));
-
             using (var conn = new SqlConnection(Environment.GetEnvironmentVariable("SqlConnectionString")))
             {
                 var ids = conn.Query<string>(Sql_Select_GasTransaction_IDs);
-                var newRows = filtered.Where(x => !ids.Contains(x.DeliveryID));
+                var newRows = importResult.Data.Where(x => !ids.Contains(x.DeliveryID));
                 res.NewRowsInsertedIntoDatabase += conn.Execute(Sql_Insert_GasTransaction, newRows);
             }
 
@@ -169,7 +159,7 @@ namespace AXERP.API.Functions.Transactions
                 var importResult = _processor.ProcessRows(rows, sheetCulture);
 
                 // Process
-                var result = ProcessRecords(importResult);
+                var result = InsertTransactions(importResult);
 
                 _logger.LogInformation("GasTransactions imported. Stats: {stats}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
 
@@ -181,7 +171,7 @@ namespace AXERP.API.Functions.Transactions
                 var res = new ObjectResult(new ImportGasTransactionResponse
                 {
                     HttpStatusCode = HttpStatusCode.InternalServerError,
-                    Error = ex.Message
+                    RequestError = ex.Message
                 })
                 {
                     StatusCode = 500
