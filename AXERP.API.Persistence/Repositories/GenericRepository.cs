@@ -1,5 +1,6 @@
 ﻿using AXERP.API.Persistence.ServiceContracts.Requests;
 using AXERP.API.Persistence.ServiceContracts.Responses;
+using AXERP.API.Persistence.Utils;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
@@ -86,7 +87,8 @@ namespace AXERP.API.Persistence.Repositories
                 Data = result,
                 PageIndex = request.Page,
                 PageSize = request.PageSize,
-                TotalCount = totalCount
+                TotalCount = totalCount,
+                Columns = typeof(RowType).GetColumnDatas(request.Columns)
             };
         }
     }

@@ -17,6 +17,7 @@ using static Microsoft.ApplicationInsights.MetricDimensionNames.TelemetryContext
 using YamlDotNet.Core;
 using AXERP.API.Persistence.Repositories;
 using AXERP.API.Persistence.ServiceContracts.Requests;
+using AXERP.API.Persistence.Utils;
 
 namespace AXERP.API.Functions.Transactions
 {
@@ -248,7 +249,7 @@ namespace AXERP.API.Functions.Transactions
 
         [Function(nameof(QueryGasTransactions))]
         [OpenApiOperation(operationId: nameof(QueryGasTransactions), tags: new[] { "gas-transactions" })]
-        //[OpenApiParameter(name: "Columns", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "List of columns, separated by ',' character")]
+        [OpenApiParameter(name: "Columns", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "List of columns, separated by ',' character")]
         [OpenApiParameter(name: "OrderBy", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Order by column, default is DeliveryID")]
         [OpenApiParameter(name: "OrderByDesc", In = ParameterLocation.Query, Required = false, Type = typeof(bool), Description = "Descending order, false by default")]
         [OpenApiParameter(name: "PageSize", In = ParameterLocation.Query, Required = false, Type = typeof(int), Description = "Returned row count, default is 5")]
@@ -260,7 +261,7 @@ namespace AXERP.API.Functions.Transactions
             var queryTemplate = Environment.GetEnvironmentVariable("Sql_Query_Paged_GasTransactions") ?? Sql_Query_Paged_GasTransactions;
             var countTemplate = Environment.GetEnvironmentVariable("Sql_Query_Count_GasTransactions") ?? Sql_Query_Count_GasTransactions;
 
-            //var cols = req.Query["Columns"]?.ToString() ?? "";
+            var cols = req.Query["Columns"]?.ToString()?.Split(",", StringSplitOptions.TrimEntries)?.ToList() ?? new List<string>();
 
             var page = int.Parse(req.Query["Page"] ?? "1");
             if (page <= 0)
@@ -278,7 +279,7 @@ namespace AXERP.API.Functions.Transactions
             {
                 QueryTemplate = queryTemplate,
                 CountTemplate = countTemplate,
-                //Columns = cols.Split(",").ToList(),
+                Columns = cols,
                 OrderBy = req.Query["OrderBy"] ?? "DeliveryID",
                 OrderDesc = bool.Parse(req.Query["OrderByDesc"] ?? "false"),
                 Page = page,
