@@ -6,11 +6,15 @@
 
         public virtual string CountTemplate { get; set; }
 
+        public virtual string Search { get; set; }
+
         public virtual int Page { get; set; }
 
         public virtual int PageSize { get; set; }
 
         public virtual string OrderBy { get; set; }
+
+        public virtual bool SearchOnlyInSelectedColumns { get; set; }
 
         public virtual bool OrderDesc { get; set; }
 

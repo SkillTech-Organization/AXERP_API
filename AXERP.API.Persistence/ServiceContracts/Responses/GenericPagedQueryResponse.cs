@@ -1,10 +1,13 @@
 ﻿using AXERP.API.Domain.ServiceContracts.Responses;
+using AXERP.API.Persistence.ServiceContracts.Models;
 
 namespace AXERP.API.Persistence.ServiceContracts.Responses
 {
     public class GenericPagedQueryResponse<RowType> : BaseResponse
     {
         public IEnumerable<RowType> Data { get; set; }
+
+        public List<ColumnData> Columns { get; set; }
 
         public int PageSize { get; set; }
 

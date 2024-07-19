@@ -17,6 +17,7 @@ using static Microsoft.ApplicationInsights.MetricDimensionNames.TelemetryContext
 using YamlDotNet.Core;
 using AXERP.API.Persistence.Repositories;
 using AXERP.API.Persistence.ServiceContracts.Requests;
+using AXERP.API.Persistence.Utils;
 
 namespace AXERP.API.Functions.Transactions
 {
@@ -111,7 +112,19 @@ namespace AXERP.API.Functions.Transactions
                 select DeliveryID from GasTransactions
             ";
 
-        public readonly string Sql_Query_Paged_GasTransactions = "select @columns from (select _table.*, ROW_NUMBER() OVER (/**orderby**/) AS RowNumber from GasTransactions _table /**where**/) as X where RowNumber between @start and @finish";
+        public readonly string Sql_Query_Paged_GasTransactions = 
+            @"
+            select X.* from 
+                (select _table.*, ROW_NUMBER() OVER (/**orderby**/) AS RowNumber from GasTransactions _table /**where**/)
+            as X where RowNumber between @start and @finish
+            ";
+
+        public readonly string Sql_Query_Paged_GasTransactions_Dynamic_Columns =
+            @"
+            select {0} from 
+                (select _table.*, ROW_NUMBER() OVER (/**orderby**/) AS RowNumber from GasTransactions _table /**where**/)
+            as X where RowNumber between @start and @finish
+            ";
 
         public readonly string Sql_Query_Count_GasTransactions = "SELECT COUNT(*) FROM GasTransactions";
 
@@ -248,7 +261,9 @@ namespace AXERP.API.Functions.Transactions
 
         [Function(nameof(QueryGasTransactions))]
         [OpenApiOperation(operationId: nameof(QueryGasTransactions), tags: new[] { "gas-transactions" })]
-        //[OpenApiParameter(name: "Columns", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "List of columns, separated by ',' character")]
+        [OpenApiParameter(name: "Search", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Search in all columns, type Column = Search for specific search, eg. DeliveryID = 5")]
+        [OpenApiParameter(name: "SearchOnlyInSelectedColumns", In = ParameterLocation.Query, Required = false, Type = typeof(bool), Description = "Search only in columns provided in the Columns parameter - ignored if Search is written for specific column")]
+        [OpenApiParameter(name: "Columns", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "List of columns, separated by ',' character, all columns will be used by default")]
         [OpenApiParameter(name: "OrderBy", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Order by column, default is DeliveryID")]
         [OpenApiParameter(name: "OrderByDesc", In = ParameterLocation.Query, Required = false, Type = typeof(bool), Description = "Descending order, false by default")]
         [OpenApiParameter(name: "PageSize", In = ParameterLocation.Query, Required = false, Type = typeof(int), Description = "Returned row count, default is 5")]
@@ -257,10 +272,10 @@ namespace AXERP.API.Functions.Transactions
         public IActionResult QueryGasTransactions(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
-            var queryTemplate = Environment.GetEnvironmentVariable("Sql_Query_Paged_GasTransactions") ?? Sql_Query_Paged_GasTransactions;
+            var queryTemplate = Environment.GetEnvironmentVariable("Sql_Query_Paged_GasTransactions_Dynamic_Columns") ?? Sql_Query_Paged_GasTransactions_Dynamic_Columns;
             var countTemplate = Environment.GetEnvironmentVariable("Sql_Query_Count_GasTransactions") ?? Sql_Query_Count_GasTransactions;
 
-            //var cols = req.Query["Columns"]?.ToString() ?? "";
+            var cols = req.Query["Columns"]?.ToString()?.Split(",", StringSplitOptions.TrimEntries)?.ToList() ?? new List<string>();
 
             var page = int.Parse(req.Query["Page"] ?? "1");
             if (page <= 0)
@@ -278,11 +293,13 @@ namespace AXERP.API.Functions.Transactions
             {
                 QueryTemplate = queryTemplate,
                 CountTemplate = countTemplate,
-                //Columns = cols.Split(",").ToList(),
+                Columns = cols,
                 OrderBy = req.Query["OrderBy"] ?? "DeliveryID",
                 OrderDesc = bool.Parse(req.Query["OrderByDesc"] ?? "false"),
                 Page = page,
                 PageSize = pageSize,
+                Search = req.Query["Search"],
+                SearchOnlyInSelectedColumns = bool.Parse(req.Query["SearchOnlyInSelectedColumns"] ?? "false")
             });
 
             return new OkObjectResult(result);
