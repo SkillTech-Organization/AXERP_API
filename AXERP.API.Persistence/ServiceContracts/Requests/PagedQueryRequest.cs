@@ -14,6 +14,8 @@
 
         public virtual string OrderBy { get; set; }
 
+        public virtual bool SearchOnlyInSelectedColumns { get; set; }
+
         public virtual bool OrderDesc { get; set; }
 
         public virtual List<string> Columns { get; set; }

@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text.Json.Nodes;
 
 namespace AXERP.API.Persistence.Utils
 {
@@ -46,6 +47,57 @@ namespace AXERP.API.Persistence.Utils
                     var jsonName = property.Name;
 
                     columns.Add(property.Name);
+                }
+            }
+
+            return columns;
+        }
+
+        public static string FilterValidColumn(this Type t, string column, bool includeJsonAttributes = false)
+        {
+            if (string.IsNullOrWhiteSpace(column))
+            {
+                return null;
+            }
+
+            foreach (var property in t.GetProperties())
+            {
+                if (column == property.Name)
+                {
+                    return property.Name;
+                }
+
+                if (includeJsonAttributes)
+                {
+                    var jsonAttribute = property.GetCustomAttribute<JsonPropertyAttribute>(true);
+                    if (jsonAttribute != null && !string.IsNullOrWhiteSpace(jsonAttribute.PropertyName) && column == jsonAttribute.PropertyName)
+                    {
+                        return property.Name;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        public static List<string> FilterValidColumns(this Type t, List<string> columnList, bool includeJsonAttributes = false)
+        {
+            var columns = new List<string>();
+
+            foreach (var property in t.GetProperties())
+            {
+                if (columnList != null && columnList.Any() && columnList.Contains(property.Name))
+                {
+                    columns.Add(property.Name);
+                }
+
+                if (columnList != null && columnList.Any() && includeJsonAttributes)
+                {
+                    var jsonAttribute = property.GetCustomAttribute<JsonPropertyAttribute>(true);
+                    if (jsonAttribute != null && columnList.Contains(jsonAttribute.PropertyName ?? ""))
+                    {
+                        columns.Add(property.Name);
+                    }
                 }
             }
 
@@ -132,7 +184,7 @@ namespace AXERP.API.Persistence.Utils
                             }
                         }
                     }
-                    else if (parameterType == typeof(string))
+                    else// if (parameterType == typeof(string))
                     {
                         if (!string.IsNullOrWhiteSpace(selectAlias))
                         {
@@ -155,7 +207,7 @@ namespace AXERP.API.Persistence.Utils
             {
                 return typeof(DateTime);
             }
-            if (double.TryParse(value, out var _))
+            if (double.TryParse(value.Replace(".", ",").Replace(" ", ""), out var _))
             {
                 return typeof(double);
             }
