@@ -112,7 +112,12 @@ namespace AXERP.API.Functions.Transactions
                 select DeliveryID from GasTransactions
             ";
 
-        public readonly string Sql_Query_Paged_GasTransactions = "select @columns from (select _table.*, ROW_NUMBER() OVER (/**orderby**/) AS RowNumber from GasTransactions _table /**where**/) as X where RowNumber between @start and @finish";
+        public readonly string Sql_Query_Paged_GasTransactions = 
+            @"
+            select @columns from 
+                (select _table.*, ROW_NUMBER() OVER (/**orderby**/) AS RowNumber from GasTransactions _table /**where**/)
+            as X where RowNumber between @start and @finish
+            ";
 
         public readonly string Sql_Query_Count_GasTransactions = "SELECT COUNT(*) FROM GasTransactions";
 
@@ -249,7 +254,8 @@ namespace AXERP.API.Functions.Transactions
 
         [Function(nameof(QueryGasTransactions))]
         [OpenApiOperation(operationId: nameof(QueryGasTransactions), tags: new[] { "gas-transactions" })]
-        [OpenApiParameter(name: "Columns", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "List of columns, separated by ',' character")]
+        [OpenApiParameter(name: "Search", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Search in all columns, type <<Column>> = Search for specific search, eg. DeliveryID = 5")]
+        [OpenApiParameter(name: "Columns", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "List of columns, separated by ',' character, all columns will be used by default")]
         [OpenApiParameter(name: "OrderBy", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Order by column, default is DeliveryID")]
         [OpenApiParameter(name: "OrderByDesc", In = ParameterLocation.Query, Required = false, Type = typeof(bool), Description = "Descending order, false by default")]
         [OpenApiParameter(name: "PageSize", In = ParameterLocation.Query, Required = false, Type = typeof(int), Description = "Returned row count, default is 5")]
@@ -284,6 +290,7 @@ namespace AXERP.API.Functions.Transactions
                 OrderDesc = bool.Parse(req.Query["OrderByDesc"] ?? "false"),
                 Page = page,
                 PageSize = pageSize,
+                Search = req.Query["Search"]
             });
 
             return new OkObjectResult(result);

@@ -71,6 +71,14 @@ namespace AXERP.API.Persistence.Repositories
                         })
                     );
 
+                    if (!string.IsNullOrWhiteSpace(request.Search))
+                    {
+                        builder.Where(typeof(RowType).GetSqlSearchExpressionForColumns(null, "@search", request.Search.GetValueType(), "_table"), new DynamicParameters(new Dictionary<string, object>
+                        {
+                            { "@search", request.Search }
+                        }));
+                    }
+
                     builder.OrderBy(string.Format("_table.{0} {1}", request.OrderBy, request.OrderDesc ? "desc" : "asc"));
 
                     result = conn.Query<RowType>(selectTemplate.RawSql, selectTemplate.Parameters).ToList();
