@@ -49,7 +49,6 @@ namespace AXERP.API.Persistence.Repositories
 
                 // Select column list
                 var cols = _requestedColumns.Select(x => "X." + x) ?? new List<string>();
-                var _cols = string.Join(", ", cols);
 
                 // Specific column for search string
                 var _specificSearchColumn = !string.IsNullOrWhiteSpace(request.Search) && request.Search.Split("=").Length > 0 ?
@@ -66,27 +65,23 @@ namespace AXERP.API.Persistence.Repositories
                 {
                     var builder = new SqlBuilder();
 
-                    // Select column list binding
-                    var template = request.QueryTemplate;
-
-                    if (!string.IsNullOrWhiteSpace(_cols))
-                    {
-                        template = string.Format(template, _cols);
-                    }
-
                     // Building template
                     var selectTemplate = builder.AddTemplate(
                         // Query
-                        template,
+                        request.QueryTemplate,
 
                         // Parameters
                         new DynamicParameters(new Dictionary<string, object>
                         {
-                            { "@columns", _cols },
                             { "@start", request.RowNumberStart },
                             { "@finish", request.RowNumberFinish },
                         })
                     );
+
+                    foreach (string c in cols)
+                    {
+                        builder.Select(c);
+                    }
 
                     // Optional search
                     if (!string.IsNullOrWhiteSpace(request.Search))

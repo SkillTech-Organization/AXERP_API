@@ -121,7 +121,7 @@ namespace AXERP.API.Functions.Transactions
 
         public readonly string Sql_Query_Paged_GasTransactions_Dynamic_Columns =
             @"
-            select {0} from 
+            select /**select**/ from 
                 (select _table.*, ROW_NUMBER() OVER (/**orderby**/) AS RowNumber from GasTransactions _table /**where**/)
             as X where RowNumber between @start and @finish
             ";
