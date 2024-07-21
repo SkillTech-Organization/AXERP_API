@@ -95,7 +95,15 @@ namespace AXERP.API.Persistence.Repositories
                             }));
                     }
 
-                    builder.OrderBy(string.Format("_table.{0} {1}", request.OrderBy, request.OrderDesc ? "desc" : "asc"));
+                    if (typeof(RowType).CheckSqlModifier(request.OrderBy, Domain.Attributes.SqlModifiers.StringNumeral))
+                    {
+                        builder.OrderBy(string.Format("len(_table.{0}) {1}, _table.{0} {1}", request.OrderBy, request.OrderDesc ? "desc" : "asc"));
+                    }
+                    else
+                    {
+                        builder.OrderBy(string.Format("_table.{0} {1}", request.OrderBy, request.OrderDesc ? "desc" : "asc"));
+                    }
+
 
                     result = conn.Query(selectTemplate.RawSql, selectTemplate.Parameters).ToList(); // <RowType>
                 }

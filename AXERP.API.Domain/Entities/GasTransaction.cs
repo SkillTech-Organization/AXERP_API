@@ -1,9 +1,11 @@
-﻿using Newtonsoft.Json;
+﻿using AXERP.API.Domain.Attributes;
+using Newtonsoft.Json;
 
 namespace AXERP.API.Domain.Entities
 {
     public class GasTransaction
     {
+        [SqlModifier(SqlModifiers.StringNumeral)]
         [JsonProperty("Delivery ID")]
         [JsonRequired]
         public string DeliveryID { get; set; }

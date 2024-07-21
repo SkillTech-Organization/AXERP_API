@@ -1,4 +1,5 @@
-﻿using AXERP.API.Persistence.ServiceContracts.Models;
+﻿using AXERP.API.Domain.Attributes;
+using AXERP.API.Persistence.ServiceContracts.Models;
 using Newtonsoft.Json;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -212,6 +213,22 @@ namespace AXERP.API.Persistence.Utils
                 return typeof(double);
             }
             return typeof(string);
+        }
+
+        public static bool CheckSqlModifier(this Type t, string propertyName, SqlModifiers sqlModifier)
+        {
+            foreach (var property in t.GetProperties())
+            {
+                var jsonAttributes = property.GetCustomAttributes<SqlModifierAttribute>(true);
+                foreach (var attribute in jsonAttributes)
+                {
+                    if (attribute.Modifier == sqlModifier)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
     }
 }

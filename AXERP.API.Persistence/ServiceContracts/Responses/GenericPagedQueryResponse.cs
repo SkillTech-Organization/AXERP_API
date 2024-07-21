@@ -5,7 +5,7 @@ namespace AXERP.API.Persistence.ServiceContracts.Responses
 {
     public class GenericPagedQueryResponse<RowType> : BaseResponse
     {
-        public IEnumerable<RowType> Data { get; set; }
+        public List<RowType> Data { get; set; }
 
         public List<ColumnData> Columns { get; set; }
 
