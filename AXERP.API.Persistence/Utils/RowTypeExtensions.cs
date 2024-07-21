@@ -71,7 +71,7 @@ namespace AXERP.API.Persistence.Utils
                 if (includeJsonAttributes)
                 {
                     var jsonAttribute = property.GetCustomAttribute<JsonPropertyAttribute>(true);
-                    if (jsonAttribute != null && !string.IsNullOrWhiteSpace(jsonAttribute.PropertyName) && column == jsonAttribute.PropertyName)
+                    if (jsonAttribute != null && !string.IsNullOrWhiteSpace(jsonAttribute.PropertyName) && column.ToLower() == jsonAttribute.PropertyName.ToLower())
                     {
                         return property.Name;
                     }

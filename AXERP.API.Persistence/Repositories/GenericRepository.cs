@@ -48,11 +48,12 @@ namespace AXERP.API.Persistence.Repositories
                 var _requestedColumns = request.Columns?.Any() ?? false ? typeof(RowType).FilterValidColumns(request.Columns) : typeof(RowType).GetColumnNames(null);
 
                 // Select column list
-                var cols = _requestedColumns.Select(x => "X." + x) ?? new List<string>();
+                // Make sure to "copy" with ToList so setting _requestedColumns won't modify by reference
+                var cols = _requestedColumns.Select(x => "X." + x).ToList() ?? new List<string>();
 
                 // Specific column for search string
                 var _specificSearchColumn = !string.IsNullOrWhiteSpace(request.Search) && request.Search.Split("=").Length > 0 ?
-                    typeof(RowType).FilterValidColumn(request.Search.Split("=")[0]?.Trim()) : null;
+                    typeof(RowType).FilterValidColumn(request.Search.Split("=")[0]?.Trim(), true) : null;
                 if (!string.IsNullOrWhiteSpace(_specificSearchColumn))
                 {
                     _requestedColumns.Clear();
