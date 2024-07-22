@@ -68,6 +68,13 @@ namespace AXERP.API.Functions.SheetProcessors
 
                     gasTransaction.DeliveryID = row[field_idx].ToString()!;
 
+                    if (result.Any(x => x.DeliveryID == gasTransaction.DeliveryID))
+                    {
+                        invalidRows++;
+                        errors.Add($"Duplicate Delivery ID: {gasTransaction.DeliveryID}. RowIndex: {sheet_row_index}");
+                        continue;
+                    }
+
                     // DateLoadedEnd
                     field_idx = field_names[nameof(gasTransaction.DateLoadedEnd)];
                     if (row.Count <= field_idx)

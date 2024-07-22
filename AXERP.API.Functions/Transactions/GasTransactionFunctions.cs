@@ -18,6 +18,8 @@ using YamlDotNet.Core;
 using AXERP.API.Persistence.Repositories;
 using AXERP.API.Persistence.ServiceContracts.Requests;
 using AXERP.API.Persistence.Utils;
+using AutoMapper;
+using Location = AXERP.API.Domain.Entities.Location;
 
 namespace AXERP.API.Functions.Transactions
 {
@@ -26,33 +28,36 @@ namespace AXERP.API.Functions.Transactions
         private readonly ILogger<GasTransactionFunctions> _logger;
         private readonly GasTransactionSheetProcessor _gasTransactionSheetProcessor;
         private readonly GenericRepository _genericRepository;
+        private readonly IMapper _mapper;
 
         public GasTransactionFunctions(
             ILogger<GasTransactionFunctions> logger,
             GasTransactionSheetProcessor gasTransactionSheetProcessor,
-            GenericRepository genericRepository)
+            GenericRepository genericRepository,
+            IMapper mapper)
         {
             _logger = logger;
             _gasTransactionSheetProcessor = gasTransactionSheetProcessor;
             _genericRepository = genericRepository;
+            _mapper = mapper;
         }
 
         #region SQL Scripts
 
-        public readonly string Sql_Insert_GasTransaction = @"
-                INSERT INTO GasTransactions
-                       (DeliveryID
+        public readonly string Sql_Insert_Delivery = @"
+                INSERT INTO Deliveries
+                       (ID
                        ,DateLoadedEnd
                        ,DateDelivered
                        ,SalesContractID
                        ,SalesStatus
-                       ,Terminal
+                       ,TerminalID
                        ,QtyLoaded
                        ,ToDeliveryID
                        ,Status
-                       ,SpecificDeliveryPoint
-                       ,DeliveryPoint
-                       ,Transporter
+                       ,SpecificDeliveryPointID
+                       ,DeliveryPointID
+                       ,TransporterID
                        ,DeliveryUP
                        ,TransportCharges
                        ,UnitSlotCharge
@@ -66,26 +71,22 @@ namespace AXERP.API.Functions.Transactions
                        ,BillOfLading
                        ,BioAddendum
                        ,Comment
-                       ,CustomerNote
-                       ,Customer
-                       ,Reference
-                       ,Reference2
-                       ,Reference3
-                       ,TruckLoadingCompanyComment
-                       ,TruckCompany)
+                       ,ReferenceID1
+                       ,ReferenceID2
+                       ,ReferenceID3)
                  VALUES
-                       (@DeliveryID
+                       (@ID
                        ,@DateLoadedEnd
                        ,@DateDelivered
                        ,@SalesContractID
                        ,@SalesStatus
-                       ,@Terminal
+                       ,@TerminalID
                        ,@QtyLoaded
                        ,@ToDeliveryID
                        ,@Status
-                       ,@SpecificDeliveryPoint
-                       ,@DeliveryPoint
-                       ,@Transporter
+                       ,@SpecificDeliveryPointID
+                       ,@DeliveryPointID
+                       ,@TransporterID
                        ,@DeliveryUP
                        ,@TransportCharges
                        ,@UnitSlotCharge
@@ -99,17 +100,13 @@ namespace AXERP.API.Functions.Transactions
                        ,@BillOfLading
                        ,@BioAddendum
                        ,@Comment
-                       ,@CustomerNote
-                       ,@Customer
-                       ,@Reference
-                       ,@Reference2
-                       ,@Reference3
-                       ,@TruckLoadingCompanyComment
-                       ,@TruckCompany)
+                       ,@ReferenceID1
+                       ,@ReferenceID2
+                       ,@ReferenceID3)
             ";
 
-        public readonly string Sql_Select_GasTransaction_IDs = @"
-                select DeliveryID from GasTransactions
+        public readonly string Sql_Select_Delivery_IDs = @"
+                select ID from Deliveries
             ";
 
         public readonly string Sql_Query_Paged_GasTransactions = 
@@ -147,13 +144,168 @@ namespace AXERP.API.Functions.Transactions
 
             using (var conn = new SqlConnection(Environment.GetEnvironmentVariable("SqlConnectionString")))
             {
-                var ids = conn.Query<string>(Sql_Select_GasTransaction_IDs);
-                var newRows = importResult.Data.Where(x => !ids.Contains(x.DeliveryID));
-                res.NewRowsInsertedIntoDatabase += conn.Execute(Sql_Insert_GasTransaction, newRows);
+                conn.Open();
+                using (var transaction = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        /*
+                         * FILTER NEW DATA
+                         */
+
+                        // New Deliveries row check
+                        var ids = conn.Query<string>(Sql_Select_Delivery_IDs, transaction: transaction);
+                        var newSheetRows = importResult.Data.Where(x => !ids.Contains(x.DeliveryID));
+
+                        var locations = conn.Query<Location>("select * from Locations", transaction: transaction).ToList();
+                        var entities = conn.Query<Entity>("select * from Entities", transaction: transaction).ToList();
+                        var truckCompanies = conn.Query<TruckCompany>("select * from TruckCompanies", transaction: transaction).ToList();
+                        var customers = conn.Query<Customer>("select * from Customers", transaction: transaction).ToList();
+                        var transporters = conn.Query<Transporter>("select * from Transporters", transaction: transaction).ToList();
+
+                        var ctd = new List<CustomerToDelivery>();
+                        var ttd = new List<TruckCompanyToDelivery>();
+
+                        var deliveries = new List<Delivery>();
+
+                        foreach (var newSheetRow in newSheetRows)
+                        {
+                            var delivery = _mapper.Map<Delivery>(newSheetRow);
+
+                            delivery.ID = newSheetRow.DeliveryID;
+
+                            var newTerminal = locations.FirstOrDefault(x => x.Name == newSheetRow.Terminal);
+                            if (newTerminal == null && !string.IsNullOrWhiteSpace(newSheetRow.Terminal) && !locations.Any(x => x.Name == newSheetRow.Terminal))
+                            {
+                                newTerminal = conn.QuerySingle<Location>(@"INSERT INTO Locations (Name) OUTPUT INSERTED.ID, INSERTED.NAME VALUES (@Name)", new { Name = newSheetRow.Terminal }, transaction: transaction);
+                                locations.Add(newTerminal);
+                            }
+
+                            var newDeliveryPoint = locations.FirstOrDefault(x => x.Name == newSheetRow.DeliveryPoint);
+                            if (newDeliveryPoint == null && !string.IsNullOrWhiteSpace(newSheetRow.DeliveryPoint) && !locations.Any(x => x.Name == newSheetRow.DeliveryPoint))
+                            {
+                                newDeliveryPoint = conn.QuerySingle<Location>(@"INSERT INTO Locations (Name) OUTPUT INSERTED.ID, INSERTED.NAME VALUES (@Name)", new { Name = newSheetRow.DeliveryPoint }, transaction: transaction);
+                                locations.Add(newDeliveryPoint);
+                            }
+
+                            var newSpecificPoint = locations.FirstOrDefault(x => x.Name == newSheetRow.SpecificDeliveryPoint);
+                            if (newSpecificPoint == null && !string.IsNullOrWhiteSpace(newSheetRow.SpecificDeliveryPoint) && !locations.Any(x => x.Name == newSheetRow.SpecificDeliveryPoint))
+                            {
+                                newSpecificPoint = conn.QuerySingle<Location>(@"INSERT INTO Locations (Name) OUTPUT INSERTED.ID, INSERTED.NAME VALUES (@Name)", new { Name = newSheetRow.SpecificDeliveryPoint }, transaction: transaction);
+                                locations.Add(newSpecificPoint);
+                            }
+
+                            var newRef = entities.FirstOrDefault(x => x.Name == newSheetRow.Reference);
+                            if (newRef == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference) && !entities.Any(x => x.Name == newSheetRow.Reference))
+                            {
+                                newRef = conn.QuerySingle<Entity>(@"INSERT INTO Entities (Name) OUTPUT INSERTED.ID, INSERTED.NAME VALUES (@Name)", new { Name = newSheetRow.Reference }, transaction: transaction);
+                                entities.Add(newRef);
+                            }
+
+                            var newRef2 = entities.FirstOrDefault(x => x.Name == newSheetRow.Reference2);
+                            if (newRef2 == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference2) && !entities.Any(x => x.Name == newSheetRow.Reference2))
+                            {
+                                newRef2 = conn.QuerySingle<Entity>(@"INSERT INTO Entities (Name) OUTPUT INSERTED.ID, INSERTED.NAME VALUES (@Name)", new { Name = newSheetRow.Reference2 }, transaction: transaction);
+                                entities.Add(newRef2);
+                            }
+
+                            var newRef3 = entities.FirstOrDefault(x => x.Name == newSheetRow.Reference3);
+                            if (newRef3 == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference3) && !entities.Any(x => x.Name == newSheetRow.Reference3))
+                            {
+                                newRef3 = conn.QuerySingle<Entity>(@"INSERT INTO Entities (Name) OUTPUT INSERTED.ID, INSERTED.NAME VALUES (@Name)", new { Name = newSheetRow.Reference3 }, transaction: transaction);
+                                entities.Add(newRef3);
+                            }
+
+                            var newTransporter = transporters.FirstOrDefault(x => x.Name == newSheetRow.Transporter);
+                            if (newTransporter == null && !string.IsNullOrWhiteSpace(newSheetRow.Transporter) && !transporters.Any(x => x.Name == newSheetRow.Transporter))
+                            {
+                                newTransporter = conn.QuerySingle<Transporter>(@"INSERT INTO Transporters (Name) OUTPUT INSERTED.ID, INSERTED.NAME VALUES (@Name)", new { Name = newSheetRow.Transporter }, transaction: transaction);
+                                transporters.Add(newTransporter);
+                            }
+
+                            var newTruckCompany = truckCompanies.FirstOrDefault(x => x.Name == newSheetRow.TruckCompany);
+                            if (newTruckCompany == null && !string.IsNullOrWhiteSpace(newSheetRow.TruckCompany) && !truckCompanies.Any(x => x.Name == newSheetRow.TruckCompany))
+                            {
+                                newTruckCompany = conn.QuerySingle<TruckCompany>(@"INSERT INTO TruckCompanies (Name) OUTPUT INSERTED.ID, INSERTED.NAME VALUES (@Name)", new { Name = newSheetRow.TruckCompany }, transaction: transaction);
+                                truckCompanies.Add(newTruckCompany);
+                            }
+
+                            var newCustomer = customers.FirstOrDefault(x => x.Name == newSheetRow.Customer);
+                            if (newCustomer == null && !string.IsNullOrWhiteSpace(newSheetRow.Customer) && !customers.Any(x => x.Name == newSheetRow.Customer))
+                            {
+                                newCustomer = conn.QuerySingle<Customer>(@"INSERT INTO Customers (Name) OUTPUT INSERTED.ID, INSERTED.NAME VALUES (@Name)", new { Name = newSheetRow.Customer }, transaction: transaction);
+                                customers.Add(newCustomer);
+                            }
+
+                            delivery.TerminalID = newTerminal?.ID;
+
+                            delivery.DeliveryPointID = newDeliveryPoint?.ID;
+                            delivery.SpecificDeliveryPointID = newSpecificPoint?.ID;
+
+                            delivery.ReferenceID1 = newRef?.ID;
+                            delivery.ReferenceID2 = newRef2?.ID;
+                            delivery.ReferenceID3 = newRef3?.ID;
+
+                            delivery.TransporterID = newTransporter?.ID;
+
+                            if (newCustomer != null)
+                            {
+                                ctd.Add(new CustomerToDelivery
+                                {
+                                    DeliveryID = delivery.ID,
+                                    CustomerID = newCustomer.ID,
+                                    Comment = newSheetRow.CustomerNote
+                                });
+                            }
+
+                            if (newTruckCompany != null)
+                            {
+                                ttd.Add(new TruckCompanyToDelivery
+                                {
+                                    DeliveryID = delivery.ID,
+                                    TruckCompanyID = newTruckCompany.ID,
+                                    Comment = newSheetRow.TruckLoadingCompanyComment
+                                });
+                            }
+
+                            //delivery.TruckCompanyToDeliveryID = newTruckCompany?.ID;
+                            //delivery.CustomerToDeliveryID = newCustomer?.ID;
+
+                            deliveries.Add(delivery);
+                        }
+
+                        transaction.Save("pt-before-deliveries");
+
+                        // New Deliveries
+                        res.NewRowsInsertedIntoDatabase += conn.Execute(Sql_Insert_Delivery, deliveries, transaction: transaction);
+
+                        transaction.Save("pt-before-ctd-ttd");
+
+                        conn.Execute(@"INSERT INTO CustomerToDelivery (DeliveryID, CustomerID, Comment) VALUES (@DeliveryID, @CustomerID, @Comment)", ctd, transaction: transaction);
+                        conn.Execute(@"INSERT INTO TruckCompanyToDelivery (DeliveryID, TruckCompanyID, Comment) VALUES (@DeliveryID, @TruckCompanyID, @Comment)", ttd, transaction: transaction);
+
+                        transaction.Commit();
+                    }
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
             }
 
             return res;
         }
+
+        //[Function(nameof(ClearDatabaseDeliveries))]
+        //[OpenApiOperation(operationId: nameof(ClearDatabaseDeliveries), tags: new[] { "database" })]
+        //[OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
+        //public async Task<IActionResult> ClearDatabaseDeliveries([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
+        //{
+        //    _logger.LogInformation("Clearing Deliveries and associated data from database...");
+
+
+        //}
 
         [Function(nameof(ImportGasTransactions))]
         [OpenApiOperation(operationId: nameof(ImportGasTransactions), tags: new[] { "gas-transactions" })]
@@ -256,7 +408,7 @@ namespace AXERP.API.Functions.Transactions
         public int CountGasTransactions(
                 [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
-            return _genericRepository.Count(Environment.GetEnvironmentVariable("Sql_Query_Count_GasTransactions") ?? Sql_Query_Count_GasTransactions);
+            return _genericRepository.Count(Environment.GetEnvironmentVariable(nameof(Sql_Query_Count_GasTransactions)) ?? Sql_Query_Count_GasTransactions);
         }
 
         [Function(nameof(QueryGasTransactions))]
@@ -272,8 +424,8 @@ namespace AXERP.API.Functions.Transactions
         public IActionResult QueryGasTransactions(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
-            var queryTemplate = Environment.GetEnvironmentVariable("Sql_Query_Paged_GasTransactions_Dynamic_Columns") ?? Sql_Query_Paged_GasTransactions_Dynamic_Columns;
-            var countTemplate = Environment.GetEnvironmentVariable("Sql_Query_Count_GasTransactions") ?? Sql_Query_Count_GasTransactions;
+            var queryTemplate = Environment.GetEnvironmentVariable(nameof(Sql_Query_Paged_GasTransactions_Dynamic_Columns)) ?? Sql_Query_Paged_GasTransactions_Dynamic_Columns;
+            var countTemplate = Environment.GetEnvironmentVariable(nameof(Sql_Query_Count_GasTransactions)) ?? Sql_Query_Count_GasTransactions;
 
             var cols = req.Query["Columns"]?.ToString()?.Split(",", StringSplitOptions.TrimEntries)?.ToList() ?? new List<string>();
 

@@ -1,6 +1,7 @@
 ﻿using AXERP.API.Persistence.ServiceContracts.Requests;
 using AXERP.API.Persistence.ServiceContracts.Responses;
 using AXERP.API.Persistence.Utils;
+using Azure.Core;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
@@ -36,6 +37,33 @@ namespace AXERP.API.Persistence.Repositories
             return count;
         }
 
+        private Dictionary<string, string> GetSpecificSearchPairs<RowType>(string searchString, string searchDelimeter = "|", string columnValueDelimeter = "=")
+        {
+            var result = new Dictionary<string, string>();
+
+            if (string.IsNullOrWhiteSpace(searchString))
+            {
+                return result;
+            }
+
+            var columnSearches = searchString.Split(searchDelimeter);
+            foreach(var columnSearch in columnSearches)
+            {
+                var searchColumn = 
+                    !string.IsNullOrWhiteSpace(columnSearch) &&
+                    columnSearch.Split(columnValueDelimeter).Length > 1 ?
+                        typeof(RowType).FilterValidColumn(columnSearch.Split(columnValueDelimeter)[0]?.Trim(), true) : 
+                        null;
+                if (!string.IsNullOrWhiteSpace(searchColumn) && !result.ContainsKey(searchColumn))
+                {
+                    var searchValue = columnSearch.Split(columnValueDelimeter)[1].TrimStart();
+                    result[searchColumn] = searchValue;
+                }
+            }
+
+            return result;
+        }
+
         public GenericPagedQueryResponse<dynamic> PagedQuery<RowType>(PagedQueryRequest request)
         {
             var result = new List<dynamic>();
@@ -45,22 +73,21 @@ namespace AXERP.API.Persistence.Repositories
             {
                 totalCount = Count(request.CountTemplate);
 
-                var _requestedColumns = request.Columns?.Any() ?? false ? typeof(RowType).FilterValidColumns(request.Columns) : typeof(RowType).GetColumnNames(null);
+                var _columnsFromRequest = request.Columns?.Any() ?? false ? typeof(RowType).FilterValidColumns(request.Columns) : typeof(RowType).GetColumnNames(null);
 
                 // Select column list
-                // Make sure to "copy" with ToList so setting _requestedColumns won't modify by reference
-                var cols = _requestedColumns.Select(x => "X." + x).ToList() ?? new List<string>();
+                // Make sure to "copy" with ToList so setting searchColumns won't modify by reference
+                var columnsForSelect = _columnsFromRequest.Select(x => "X." + x).ToList() ?? new List<string>();
+                var searchColumns = columnsForSelect.ToList();
 
-                // Specific column for search string
-                var _specificSearchColumn = !string.IsNullOrWhiteSpace(request.Search) && request.Search.Split("=").Length > 0 ?
-                    typeof(RowType).FilterValidColumn(request.Search.Split("=")[0]?.Trim(), true) : null;
-                if (!string.IsNullOrWhiteSpace(_specificSearchColumn))
-                {
-                    _requestedColumns.Clear();
-                    _requestedColumns.Add(_specificSearchColumn);
-                    request.SearchOnlyInSelectedColumns = true;
-                    request.Search = request.Search.Split("=")[1].TrimStart();
-                }
+                // Specific columns for search string
+                var searchPairs = GetSpecificSearchPairs<RowType>(request.Search);
+                //if (searchPairs.Keys.Count > 0)
+                //{
+                //    searchColumns.Clear();
+                //    searchColumns.AddRange(searchPairs.Keys);
+                //    request.SearchOnlyInSelectedColumns = true;
+                //}
 
                 using (var conn = GetConnection())
                 {
@@ -79,7 +106,7 @@ namespace AXERP.API.Persistence.Repositories
                         })
                     );
 
-                    foreach (string c in cols)
+                    foreach (string c in columnsForSelect)
                     {
                         builder.Select(c);
                     }
@@ -87,13 +114,32 @@ namespace AXERP.API.Persistence.Repositories
                     // Optional search
                     if (!string.IsNullOrWhiteSpace(request.Search))
                     {
-                        builder.Where(
-                            typeof(RowType).GetSqlSearchExpressionForColumns(
-                                request.SearchOnlyInSelectedColumns ? _requestedColumns : null, "@search", request.Search.GetValueType(), "_table"),
-                            new DynamicParameters(new Dictionary<string, object>
+                        if (searchPairs.Keys.Count > 0)
+                        {
+                            var param_idx = 0;
+                            var dynamicParams = new Dictionary<string, object>();
+                            foreach (var searchPair in searchPairs)
                             {
+                                dynamicParams.Add($"@search{param_idx++}", searchPair.Value);
+                            }
+
+                            var valueTypes = searchPairs.Values.Select(x => x.GetValueType()).ToList();
+
+                            builder.Where(
+                                    typeof(RowType).GetSqlMultiSearchExpressionForSpecificColumns(
+                                        request.SearchOnlyInSelectedColumns ? searchPairs.Keys.ToList() : null, $"@search{param_idx}", valueTypes, "_table"),
+                                    new DynamicParameters(dynamicParams));
+                        }
+                        else
+                        {
+                            builder.Where(
+                                typeof(RowType).GetSqlSearchExpressionForColumns(
+                                    request.SearchOnlyInSelectedColumns ? searchColumns : null, "@search", request.Search.GetValueType(), "_table"),
+                                new DynamicParameters(new Dictionary<string, object>
+                                {
                                 { "@search", request.Search }
-                            }));
+                                }));
+                        }
                     }
 
                     if (typeof(RowType).CheckSqlModifier(request.OrderBy, Domain.Attributes.SqlModifiers.StringNumeral))

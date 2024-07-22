@@ -202,6 +202,77 @@ namespace AXERP.API.Persistence.Utils
             return string.Join(" or ", columns);
         }
 
+        public static string GetSqlMultiSearchExpressionForSpecificColumns(this Type t, List<string>? columnList, string? baseParameterName, List<Type> parameterTypes, string? selectAlias)
+        {
+            var columns = new List<string>();
+
+            int parameterIdx = 0;
+
+            foreach (var property in t.GetProperties())
+            {
+                if (columnList == null || !columnList.Any() || columnList.Contains(property.Name))
+                {
+                    var parameterType = parameterTypes[parameterIdx];
+
+                    if (property.PropertyType == typeof(float) ||
+                        property.PropertyType == typeof(double) ||
+                        property.PropertyType == typeof(int) ||
+                        property.PropertyType == typeof(decimal) ||
+                        property.PropertyType == typeof(float?) ||
+                        property.PropertyType == typeof(double?) ||
+                        property.PropertyType == typeof(int?) ||
+                        property.PropertyType == typeof(decimal?))
+                    {
+                        if (parameterType == typeof(double))
+                        {
+                            if (!string.IsNullOrWhiteSpace(selectAlias))
+                            {
+                                columns.Add($"{selectAlias}.{property.Name} = {baseParameterName}{parameterIdx}");
+                            }
+                            else
+                            {
+                                columns.Add($"{property.Name} = {baseParameterName}{parameterIdx}");
+                            }
+                        }
+                    }
+                    else if (property.PropertyType == typeof(DateTime) ||
+                        property.PropertyType == typeof(DateOnly) ||
+                        property.PropertyType == typeof(DateTimeOffset) ||
+                        property.PropertyType == typeof(DateTime?) ||
+                        property.PropertyType == typeof(DateOnly?) ||
+                        property.PropertyType == typeof(DateTimeOffset?))
+                    {
+                        if (parameterType == typeof(DateTime))
+                        {
+                            if (!string.IsNullOrWhiteSpace(selectAlias))
+                            {
+                                columns.Add($"{selectAlias}.{property.Name} = {baseParameterName}{parameterIdx}");
+                            }
+                            else
+                            {
+                                columns.Add($"{property.Name} = {baseParameterName}{parameterIdx}");
+                            }
+                        }
+                    }
+                    else// if (parameterType == typeof(string))
+                    {
+                        if (!string.IsNullOrWhiteSpace(selectAlias))
+                        {
+                            columns.Add($"{selectAlias}.{property.Name} LIKE {baseParameterName}{parameterIdx}");
+                        }
+                        else
+                        {
+                            columns.Add($"{property.Name} LIKE {baseParameterName}{parameterIdx}");
+                        }
+                    }
+
+                    parameterIdx++;
+                }
+            }
+
+            return string.Join(" or ", columns);
+        }
+
         public static Type GetValueType(this string value)
         {
             if (DateTime.TryParse(value, out var _))

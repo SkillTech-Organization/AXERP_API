@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using AXERP.API.Domain.Entities;
 
 namespace AXERP.API.Domain.AutoMapperProfiles
 {
@@ -6,7 +7,7 @@ namespace AXERP.API.Domain.AutoMapperProfiles
     {
         public ModelProfile()
         {
-            //CreateMap<GasTransaction, GasTransaction>().ReverseMap();
+            CreateMap<GasTransaction, Delivery>().ReverseMap();
         }
     }
 }
