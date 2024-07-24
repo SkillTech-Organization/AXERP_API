@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System.Diagnostics;
 
-namespace AXERP.API.Business.JsonConverters
+namespace AXERP.API.GoogleHelper.JsonConverters
 {
     public class DoubleConverter : JsonConverter<double?>
     {

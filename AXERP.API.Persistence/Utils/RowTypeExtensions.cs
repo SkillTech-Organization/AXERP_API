@@ -1,6 +1,7 @@
 ﻿using AXERP.API.Domain.Attributes;
 using AXERP.API.Persistence.ServiceContracts.Models;
 using Newtonsoft.Json;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
@@ -300,6 +301,12 @@ namespace AXERP.API.Persistence.Utils
                 }
             }
             return false;
+        }
+
+        public static string GetTableName(this Type t)
+        {
+            var tableAttrib = t.GetCustomAttribute<TableAttribute>();
+            return tableAttrib?.Name ?? t.Name;
         }
     }
 }

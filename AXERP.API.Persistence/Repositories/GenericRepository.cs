@@ -1,10 +1,11 @@
-﻿using AXERP.API.Persistence.ServiceContracts.Requests;
+﻿using AXERP.API.Persistence.Queries;
+using AXERP.API.Persistence.ServiceContracts.Requests;
 using AXERP.API.Persistence.ServiceContracts.Responses;
 using AXERP.API.Persistence.Utils;
-using Azure.Core;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
+using System.Text.RegularExpressions;
 
 namespace AXERP.API.Persistence.Repositories
 {
@@ -25,16 +26,27 @@ namespace AXERP.API.Persistence.Repositories
             return new SqlConnection(Environment.GetEnvironmentVariable(_connectionStringKey));
         }
 
-        public int Count(string queryTemplate)
+        private bool CheckIfTableExists(string tableName, bool onlyLetters = true)
         {
-            int count = 0;
+            if (onlyLetters)
+            {
+                string pattern = @"[^a-zA-Z0-9]";
+                if (Regex.IsMatch(tableName, pattern))
+                {
+                    return false;
+                }
+            }
+
             using (var conn = GetConnection())
             {
-                var builder = new SqlBuilder();
-                var countTemplate = builder.AddTemplate(queryTemplate);
-                count = conn.ExecuteScalar<int>(countTemplate.RawSql, countTemplate.Parameters);
+                string tableNameCheckQuery = "select count(1) from information_schema.tables where table_name = @tableName";
+                if (conn.QuerySingle<int>(tableNameCheckQuery, new { tableName }) == 1)
+                {
+                    return true;
+                }
             }
-            return count;
+
+            return false;
         }
 
         private Dictionary<string, string> GetSpecificSearchPairs<RowType>(string searchString, string searchDelimeter = "|", string columnValueDelimeter = "=")
@@ -47,12 +59,12 @@ namespace AXERP.API.Persistence.Repositories
             }
 
             var columnSearches = searchString.Split(searchDelimeter);
-            foreach(var columnSearch in columnSearches)
+            foreach (var columnSearch in columnSearches)
             {
-                var searchColumn = 
+                var searchColumn =
                     !string.IsNullOrWhiteSpace(columnSearch) &&
                     columnSearch.Split(columnValueDelimeter).Length > 1 ?
-                        typeof(RowType).FilterValidColumn(columnSearch.Split(columnValueDelimeter)[0]?.Trim(), true) : 
+                        typeof(RowType).FilterValidColumn(columnSearch.Split(columnValueDelimeter)[0]?.Trim(), true) :
                         null;
                 if (!string.IsNullOrWhiteSpace(searchColumn) && !result.ContainsKey(searchColumn))
                 {
@@ -71,7 +83,7 @@ namespace AXERP.API.Persistence.Repositories
 
             try
             {
-                totalCount = Count(request.CountTemplate);
+                totalCount = CountAll<RowType>();
 
                 var _columnsFromRequest = request.Columns?.Any() ?? false ? typeof(RowType).FilterValidColumns(request.Columns) : typeof(RowType).GetColumnNames(null);
 
@@ -169,6 +181,154 @@ namespace AXERP.API.Persistence.Repositories
                 TotalCount = totalCount,
                 Columns = typeof(RowType).GetColumnDatas(request.Columns)
             };
+        }
+
+        public IEnumerable<RowType> GetAll<RowType>(string tableName, SqlConnection? conn = null, SqlTransaction? transaction = null)
+        {
+            if (CheckIfTableExists(tableName))
+            {
+                if (conn != null)
+                {
+                    var rows = conn.Query<RowType>(string.Format(ParameterizedQueries.GetAll, tableName), transaction: transaction);
+                    return rows;
+                }
+                using (conn = GetConnection())
+                {
+                    var rows = conn.Query<RowType>(string.Format(ParameterizedQueries.GetAll, tableName));
+                    return rows;
+                }
+            }
+            throw new Exception($"Illegal table name: {tableName}");
+        }
+
+        public int DeleteAll(string tableName, SqlConnection? conn = null, SqlTransaction? transaction = null)
+        {
+            if (CheckIfTableExists(tableName))
+            {
+                if (conn != null)
+                {
+                    var affectedRows = conn.Execute(string.Format(ParameterizedQueries.DeleteAll, tableName), transaction: transaction);
+                    return affectedRows;
+                }
+                using (conn = GetConnection())
+                {
+                    var affectedRows = conn.Execute(string.Format(ParameterizedQueries.DeleteAll, tableName), transaction: transaction);
+                    return affectedRows;
+                }
+            }
+            throw new Exception($"Illegal table name: {tableName}");
+        }
+
+        public int CountAll(string tableName, SqlConnection? conn = null, SqlTransaction? transaction = null)
+        {
+            if (CheckIfTableExists(tableName))
+            {
+                if (conn != null)
+                {
+                    var rowCount = conn.ExecuteScalar<int>(string.Format(ParameterizedQueries.Count, tableName), transaction: transaction);
+                    return rowCount;
+                }
+                using (conn = GetConnection())
+                {
+                    var rowCount = conn.ExecuteScalar<int>(string.Format(ParameterizedQueries.Count, tableName), transaction: transaction);
+                    return rowCount;
+                }
+            }
+            throw new Exception($"Illegal table name: {tableName}");
+        }
+
+        public IEnumerable<int> GetAllIDs(string tableName, SqlConnection? conn = null, SqlTransaction? transaction = null)
+        {
+            if (CheckIfTableExists(tableName))
+            {
+                if (conn != null)
+                {
+                    var rowCount = conn.Query<int>(string.Format(ParameterizedQueries.GetALLIDs, tableName), transaction: transaction);
+                    return rowCount;
+                }
+                using (conn = GetConnection())
+                {
+                    var rowCount = conn.Query<int>(string.Format(ParameterizedQueries.GetALLIDs, tableName), transaction: transaction);
+                    return rowCount;
+                }
+            }
+            throw new Exception($"Illegal table name: {tableName}");
+        }
+
+        public IEnumerable<RowType> GetAll<RowType>(SqlConnection? conn = null, SqlTransaction? transaction = null)
+        {
+            var tableName = typeof(RowType).GetTableName();
+            if (CheckIfTableExists(tableName))
+            {
+                if (conn != null)
+                {
+                    var rows = conn.Query<RowType>(string.Format(ParameterizedQueries.GetAll, tableName), transaction: transaction);
+                    return rows;
+                }
+                using (conn = GetConnection())
+                {
+                    var rows = conn.Query<RowType>(string.Format(ParameterizedQueries.GetAll, tableName));
+                    return rows;
+                }
+            }
+            throw new Exception($"Illegal table name: {tableName}");
+        }
+
+        public int DeleteAll<RowType>(SqlConnection? conn = null, SqlTransaction? transaction = null)
+        {
+            var tableName = typeof(RowType).GetTableName();
+            if (CheckIfTableExists(tableName))
+            {
+                if (conn != null)
+                {
+                    var affectedRows = conn.Execute(string.Format(ParameterizedQueries.DeleteAll, tableName), transaction: transaction);
+                    return affectedRows;
+                }
+                using (conn = GetConnection())
+                {
+                    var affectedRows = conn.Execute(string.Format(ParameterizedQueries.DeleteAll, tableName), transaction: transaction);
+                    return affectedRows;
+                }
+            }
+            throw new Exception($"Illegal table name: {tableName}");
+        }
+
+        public int CountAll<RowType>(SqlConnection? conn = null, SqlTransaction? transaction = null)
+        {
+            var tableName = typeof(RowType).GetTableName();
+            if (CheckIfTableExists(tableName))
+            {
+                if (conn != null)
+                {
+                    var rowCount = conn.ExecuteScalar<int>(string.Format(ParameterizedQueries.Count, tableName), transaction: transaction);
+                    return rowCount;
+                }
+                using (conn = GetConnection())
+                {
+                    var rowCount = conn.ExecuteScalar<int>(string.Format(ParameterizedQueries.Count, tableName), transaction: transaction);
+                    return rowCount;
+                }
+            }
+            throw new Exception($"Illegal table name: {tableName}");
+        }
+
+        public IEnumerable<int> GetAllIDs<RowType>(SqlConnection? conn = null, SqlTransaction? transaction = null)
+        {
+            var tableName = typeof(RowType).GetTableName();
+            if (CheckIfTableExists(tableName))
+            {
+                if (conn != null)
+                {
+                    var rowCount = conn.Query<int>(string.Format(ParameterizedQueries.GetALLIDs, tableName), transaction: transaction);
+                    return rowCount;
+                }
+                using (conn = GetConnection())
+                {
+                    var rowCount = conn.Query<int>(string.Format(ParameterizedQueries.GetALLIDs, tableName), transaction: transaction);
+                    return rowCount;
+                }
+            }
+            throw new Exception($"Illegal table name: {tableName}");
         }
     }
 }

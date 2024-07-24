@@ -408,7 +408,7 @@ namespace AXERP.API.Functions.Transactions
         public int CountGasTransactions(
                 [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
-            return _genericRepository.Count(Environment.GetEnvironmentVariable(nameof(Sql_Query_Count_GasTransactions)) ?? Sql_Query_Count_GasTransactions);
+            return _genericRepository.CountAll<GasTransaction>();
         }
 
         [Function(nameof(QueryGasTransactions))]

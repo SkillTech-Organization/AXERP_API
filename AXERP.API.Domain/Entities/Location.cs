@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AXERP.API.Domain.Entities
 {
+    [Table("Locations")]
     public class Location
     {
         public int ID { get; set; }

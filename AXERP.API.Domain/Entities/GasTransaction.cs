@@ -1,8 +1,10 @@
 ﻿using AXERP.API.Domain.Attributes;
 using Newtonsoft.Json;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AXERP.API.Domain.Entities
 {
+    [Table("GasTransactions")]
     public class GasTransaction
     {
         [SqlModifier(SqlModifiers.StringNumeral)]
