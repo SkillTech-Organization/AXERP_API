@@ -1,4 +1,4 @@
-﻿namespace AXERP.API.Persistence.ServiceContracts.Requests
+﻿namespace AXERP.API.Domain.ServiceContracts.Requests
 {
     public class PagedQueryRequest
     {

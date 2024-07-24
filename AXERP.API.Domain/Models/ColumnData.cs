@@ -1,4 +1,4 @@
-﻿namespace AXERP.API.Persistence.ServiceContracts.Models
+﻿namespace AXERP.API.Domain.Models
 {
     public class ColumnData
     {

@@ -1,7 +1,6 @@
-﻿using AXERP.API.Domain.ServiceContracts.Responses;
-using AXERP.API.Persistence.ServiceContracts.Models;
+﻿using AXERP.API.Domain.Models;
 
-namespace AXERP.API.Persistence.ServiceContracts.Responses
+namespace AXERP.API.Domain.ServiceContracts.Responses
 {
     public class GenericPagedQueryResponse<RowType> : BaseResponse
     {

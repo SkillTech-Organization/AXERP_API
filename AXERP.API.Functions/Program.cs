@@ -1,6 +1,7 @@
+using AXERP.API.Business.Commands;
+using AXERP.API.Business.Factories;
 using AXERP.API.Domain.AutoMapperProfiles;
 using AXERP.API.Functions.SheetProcessors;
-using AXERP.API.Persistence.Repositories;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -19,7 +20,9 @@ var host = new HostBuilder()
         services.ConfigureFunctionsApplicationInsights();
         services.AddAutoMapper(typeof(ModelProfile));
         services.AddTransient<GasTransactionSheetProcessor>();
-        services.AddTransient<GenericRepository>();
+        //services.AddTransient<GenericRepository>();
+        services.AddTransient<UnitOfWorkFactory>();
+        services.AddTransient<InsertTransactionsCommand>();
     })
     // Source: https://learn.microsoft.com/en-us/azure/azure-functions/dotnet-isolated-process-guide?tabs=windows#application-insights
     // Quote: "However, by default, the Application Insights SDK adds a logging filter that instructs the logger to capture only warnings and more severe logs. If you want to disable this behavior, remove the filter rule as part of service configuration"

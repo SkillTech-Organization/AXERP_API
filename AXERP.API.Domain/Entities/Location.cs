@@ -3,10 +3,8 @@
 namespace AXERP.API.Domain.Entities
 {
     [Table("Locations")]
-    public class Location
+    public class Location : BaseEntity<int>
     {
-        public int ID { get; set; }
-
         public string Name { get; set; }
     }
 }

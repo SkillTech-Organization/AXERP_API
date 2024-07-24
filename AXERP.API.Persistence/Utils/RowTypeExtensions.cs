@@ -1,10 +1,9 @@
 ﻿using AXERP.API.Domain.Attributes;
-using AXERP.API.Persistence.ServiceContracts.Models;
+using AXERP.API.Domain.Models;
 using Newtonsoft.Json;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text.Json.Nodes;
 
 namespace AXERP.API.Persistence.Utils
 {
@@ -113,16 +112,22 @@ namespace AXERP.API.Persistence.Utils
         /// <param name="t"></param>
         /// <param name="columnList"></param>
         /// <param name="selectAlias">optional alias for select, if not provided, column names will be listed in their own eg. FieldA, FieldB, ...</param>
+        /// <param name="excludeKey"></param>
         /// <returns></returns>
-        public static string GetColumnNamesAsSqlColumnList(this Type t, List<string>? columnList, string? selectAlias)
+        public static string GetColumnNamesAsSqlColumnList(this Type t, List<string>? columnList, string? selectAlias, bool excludeKey = false)
         {
             var columns = new List<string>();
+
+            var key = t.GetKeyColumnName();
 
             foreach (var property in t.GetProperties())
             {
                 if (columnList == null || !columnList.Any() || columnList.Contains(property.Name))
                 {
-                    var jsonName = property.Name;
+                    if (excludeKey && key == property.Name)
+                    {
+                        continue;
+                    }
 
                     if (!string.IsNullOrWhiteSpace(selectAlias))
                     {
@@ -132,6 +137,68 @@ namespace AXERP.API.Persistence.Utils
                     {
                         columns.Add(property.Name);
                     }
+                }
+            }
+
+            return string.Join(",", columns);
+        }
+
+        /// <summary>
+        /// Example:
+        /// object { FieldA, FieldB } -> "selectAlias.FieldA, selectAlias.FieldB"
+        /// </summary>
+        /// <param name="t"></param>
+        /// <param name="columnList"></param>
+        /// <param name="selectAlias">optional alias for select, if not provided, column names will be listed in their own eg. FieldA, FieldB, ...</param>
+        /// <param name="excludeKey"></param>
+        /// <returns></returns>
+        public static string GetColumnNamesAsSqlParamList(this Type t, List<string>? columnList, bool excludeKey = false)
+        {
+            var columns = new List<string>();
+
+            var key = t.GetKeyColumnName();
+
+            foreach (var property in t.GetProperties())
+            {
+                if (columnList == null || !columnList.Any() || columnList.Contains(property.Name))
+                {
+                    if (excludeKey && key == property.Name)
+                    {
+                        continue;
+                    }
+
+                    columns.Add($"@{property.Name}");
+                }
+            }
+
+            return string.Join(",", columns);
+        }
+
+        /// <summary>
+        /// Example:
+        /// object { FieldA, FieldB } -> "selectAlias.FieldA, selectAlias.FieldB"
+        /// </summary>
+        /// <param name="t"></param>
+        /// <param name="columnList"></param>
+        /// <param name="selectAlias">optional alias for select, if not provided, column names will be listed in their own eg. FieldA, FieldB, ...</param>
+        /// <param name="excludeKey"></param>
+        /// <returns></returns>
+        public static string GetColumnNamesAsSqlAssignmentList(this Type t, List<string>? columnList, bool excludeKey = false)
+        {
+            var columns = new List<string>();
+
+            var key = t.GetKeyColumnName();
+
+            foreach (var property in t.GetProperties())
+            {
+                if (columnList == null || !columnList.Any() || columnList.Contains(property.Name))
+                {
+                    if (excludeKey && key == property.Name)
+                    {
+                        continue;
+                    }
+
+                    columns.Add($"property.Name = '@{property.Name}'");
                 }
             }
 
@@ -306,7 +373,34 @@ namespace AXERP.API.Persistence.Utils
         public static string GetTableName(this Type t)
         {
             var tableAttrib = t.GetCustomAttribute<TableAttribute>();
-            return tableAttrib?.Name ?? t.Name;
+            return tableAttrib?.Name ?? t.Name + "s";
+        }
+
+        public static string GetKeyColumnName(this Type t)
+        {
+            PropertyInfo[] properties = t.GetProperties();
+
+            foreach (PropertyInfo property in properties)
+            {
+                object[] keyAttributes = property.GetCustomAttributes(typeof(KeyAttribute), true);
+
+                if (keyAttributes != null && keyAttributes.Length > 0)
+                {
+                    object[] columnAttributes = property.GetCustomAttributes(typeof(ColumnAttribute), true);
+
+                    if (columnAttributes != null && columnAttributes.Length > 0)
+                    {
+                        ColumnAttribute columnAttribute = (ColumnAttribute)columnAttributes[0];
+                        return columnAttribute.Name;
+                    }
+                    else
+                    {
+                        return property.Name;
+                    }
+                }
+            }
+
+            return null;
         }
     }
 }

@@ -3,10 +3,8 @@
 namespace AXERP.API.Domain.Entities
 {
     [Table("Transporters")]
-    public class Transporter
+    public class Transporter : BaseEntity<int>
     {
-        public int ID { get; set; }
-
         public string Name { get; set; }
     }
 }

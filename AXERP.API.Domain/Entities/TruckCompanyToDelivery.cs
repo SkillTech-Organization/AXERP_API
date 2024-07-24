@@ -3,10 +3,8 @@
 namespace AXERP.API.Domain.Entities
 {
     [Table("TruckCompanyToDelivery")]
-    public class TruckCompanyToDelivery
+    public class TruckCompanyToDelivery : BaseEntity<int>
     {
-        public int ID { get; set; }
-
         public string? DeliveryID { get; set; }
 
         public int? TruckCompanyID { get; set; }

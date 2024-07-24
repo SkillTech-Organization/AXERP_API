@@ -10,8 +10,4 @@
     <PackageReference Include="Google.Apis.Sheets.v4" Version="1.68.0.3421" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\AXERP.API.Business\AXERP.API.Business.csproj" />
-  </ItemGroup>
-
 </Project>

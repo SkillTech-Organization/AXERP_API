@@ -11,10 +11,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Abstractions" Version="2.2.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="1.22.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Sql" Version="3.0.534" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\AXERP.API.Business\AXERP.API.Business.csproj" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
   <ItemGroup>

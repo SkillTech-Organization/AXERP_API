@@ -1,15 +1,19 @@
 ﻿namespace AXERP.API.Business.Interfaces.Repositories
 {
-    public interface IRepository<T> where T : class
+    public interface IRepository<RowType> where RowType : class
     {
-        Task<IReadOnlyList<T>> GetAllAsync();
+        IEnumerable<RowType> GetAll();
 
-        Task<T> GetByIdAsync(int id);
+        RowType GetById(int id);
 
-        Task<string> AddAsync(T entity);
+        int Add(List<RowType> entities, bool insertId = false);
 
-        Task<string> UpdateAsync(T entity);
+        RowType Add(object entity, bool insertId = false);
 
-        Task<string> DeleteAsync(T entity);
+        RowType Add(RowType entity, bool insertId = false);
+
+        bool Update(RowType entity);
+
+        bool Delete(RowType entity);
     }
 }

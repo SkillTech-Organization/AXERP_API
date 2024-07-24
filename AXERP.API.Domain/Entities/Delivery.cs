@@ -1,13 +1,15 @@
 ﻿using AXERP.API.Domain.Attributes;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AXERP.API.Domain.Entities
 {
     [Table("Deliveries")]
-    public class Delivery
+    public class Delivery : BaseEntity<string>
     {
         [SqlModifier(SqlModifiers.StringNumeral)]
-        public string ID { get; set; }
+        [Key]
+        public override string ID { get; set; }
 
         public DateTime? DateLoadedEnd { get; set; }
 
