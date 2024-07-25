@@ -75,7 +75,7 @@ namespace AXERP.API.Persistence.Repositories
 
             totalCount = CountAll<RowType>();
 
-            var _columnsFromRequest = request.Columns?.Any() ?? false ? typeof(RowType).FilterValidColumns(request.Columns) : typeof(RowType).GetColumnNames(null);
+            var _columnsFromRequest = request.Columns?.Any() ?? false ? typeof(RowType).FilterValidColumns(request.Columns, true) : typeof(RowType).GetColumnNames(null);
 
             // Select column list
             // Make sure to "copy" with ToList so setting searchColumns won't modify by reference
@@ -84,12 +84,12 @@ namespace AXERP.API.Persistence.Repositories
 
             // Specific columns for search string
             var searchPairs = GetSpecificSearchPairs<RowType>(request.Search);
-            //if (searchPairs.Keys.Count > 0)
-            //{
-            //    searchColumns.Clear();
-            //    searchColumns.AddRange(searchPairs.Keys);
-            //    request.SearchOnlyInSelectedColumns = true;
-            //}
+            if (searchPairs.Keys.Count > 0)
+            {
+                searchColumns.Clear();
+                searchColumns.AddRange(searchPairs.Keys);
+                request.SearchOnlyInSelectedColumns = true;
+            }
 
             var builder = new SqlBuilder();
 
@@ -127,14 +127,14 @@ namespace AXERP.API.Persistence.Repositories
 
                     builder.Where(
                             typeof(RowType).GetSqlMultiSearchExpressionForSpecificColumns(
-                                request.SearchOnlyInSelectedColumns ? searchPairs.Keys.ToList() : null, $"@search{param_idx}", valueTypes, "_table"),
+                                request.SearchOnlyInSelectedColumns ? searchPairs.Keys.ToList() : null, $"@search", valueTypes, "_table"),
                             new DynamicParameters(dynamicParams));
                 }
                 else
                 {
                     builder.Where(
                         typeof(RowType).GetSqlSearchExpressionForColumns(
-                            request.SearchOnlyInSelectedColumns ? searchColumns : null, "@search", request.Search.GetValueType(), "_table"),
+                            request.SearchOnlyInSelectedColumns ? _columnsFromRequest : null, "@search", request.Search.GetValueType(), "_table"),
                         new DynamicParameters(new Dictionary<string, object>
                         {
                                 { "@search", request.Search }
