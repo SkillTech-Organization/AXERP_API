@@ -198,7 +198,7 @@ namespace AXERP.API.Persistence.Utils
                         continue;
                     }
 
-                    columns.Add($"property.Name = '@{property.Name}'");
+                    columns.Add($"{property.Name} = @{property.Name}");
                 }
             }
 

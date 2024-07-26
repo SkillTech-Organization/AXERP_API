@@ -11,7 +11,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AXERP.API.Domain", "AXERP.A
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AXERP.API.Business", "AXERP.API.Business\AXERP.API.Business.csproj", "{696D330C-24E1-4676-AE10-D3E1B01F6406}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AXERP.API.Persistence", "AXERP.API.Persistence\AXERP.API.Persistence.csproj", "{42BE7819-9D1D-42A1-BF7E-FEF059393A0E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AXERP.API.Persistence", "AXERP.API.Persistence\AXERP.API.Persistence.csproj", "{42BE7819-9D1D-42A1-BF7E-FEF059393A0E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AXERP.API.BlobHelper", "AXERP.API.BlobHelper\AXERP.API.BlobHelper.csproj", "{35024675-E2E5-43A4-B106-658898EF4FC1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +41,10 @@ Global
 		{42BE7819-9D1D-42A1-BF7E-FEF059393A0E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{42BE7819-9D1D-42A1-BF7E-FEF059393A0E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{42BE7819-9D1D-42A1-BF7E-FEF059393A0E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{35024675-E2E5-43A4-B106-658898EF4FC1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{35024675-E2E5-43A4-B106-658898EF4FC1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{35024675-E2E5-43A4-B106-658898EF4FC1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{35024675-E2E5-43A4-B106-658898EF4FC1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

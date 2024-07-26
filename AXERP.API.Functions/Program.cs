@@ -1,6 +1,7 @@
 using AXERP.API.Business.Commands;
 using AXERP.API.Business.Factories;
 using AXERP.API.Domain.AutoMapperProfiles;
+using AXERP.API.Functions.Commands;
 using AXERP.API.Functions.SheetProcessors;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +24,7 @@ var host = new HostBuilder()
         //services.AddTransient<GenericRepository>();
         services.AddTransient<UnitOfWorkFactory>();
         services.AddTransient<InsertTransactionsCommand>();
+        services.AddTransient<UpdateReferencesByBlobFilesCommand>();
     })
     // Source: https://learn.microsoft.com/en-us/azure/azure-functions/dotnet-isolated-process-guide?tabs=windows#application-insights
     // Quote: "However, by default, the Application Insights SDK adds a logging filter that instructs the logger to capture only warnings and more severe logs. If you want to disable this behavior, remove the filter rule as part of service configuration"

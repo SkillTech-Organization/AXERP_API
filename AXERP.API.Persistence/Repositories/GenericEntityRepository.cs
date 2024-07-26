@@ -7,7 +7,7 @@ using System.Text;
 
 namespace AXERP.API.Persistence.Repositories
 {
-    public class GenericEntityRepository<RowType> : IRepository<RowType> where RowType : class
+    public class GenericEntityRepository<RowType, KeyType> : IRepository<RowType, KeyType> where RowType : class
     {
         private readonly IConnectionProvider _connectionProvider;
         private SqlConnection _connection => _connectionProvider.Connection;
@@ -83,13 +83,28 @@ namespace AXERP.API.Persistence.Repositories
             return rowsEffected > 0 ? true : false;
         }
 
+        public bool Delete(KeyType id)
+        {
+            int rowsEffected = 0;
+
+            var t = typeof(RowType);
+
+            string tableName = t.GetTableName();
+            string key = t.GetKeyColumnName();
+            string query = $"DELETE FROM {tableName} WHERE {key} = @id";
+
+            rowsEffected = _connection.Execute(query, new { id = id }, transaction: _sqlTransaction);
+
+            return rowsEffected > 0 ? true : false;
+        }
+
         public IEnumerable<RowType> GetAll()
         {
             IEnumerable<RowType> result = _connection.Query<RowType>($"SELECT * FROM {typeof(RowType).GetTableName()}", transaction: _sqlTransaction);
             return result;
         }
 
-        public RowType GetById(int Id)
+        public RowType GetById(KeyType Id)
         {
             RowType result = null;
 
@@ -108,25 +123,20 @@ namespace AXERP.API.Persistence.Repositories
         public bool Update(RowType entity)
         {
             int rowsEffected = 0;
-            try
-            {
-                var t = typeof(RowType);
 
-                string tableName = t.GetTableName();
-                string cols = t.GetColumnNamesAsSqlAssignmentList(null, true);
-                string key = t.GetKeyColumnName();
+            var t = typeof(RowType);
 
-                StringBuilder query = new StringBuilder();
+            string tableName = t.GetTableName();
+            string cols = t.GetColumnNamesAsSqlAssignmentList(null, true);
+            string key = t.GetKeyColumnName();
 
-                query.Append($"UPDATE {tableName} SET {cols}");
+            StringBuilder query = new StringBuilder();
 
-                query.Remove(query.Length - 1, 1);
+            query.Append($"UPDATE {tableName} SET {cols}");
 
-                query.Append($" WHERE {key} = @{key}");
+            query.Append($" WHERE {key} = @{key}");
 
-                rowsEffected = _connection.Execute(query.ToString(), entity, transaction: _sqlTransaction);
-            }
-            catch (Exception ex) { }
+            rowsEffected = _connection.Execute(query.ToString(), entity, transaction: _sqlTransaction);
 
             return rowsEffected > 0 ? true : false;
         }
