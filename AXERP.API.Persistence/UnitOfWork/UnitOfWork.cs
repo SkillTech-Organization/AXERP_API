@@ -31,105 +31,105 @@ namespace AXERP.API.Persistence.UnitOfWork
             }
         }
 
-        private IRepository<Entity> _entityRepository;
-        public IRepository<Entity> EntityRepository
+        private IRepository<Entity, int> _entityRepository;
+        public IRepository<Entity, int> EntityRepository
         {
             get
             {
                 if (_entityRepository == null)
                 {
-                    return new GenericEntityRepository<Entity>(this);
+                    return new GenericEntityRepository<Entity, int>(this);
                 }
                 return _entityRepository;
             }
         }
 
-        private IRepository<Customer> _customerRepository;
-        public IRepository<Customer> CustomerRepository
+        private IRepository<Customer, int> _customerRepository;
+        public IRepository<Customer, int> CustomerRepository
         {
             get
             {
                 if (_customerRepository == null)
                 {
-                    return new GenericEntityRepository<Customer>(this);
+                    return new GenericEntityRepository<Customer, int>(this);
                 }
                 return _customerRepository;
             }
         }
 
-        private IRepository<CustomerToDelivery> _customerToDeliveryRepository;
-        public IRepository<CustomerToDelivery> CustomerToDeliveryRepository
+        private IRepository<CustomerToDelivery, int> _customerToDeliveryRepository;
+        public IRepository<CustomerToDelivery, int> CustomerToDeliveryRepository
         {
             get
             {
                 if (_customerToDeliveryRepository == null)
                 {
-                    return new GenericEntityRepository<CustomerToDelivery>(this);
+                    return new GenericEntityRepository<CustomerToDelivery, int>(this);
                 }
                 return _customerToDeliveryRepository;
             }
         }
 
-        private IRepository<Delivery> _deliveryRepository;
-        public IRepository<Delivery> DeliveryRepository
+        private IRepository<Delivery, string> _deliveryRepository;
+        public IRepository<Delivery, string> DeliveryRepository
         {
             get
             {
                 if (_deliveryRepository == null)
                 {
-                    return new GenericEntityRepository<Delivery>(this);
+                    return new GenericEntityRepository<Delivery, string>(this);
                 }
                 return _deliveryRepository;
             }
         }
 
-        private IRepository<Location> _locationRepository;
-        public IRepository<Location> LocationRepository
+        private IRepository<Location, int> _locationRepository;
+        public IRepository<Location, int> LocationRepository
         {
             get
             {
                 if (_locationRepository == null)
                 {
-                    return new GenericEntityRepository<Location>(this);
+                    return new GenericEntityRepository<Location, int>(this);
                 }
                 return _locationRepository;
             }
         }
 
-        private IRepository<Transporter> _transporterRepository;
-        public IRepository<Transporter> TransporterRepository
+        private IRepository<Transporter, int> _transporterRepository;
+        public IRepository<Transporter, int> TransporterRepository
         {
             get
             {
                 if (_transporterRepository == null)
                 {
-                    return new GenericEntityRepository<Transporter>(this);
+                    return new GenericEntityRepository<Transporter, int>(this);
                 }
                 return _transporterRepository;
             }
         }
 
-        private IRepository<TruckCompany> _truckCompanyRepository;
-        public IRepository<TruckCompany> TruckCompanyRepository
+        private IRepository<TruckCompany, int> _truckCompanyRepository;
+        public IRepository<TruckCompany, int> TruckCompanyRepository
         {
             get
             {
                 if (_truckCompanyRepository == null)
                 {
-                    return new GenericEntityRepository<TruckCompany>(this);
+                    return new GenericEntityRepository<TruckCompany, int>(this);
                 }
                 return _truckCompanyRepository;
             }
         }
 
-        private IRepository<TruckCompanyToDelivery> _truckCompanyToDeliveryRepository;
-        public IRepository<TruckCompanyToDelivery> TruckCompanyToDeliveryRepository
+        private IRepository<TruckCompanyToDelivery, int> _truckCompanyToDeliveryRepository;
+        public IRepository<TruckCompanyToDelivery, int> TruckCompanyToDeliveryRepository
         {
             get
             {
                 if (_truckCompanyToDeliveryRepository == null)
                 {
-                    return new GenericEntityRepository<TruckCompanyToDelivery>(this);
+                    return new GenericEntityRepository<TruckCompanyToDelivery, int>(this);
                 }
                 return _truckCompanyToDeliveryRepository;
             }

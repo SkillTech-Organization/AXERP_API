@@ -68,13 +68,24 @@ namespace AXERP.API.BlobHelper.Managers
             return response;
         }
 
-        public async Task MoveFile(BlobHierarchyItem blob, string destinationFolder)
+        public async Task MoveFile(BlobHierarchyItem blob, string destinationName, string destinationFolder)
         {
-            var sourceBlob = Container.GetBlobClient($"{blob.Blob.Name}");
-            var destinationBlob = Container.GetBlobClient($"{destinationFolder}/{blob.Blob.Name}");
+            var sourceBlob = Container.GetBlobClient(blob.Blob.Name);
+            var destinationBlob = Container.GetBlobClient($"{destinationFolder}/{destinationName}");
 
-            await destinationBlob.StartCopyFromUriAsync(sourceBlob.Uri);
-            await sourceBlob.DeleteAsync();
+            var copyResponse = await destinationBlob.StartCopyFromUriAsync(sourceBlob.Uri);
+
+            if (copyResponse.HasValue)
+            {
+                throw new Exception(copyResponse.GetRawResponse().ReasonPhrase);
+            }
+
+            var deleteResponse = await sourceBlob.DeleteAsync();
+
+            if (deleteResponse.IsError)
+            {
+                throw new Exception(deleteResponse.ReasonPhrase);
+            }
         }
     }
 }
