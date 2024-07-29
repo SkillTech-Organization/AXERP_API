@@ -31,29 +31,16 @@ namespace AXERP.API.Persistence.UnitOfWork
             }
         }
 
-        private IRepository<Entity, int> _entityRepository;
-        public IRepository<Entity, int> EntityRepository
+        private IRepository<Document, int> _documentRepository;
+        public IRepository<Document, int> DocumentRepository
         {
             get
             {
-                if (_entityRepository == null)
+                if (_documentRepository == null)
                 {
-                    return new GenericEntityRepository<Entity, int>(this);
+                    return new GenericEntityRepository<Document, int>(this);
                 }
-                return _entityRepository;
-            }
-        }
-
-        private IRepository<Customer, int> _customerRepository;
-        public IRepository<Customer, int> CustomerRepository
-        {
-            get
-            {
-                if (_customerRepository == null)
-                {
-                    return new GenericEntityRepository<Customer, int>(this);
-                }
-                return _customerRepository;
+                return _documentRepository;
             }
         }
 
@@ -70,42 +57,42 @@ namespace AXERP.API.Persistence.UnitOfWork
             }
         }
 
-        private IRepository<Delivery, string> _deliveryRepository;
-        public IRepository<Delivery, string> DeliveryRepository
+        private IRepository<Transaction, string> _transactionRepository;
+        public IRepository<Transaction, string> TransactionRepository
         {
             get
             {
-                if (_deliveryRepository == null)
+                if (_transactionRepository == null)
                 {
-                    return new GenericEntityRepository<Delivery, string>(this);
+                    return new GenericEntityRepository<Transaction, string>(this);
                 }
-                return _deliveryRepository;
+                return _transactionRepository;
             }
         }
 
-        private IRepository<Location, int> _locationRepository;
-        public IRepository<Location, int> LocationRepository
+        private IRepository<Interface, int> _interfaceRepository;
+        public IRepository<Interface, int> InterfaceRepository
         {
             get
             {
-                if (_locationRepository == null)
+                if (_interfaceRepository == null)
                 {
-                    return new GenericEntityRepository<Location, int>(this);
+                    return new GenericEntityRepository<Interface, int>(this);
                 }
-                return _locationRepository;
+                return _interfaceRepository;
             }
         }
 
-        private IRepository<Transporter, int> _transporterRepository;
-        public IRepository<Transporter, int> TransporterRepository
+        private IRepository<Entity, int> _entityRepository;
+        public IRepository<Entity, int> EntityRepository
         {
             get
             {
-                if (_transporterRepository == null)
+                if (_entityRepository == null)
                 {
-                    return new GenericEntityRepository<Transporter, int>(this);
+                    return new GenericEntityRepository<Entity, int>(this);
                 }
-                return _transporterRepository;
+                return _entityRepository;
             }
         }
 
@@ -132,6 +119,19 @@ namespace AXERP.API.Persistence.UnitOfWork
                     return new GenericEntityRepository<TruckCompanyToDelivery, int>(this);
                 }
                 return _truckCompanyToDeliveryRepository;
+            }
+        }
+
+        private IRepository<TransactionStatus, int> _transactionStatusRepository;
+        public IRepository<TransactionStatus, int> TransactionStatusRepository
+        {
+            get
+            {
+                if (_transactionStatusRepository == null)
+                {
+                    return new GenericEntityRepository<TransactionStatus, int>(this);
+                }
+                return _transactionStatusRepository;
             }
         }
 

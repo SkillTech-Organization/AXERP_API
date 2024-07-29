@@ -7,7 +7,7 @@ using System.Reflection;
 
 namespace AXERP.API.Functions.SheetProcessors
 {
-    public class GasTransactionSheetProcessor : BaseSheetProcessors<GasTransaction>
+    public class GasTransactionSheetProcessor : BaseSheetProcessors<Delivery>
     {
         private readonly ILogger<GasTransactionSheetProcessor> _logger;
 
@@ -16,14 +16,14 @@ namespace AXERP.API.Functions.SheetProcessors
             _logger = logger;
         }
 
-        public override GenericSheetImportResult<GasTransaction> ProcessRows(IList<IList<object>> sheet_value_range, string culture_code)
+        public override GenericSheetImportResult<Delivery> ProcessRows(IList<IList<object>> sheet_value_range, string culture_code)
         {
             var headers = sheet_value_range[0];
             var sheet_rows = sheet_value_range.Skip(1).ToList();
 
             // Eg. DeliveryID -> 0 (indexof Delivery ID in sheet headers)
             var field_names = new Dictionary<string, int>();
-            foreach (var property in typeof(GasTransaction).GetProperties())
+            foreach (var property in typeof(Delivery).GetProperties())
             {
                 var jsonAttribute = property.GetCustomAttribute<JsonPropertyAttribute>(true);
                 if (jsonAttribute != null)
@@ -33,7 +33,7 @@ namespace AXERP.API.Functions.SheetProcessors
                 }
             }
 
-            var result = new List<GasTransaction>();
+            var result = new List<Delivery>();
             var errors = new List<string>();
             var invalidRows = 0;
 
@@ -53,7 +53,7 @@ namespace AXERP.API.Functions.SheetProcessors
                         continue;
                     }
 
-                    var gasTransaction = new GasTransaction();
+                    var gasTransaction = new Delivery();
                     var field_idx = 0;
 
                     // DeliveryID
@@ -151,10 +151,35 @@ namespace AXERP.API.Functions.SheetProcessors
                         continue;
                     }
 
-                    var a = row[field_idx]?.ToString();
                     if (double.TryParse(row[field_idx]?.ToString(), new CultureInfo(culture_code), out double QtyLoaded))
                     {
                         gasTransaction.QtyLoaded = QtyLoaded;
+                    }
+
+                    // StockDays
+                    field_idx = field_names[nameof(gasTransaction.StockDays)];
+                    if (row.Count <= field_idx)
+                    {
+                        result.Add(gasTransaction);
+                        continue;
+                    }
+
+                    if (int.TryParse(row[field_idx]?.ToString(), new CultureInfo(culture_code), out int StockDays))
+                    {
+                        gasTransaction.StockDays = StockDays;
+                    }
+
+                    // SlotBookedByAXGTT
+                    field_idx = field_names[nameof(gasTransaction.SlotBookedByAXGTT)];
+                    if (row.Count <= field_idx)
+                    {
+                        result.Add(gasTransaction);
+                        continue;
+                    }
+
+                    if (int.TryParse(row[field_idx]?.ToString(), new CultureInfo(culture_code), out int SlotBookedByAXGTT))
+                    {
+                        gasTransaction.SlotBookedByAXGTT = SlotBookedByAXGTT;
                     }
 
                     // ToDeliveryID
@@ -461,7 +486,7 @@ namespace AXERP.API.Functions.SheetProcessors
                 }
             }
 
-            return new GenericSheetImportResult<GasTransaction>
+            return new GenericSheetImportResult<Delivery>
             {
                 Data = result,
                 InvalidRows = invalidRows,

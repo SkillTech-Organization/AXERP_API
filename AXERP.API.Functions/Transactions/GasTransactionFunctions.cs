@@ -183,7 +183,7 @@ namespace AXERP.API.Functions.Transactions
         {
             using (var uow = _unitOfWorkFactory.Create())
             {
-                return uow.GenericRepository.CountAll<GasTransaction>();
+                return uow.GenericRepository.CountAll<Delivery>();
             }
         }
 
@@ -221,7 +221,7 @@ namespace AXERP.API.Functions.Transactions
             {
                 using (var uow = _unitOfWorkFactory.Create())
                 {
-                    var result = uow.GenericRepository.PagedQuery<GasTransaction>(new PagedQueryRequest
+                    var result = uow.GenericRepository.PagedQuery<Delivery>(new PagedQueryRequest
                     {
                         QueryTemplate = queryTemplate,
                         CountTemplate = countTemplate,

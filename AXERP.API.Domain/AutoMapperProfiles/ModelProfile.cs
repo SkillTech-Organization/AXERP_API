@@ -7,7 +7,7 @@ namespace AXERP.API.Domain.AutoMapperProfiles
     {
         public ModelProfile()
         {
-            CreateMap<GasTransaction, Delivery>().ReverseMap();
+            CreateMap<Delivery, Transaction>().ReverseMap();
         }
     }
 }

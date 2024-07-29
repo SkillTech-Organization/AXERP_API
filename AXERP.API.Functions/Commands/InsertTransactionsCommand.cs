@@ -23,7 +23,7 @@ namespace AXERP.API.Business.Commands
             _mapper = mapper;
         }
 
-        public ImportGasTransactionResponse Execute(GenericSheetImportResult<GasTransaction> importResult)
+        public ImportGasTransactionResponse Execute(GenericSheetImportResult<Delivery> importResult)
         {
             var res = new ImportGasTransactionResponse
             {
@@ -47,75 +47,75 @@ namespace AXERP.API.Business.Commands
                      */
 
                     // New Deliveries row check
-                    var ids = uow.GenericRepository.GetAllIDs<Delivery, string>();
+                    var ids = uow.GenericRepository.GetAllIDs<Transaction, string>();
                     var newSheetRows = importResult.Data.Where(x => !ids.Contains(x.DeliveryID));
 
-                    var locations = uow.LocationRepository.GetAll().ToList();
-                    var entities = uow.EntityRepository.GetAll().ToList();
+                    var interfaces = uow.InterfaceRepository.GetAll().ToList();
+                    // var statuses = uow.TransactionStatusRepository.GetAll().ToList();
+                    var documents = uow.DocumentRepository.GetAll().ToList();
                     var truckCompanies = uow.TruckCompanyRepository.GetAll().ToList();
-                    var customers = uow.CustomerRepository.GetAll().ToList();
-                    var transporters = uow.TransporterRepository.GetAll().ToList();
+                    var entities = uow.EntityRepository.GetAll().ToList();
 
                     var ctd = new List<CustomerToDelivery>();
                     var ttd = new List<TruckCompanyToDelivery>();
 
-                    var deliveries = new List<Delivery>();
+                    var deliveries = new List<Transaction>();
 
                     uow.BeginTransaction();
 
                     foreach (var newSheetRow in newSheetRows)
                     {
-                        var delivery = _mapper.Map<Delivery>(newSheetRow);
+                        var delivery = _mapper.Map<Transaction>(newSheetRow);
 
                         delivery.ID = newSheetRow.DeliveryID;
 
-                        var newTerminal = locations.FirstOrDefault(x => x.Name == newSheetRow.Terminal);
-                        if (newTerminal == null && !string.IsNullOrWhiteSpace(newSheetRow.Terminal) && !locations.Any(x => x.Name == newSheetRow.Terminal))
+                        var newTerminal = interfaces.FirstOrDefault(x => x.Name == newSheetRow.Terminal);
+                        if (newTerminal == null && !string.IsNullOrWhiteSpace(newSheetRow.Terminal) && !interfaces.Any(x => x.Name == newSheetRow.Terminal))
                         {
-                            newTerminal = uow.LocationRepository.Add(new { Name = newSheetRow.Terminal });
-                            locations.Add(newTerminal);
+                            newTerminal = uow.InterfaceRepository.Add(new { Name = newSheetRow.Terminal });
+                            interfaces.Add(newTerminal);
                         }
 
-                        var newDeliveryPoint = locations.FirstOrDefault(x => x.Name == newSheetRow.DeliveryPoint);
-                        if (newDeliveryPoint == null && !string.IsNullOrWhiteSpace(newSheetRow.DeliveryPoint) && !locations.Any(x => x.Name == newSheetRow.DeliveryPoint))
+                        var newDeliveryPoint = interfaces.FirstOrDefault(x => x.Name == newSheetRow.DeliveryPoint);
+                        if (newDeliveryPoint == null && !string.IsNullOrWhiteSpace(newSheetRow.DeliveryPoint) && !interfaces.Any(x => x.Name == newSheetRow.DeliveryPoint))
                         {
-                            newDeliveryPoint = uow.LocationRepository.Add(new { Name = newSheetRow.DeliveryPoint });
-                            locations.Add(newDeliveryPoint);
+                            newDeliveryPoint = uow.InterfaceRepository.Add(new { Name = newSheetRow.DeliveryPoint });
+                            interfaces.Add(newDeliveryPoint);
                         }
 
-                        var newSpecificPoint = locations.FirstOrDefault(x => x.Name == newSheetRow.SpecificDeliveryPoint);
-                        if (newSpecificPoint == null && !string.IsNullOrWhiteSpace(newSheetRow.SpecificDeliveryPoint) && !locations.Any(x => x.Name == newSheetRow.SpecificDeliveryPoint))
+                        var newSpecificPoint = interfaces.FirstOrDefault(x => x.Name == newSheetRow.SpecificDeliveryPoint);
+                        if (newSpecificPoint == null && !string.IsNullOrWhiteSpace(newSheetRow.SpecificDeliveryPoint) && !interfaces.Any(x => x.Name == newSheetRow.SpecificDeliveryPoint))
                         {
-                            newSpecificPoint = uow.LocationRepository.Add(new { Name = newSheetRow.SpecificDeliveryPoint });
-                            locations.Add(newSpecificPoint);
+                            newSpecificPoint = uow.InterfaceRepository.Add(new { Name = newSheetRow.SpecificDeliveryPoint });
+                            interfaces.Add(newSpecificPoint);
                         }
 
-                        var newRef = entities.FirstOrDefault(x => x.Name == newSheetRow.Reference);
-                        if (newRef == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference) && !entities.Any(x => x.Name == newSheetRow.Reference))
+                        var newRef = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference);
+                        if (newRef == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference) && !documents.Any(x => x.Name == newSheetRow.Reference))
                         {
-                            newRef = uow.EntityRepository.Add(new { Name = newSheetRow.Reference });
-                            entities.Add(newRef);
+                            newRef = uow.DocumentRepository.Add(new { Name = newSheetRow.Reference });
+                            documents.Add(newRef);
                         }
 
-                        var newRef2 = entities.FirstOrDefault(x => x.Name == newSheetRow.Reference2);
-                        if (newRef2 == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference2) && !entities.Any(x => x.Name == newSheetRow.Reference2))
+                        var newRef2 = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference2);
+                        if (newRef2 == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference2) && !documents.Any(x => x.Name == newSheetRow.Reference2))
                         {
-                            newRef2 = uow.EntityRepository.Add(new { Name = newSheetRow.Reference2 });
-                            entities.Add(newRef2);
+                            newRef2 = uow.DocumentRepository.Add(new { Name = newSheetRow.Reference2 });
+                            documents.Add(newRef2);
                         }
 
-                        var newRef3 = entities.FirstOrDefault(x => x.Name == newSheetRow.Reference3);
-                        if (newRef3 == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference3) && !entities.Any(x => x.Name == newSheetRow.Reference3))
+                        var newRef3 = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference3);
+                        if (newRef3 == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference3) && !documents.Any(x => x.Name == newSheetRow.Reference3))
                         {
-                            newRef3 = uow.EntityRepository.Add(new { Name = newSheetRow.Reference3 });
-                            entities.Add(newRef3);
+                            newRef3 = uow.DocumentRepository.Add(new { Name = newSheetRow.Reference3 });
+                            documents.Add(newRef3);
                         }
 
-                        var newTransporter = transporters.FirstOrDefault(x => x.Name == newSheetRow.Transporter);
-                        if (newTransporter == null && !string.IsNullOrWhiteSpace(newSheetRow.Transporter) && !transporters.Any(x => x.Name == newSheetRow.Transporter))
+                        var newTransporter = entities.FirstOrDefault(x => x.Name == newSheetRow.Transporter);
+                        if (newTransporter == null && !string.IsNullOrWhiteSpace(newSheetRow.Transporter) && !entities.Any(x => x.Name == newSheetRow.Transporter))
                         {
-                            newTransporter = uow.TransporterRepository.Add(new { Name = newSheetRow.Transporter });
-                            transporters.Add(newTransporter);
+                            newTransporter = uow.EntityRepository.Add(new { Name = newSheetRow.Transporter });
+                            entities.Add(newTransporter);
                         }
 
                         var newTruckCompany = truckCompanies.FirstOrDefault(x => x.Name == newSheetRow.TruckCompany);
@@ -125,11 +125,11 @@ namespace AXERP.API.Business.Commands
                             truckCompanies.Add(newTruckCompany);
                         }
 
-                        var newCustomer = customers.FirstOrDefault(x => x.Name == newSheetRow.Customer);
-                        if (newCustomer == null && !string.IsNullOrWhiteSpace(newSheetRow.Customer) && !customers.Any(x => x.Name == newSheetRow.Customer))
+                        var newCustomer = entities.FirstOrDefault(x => x.Name == newSheetRow.Customer);
+                        if (newCustomer == null && !string.IsNullOrWhiteSpace(newSheetRow.Customer) && !entities.Any(x => x.Name == newSheetRow.Customer))
                         {
-                            newCustomer = uow.CustomerRepository.Add(new { Name = newSheetRow.Customer });
-                            customers.Add(newCustomer);
+                            newCustomer = uow.EntityRepository.Add(new { Name = newSheetRow.Customer });
+                            entities.Add(newCustomer);
                         }
 
                         delivery.TerminalID = newTerminal?.ID;
@@ -169,7 +169,7 @@ namespace AXERP.API.Business.Commands
                     uow.Save("pt-before-deliveries");
 
                     // New Deliveries
-                    res.NewRowsInsertedIntoDatabase += uow.DeliveryRepository.Add(deliveries, true);
+                    res.NewRowsInsertedIntoDatabase += uow.TransactionRepository.Add(deliveries, true);
 
                     uow.Save("pt-before-ctd-ttd");
 
