@@ -39,7 +39,6 @@ namespace AXERP.API.Functions.Commands
         {
             var response = new ProcessBlobFilesResponse
             {
-                FailedToProcess = new List<string>(),
                 Processed = new List<string>(),
                 Errors = new List<string>()
             };
@@ -90,7 +89,6 @@ namespace AXERP.API.Functions.Commands
 
                                 _logger.LogError(ex, "Error while processing blob file: {name}", name);
 
-                                response.FailedToProcess.Add(name);
                                 response.Errors.Add(name);
 
                                 continue;

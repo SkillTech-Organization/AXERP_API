@@ -9,9 +9,6 @@ namespace AXERP.API.Domain.ServiceContracts.Responses
         public List<string> Processed { get; set; }
 
         [DataMember]
-        public List<string> FailedToProcess { get; set; }
-
-        [DataMember]
         public List<string> Errors { get; set; }
     }
 }
