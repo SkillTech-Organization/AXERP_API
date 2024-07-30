@@ -26,12 +26,12 @@ namespace AXERP.API.Functions.Commands
 
             var getBlobFilesResponse = await containerHelper.GetFiles(request.BlobStorageImportFolder, request.BlobStorePdfFileRegexPattern);
 
-            var response = await Update(request, getBlobFilesResponse, containerHelper);
+            var response = await Process(request, getBlobFilesResponse, containerHelper);
 
             return response;
         }
 
-        private async Task<ProcessBlobFilesResponse> Update(ProcessBlobFilesRequest request, GetBlobFilesResponse data, BlobManager containerHelper)
+        private async Task<ProcessBlobFilesResponse> Process(ProcessBlobFilesRequest request, GetBlobFilesResponse data, BlobManager containerHelper)
         {
             var response = new ProcessBlobFilesResponse
             {
@@ -69,8 +69,15 @@ namespace AXERP.API.Functions.Commands
                             {
                                 var referenceName = item.Matches[0].Groups[regexKey].Value.Trim();
                                 var fileName = item.Matches[0].Value;
-                                var referenced = entities.FirstOrDefault(x => x.Name.Trim() == referenceName);
 
+                                var alreadyProcessed = entities.FirstOrDefault(x => x.OriginalName?.Trim() == referenceName);
+                                if (alreadyProcessed != null)
+                                {
+                                    response.Errors.Add($"Document '{fileName}' was already processed at {alreadyProcessed.ProcessedAt}.");
+                                    continue;
+                                }
+
+                                var referenced = entities.FirstOrDefault(x => x.Name.Trim() == referenceName);
                                 if (referenced == null)
                                 {
                                     response.Errors.Add($"No document found in database with name: {referenceName}");
