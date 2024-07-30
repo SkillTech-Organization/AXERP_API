@@ -1,4 +1,5 @@
-﻿using AXERP.API.Domain.Entities;
+﻿using AXERP.API.Business.Factories;
+using AXERP.API.Domain.Entities;
 using AXERP.API.GoogleHelper.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -10,10 +11,24 @@ namespace AXERP.API.Functions.SheetProcessors
     public class GasTransactionSheetProcessor : BaseSheetProcessors<Delivery>
     {
         private readonly ILogger<GasTransactionSheetProcessor> _logger;
+        private readonly UnitOfWorkFactory _uowFactory;
 
-        public GasTransactionSheetProcessor(ILogger<GasTransactionSheetProcessor> logger)
+        public GasTransactionSheetProcessor(ILogger<GasTransactionSheetProcessor> logger, UnitOfWorkFactory uowFactory)
         {
             _logger = logger;
+            _uowFactory = uowFactory;
+        }
+
+        private List<string> GetStatuses()
+        {
+            var result = new List<string>();
+
+            using (var uow = _uowFactory.Create())
+            {
+                result = uow.TransactionStatusRepository.GetAll().Select(x => x.Name).ToList();
+            }
+
+            return result;
         }
 
         public override GenericSheetImportResult<Delivery> ProcessRows(IList<IList<object>> sheet_value_range, string culture_code)
@@ -38,6 +53,8 @@ namespace AXERP.API.Functions.SheetProcessors
             var invalidRows = 0;
 
             var minSqlYear = 1753;
+
+            var valid_statuses = GetStatuses();
 
             for (var i = 0; i < sheet_rows.Count; i++)
             {
@@ -131,7 +148,15 @@ namespace AXERP.API.Functions.SheetProcessors
                         continue;
                     }
 
-                    gasTransaction.SalesStatus = row[field_idx]?.ToString();
+                    var rawSalesStatus = row[field_idx]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(rawSalesStatus) && !valid_statuses.Contains(rawSalesStatus))
+                    {
+                        invalidRows++;
+                        errors.Add($"Invalid Sales Status: '{rawSalesStatus}' for row with Delivery ID: {gasTransaction.DeliveryID}. Row index: {sheet_row_index}");
+                        continue;
+                    }
+
+                    gasTransaction.SalesStatus = string.IsNullOrWhiteSpace(rawSalesStatus) ? null : rawSalesStatus;
 
                     // Terminal
                     field_idx = field_names[nameof(gasTransaction.Terminal)];
@@ -197,13 +222,29 @@ namespace AXERP.API.Functions.SheetProcessors
 
                     // Status
                     field_idx = field_names[nameof(gasTransaction.Status)];
+
+                    var rawStatus = row[field_idx]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(rawStatus) && !valid_statuses.Contains(rawStatus))
+                    {
+                        invalidRows++;
+                        errors.Add($"Invalid Status: {rawStatus} for row with Delivery ID: {gasTransaction.DeliveryID}. Row index: {sheet_row_index}");
+                        continue;
+                    }
+
+                    //if (row.Count <= field_idx || row[field_idx] == null || string.IsNullOrWhiteSpace(row[field_idx].ToString()))
+                    //{
+                    //    invalidRows++;
+                    //    errors.Add($"Missing Status. For row with Delivery ID: {gasTransaction.DeliveryID}. Row index: {sheet_row_index}");
+                    //    continue;
+                    //}
+
                     if (row.Count <= field_idx)
                     {
                         result.Add(gasTransaction);
                         continue;
                     }
 
-                    gasTransaction.Status = row[field_idx]?.ToString();
+                    gasTransaction.Status = string.IsNullOrWhiteSpace(rawSalesStatus) ? null : rawSalesStatus;
 
                     // SpecificDeliveryPoint
                     field_idx = field_names[nameof(gasTransaction.SpecificDeliveryPoint)];
