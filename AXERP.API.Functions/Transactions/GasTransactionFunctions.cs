@@ -41,7 +41,7 @@ namespace AXERP.API.Functions.Transactions
         #region SQL Scripts
 
         public readonly string Sql_Insert_Delivery = @"
-                INSERT INTO Deliveries
+                INSERT INTO Transactions
                        (ID
                        ,DateLoadedEnd
                        ,DateDelivered
@@ -108,18 +108,18 @@ namespace AXERP.API.Functions.Transactions
         public readonly string Sql_Query_Paged_GasTransactions =
             @"
             select X.* from 
-                (select _table.*, ROW_NUMBER() OVER (/**orderby**/) AS RowNumber from GasTransactions _table /**where**/)
+                (select _table.*, ROW_NUMBER() OVER (/**orderby**/) AS RowNumber from Deliveries _table /**where**/)
             as X where RowNumber between @start and @finish
             ";
 
         public readonly string Sql_Query_Paged_GasTransactions_Dynamic_Columns =
             @"
             select /**select**/ from 
-                (select _table.*, ROW_NUMBER() OVER (/**orderby**/) AS RowNumber from GasTransactions _table /**where**/)
+                (select _table.*, ROW_NUMBER() OVER (/**orderby**/) AS RowNumber from Deliveries _table /**where**/)
             as X where RowNumber between @start and @finish
             ";
 
-        public readonly string Sql_Query_Count_GasTransactions = "SELECT COUNT(*) FROM GasTransactions";
+        public readonly string Sql_Query_Count_GasTransactions = "SELECT COUNT(*) FROM Deliveries";
 
         #endregion
 
