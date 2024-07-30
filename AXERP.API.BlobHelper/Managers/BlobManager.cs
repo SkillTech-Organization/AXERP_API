@@ -1,22 +1,28 @@
 ﻿using AXERP.API.BlobHelper.ServiceContracts.Responses;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
 
 namespace AXERP.API.BlobHelper.Managers
 {
     public class BlobManager
     {
+        private readonly ILogger _logger;
+
         private readonly string ConnectionString = string.Empty;
         private readonly string CurrentStorage = string.Empty;
 
         private readonly BlobContainerClient Container;
 
-        public BlobManager(string connectionString, string storageName)
+        public BlobManager(
+            ILogger logger,
+            string connectionString, string storageName)
         {
             ConnectionString = connectionString;
             CurrentStorage = storageName;
             Container = new BlobContainerClient(ConnectionString, CurrentStorage);
+            _logger = logger;
         }
 
         public async Task<GetBlobFilesResponse> GetFiles(string? folderName = null, string? regexPattern = null)
@@ -28,16 +34,23 @@ namespace AXERP.API.BlobHelper.Managers
 
             var result = new List<GetBlobFilesItem>();
 
+            _logger.LogInformation("Getting files from folder '{folder}' with regex: {regex}", folderName, regexPattern ?? "NO REGEX FILTER USED");
+
             await foreach (var blob in Container.GetBlobsByHierarchyAsync(prefix: folderName))
             {
                 if (blob.IsBlob)
                 {
+
+                    _logger.LogInformation("Checking blob for folder: {0}", blob.Blob.Name);
+
                     if (!blob.Blob.Name.Contains($"{folderName}/"))
                     {
                         continue;
                     }
                     if (!string.IsNullOrWhiteSpace(regexPattern))
                     {
+                        _logger.LogInformation("Checking blob for regex: {0}", blob.Blob.Name);
+
                         var matches = Regex.Matches(blob.Blob.Name, regexPattern, RegexOptions.IgnoreCase);
                         if (matches.Count == 0)
                         {
@@ -45,6 +58,8 @@ namespace AXERP.API.BlobHelper.Managers
                         }
                         else
                         {
+                            _logger.LogInformation("Matching blob found: {0}", blob.Blob.Name);
+
                             result.Add(new GetBlobFilesItem
                             {
                                 BlobItem = blob,
@@ -55,6 +70,8 @@ namespace AXERP.API.BlobHelper.Managers
                     }
                     else
                     {
+                        _logger.LogInformation("Blob found: {0}", blob.Blob.Name);
+
                         result.Add(new GetBlobFilesItem
                         {
                             BlobItem = blob
@@ -70,8 +87,12 @@ namespace AXERP.API.BlobHelper.Managers
 
         public async Task MoveFile(BlobHierarchyItem blob, string destinationName, string destinationFolder)
         {
+            _logger.LogInformation("Moving blob file '{blob_name}' to folder '{dst}' with name '{name}'", blob.Blob.Name, destinationFolder, destinationName);
+
             var sourceBlob = Container.GetBlobClient(blob.Blob.Name);
             var destinationBlob = Container.GetBlobClient($"{destinationFolder}/{destinationName}");
+
+            _logger.LogInformation("Copying between folders...");
 
             var copyResponse = await destinationBlob.StartCopyFromUriAsync(sourceBlob.Uri);
 
@@ -80,12 +101,16 @@ namespace AXERP.API.BlobHelper.Managers
                 throw new Exception(copyResponse.GetRawResponse().ReasonPhrase);
             }
 
+            _logger.LogInformation("Deleting from original folder...");
+
             var deleteResponse = await sourceBlob.DeleteAsync();
 
             if (deleteResponse.IsError)
             {
                 throw new Exception(deleteResponse.ReasonPhrase);
             }
+
+            _logger.LogInformation("Blob successfully moved to other folder!");
         }
     }
 }

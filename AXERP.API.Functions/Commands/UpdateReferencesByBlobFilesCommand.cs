@@ -22,7 +22,7 @@ namespace AXERP.API.Functions.Commands
 
         public async Task<ProcessBlobFilesResponse> Execute(ProcessBlobFilesRequest request)
         {
-            var containerHelper = new BlobManager(request.BlobStorageConnectionString, request.BlobStorageName);
+            var containerHelper = new BlobManager(_logger, request.BlobStorageConnectionString, request.BlobStorageName);
 
             var getBlobFilesResponse = await containerHelper.GetFiles(request.BlobStorageImportFolder, request.BlobStorePdfFileRegexPattern);
 
