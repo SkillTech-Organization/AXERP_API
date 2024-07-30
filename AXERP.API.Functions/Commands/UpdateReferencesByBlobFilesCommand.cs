@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using AXERP.API.BlobHelper.Managers;
+﻿using AXERP.API.BlobHelper.Managers;
 using AXERP.API.BlobHelper.ServiceContracts.Responses;
 using AXERP.API.Business.Factories;
 using AXERP.API.Domain.ServiceContracts.Requests;
@@ -12,16 +11,13 @@ namespace AXERP.API.Functions.Commands
     {
         private readonly ILogger<UpdateReferencesByBlobFilesCommand> _logger;
         private readonly UnitOfWorkFactory _uowFactory;
-        private readonly IMapper _mapper;
 
         public UpdateReferencesByBlobFilesCommand(
             ILogger<UpdateReferencesByBlobFilesCommand> logger,
-            UnitOfWorkFactory uowFactory,
-            IMapper mapper)
+            UnitOfWorkFactory uowFactory)
         {
             _logger = logger;
             _uowFactory = uowFactory;
-            _mapper = mapper;
         }
 
         public async Task<ProcessBlobFilesResponse> Execute(ProcessBlobFilesRequest request)
@@ -30,12 +26,12 @@ namespace AXERP.API.Functions.Commands
 
             var getBlobFilesResponse = await containerHelper.GetFiles(request.BlobStorageImportFolder, request.BlobStorePdfFileRegexPattern);
 
-            var response = await Update(request, getBlobFilesResponse, containerHelper);
+            var response = await Process(request, getBlobFilesResponse, containerHelper);
 
             return response;
         }
 
-        private async Task<ProcessBlobFilesResponse> Update(ProcessBlobFilesRequest request, GetBlobFilesResponse data, BlobManager containerHelper)
+        private async Task<ProcessBlobFilesResponse> Process(ProcessBlobFilesRequest request, GetBlobFilesResponse data, BlobManager containerHelper)
         {
             var response = new ProcessBlobFilesResponse
             {
@@ -60,7 +56,7 @@ namespace AXERP.API.Functions.Commands
                 {
                     try
                     {
-                        var entities = uow.EntityRepository.GetAll();
+                        var entities = uow.DocumentRepository.GetAll();
                         var processed = new List<string>();
 
                         uow.BeginTransaction();
@@ -73,11 +69,26 @@ namespace AXERP.API.Functions.Commands
                             {
                                 var referenceName = item.Matches[0].Groups[regexKey].Value.Trim();
                                 var fileName = item.Matches[0].Value;
+
+                                var alreadyProcessed = entities.FirstOrDefault(x => x.OriginalName?.Trim() == referenceName);
+                                if (alreadyProcessed != null)
+                                {
+                                    response.Errors.Add($"Document '{fileName}' was already processed at {alreadyProcessed.ProcessedAt}.");
+                                    continue;
+                                }
+
                                 var referenced = entities.FirstOrDefault(x => x.Name.Trim() == referenceName);
+                                if (referenced == null)
+                                {
+                                    response.Errors.Add($"No document found in database with name: {referenceName}");
+                                    continue;
+                                }
 
+                                referenced.OriginalName = referenced.Name;
                                 referenced.Name = fileName;
+                                referenced.ProcessedAt = DateTime.Now;
 
-                                uow.EntityRepository.Update(referenced);
+                                uow.DocumentRepository.Update(referenced);
 
                                 await containerHelper.MoveFile(item.BlobItem, fileName, request.BlobStorageProcessedFolder);
 
@@ -86,10 +97,8 @@ namespace AXERP.API.Functions.Commands
                             catch (Exception ex)
                             {
                                 var name = item.BlobItem.Blob.Name;
-
                                 _logger.LogError(ex, "Error while processing blob file: {name}", name);
-
-                                response.Errors.Add(name);
+                                response.Errors.Add($"Error while processing blob file: {name}, error: " + ex.Message);
 
                                 continue;
                             }

@@ -7,21 +7,21 @@ namespace AXERP.API.Business.Interfaces.UnitOfWork
     {
         IGenericRepository GenericRepository { get; }
 
-        IRepository<Entity, int> EntityRepository { get; }
-
-        IRepository<Customer, int> CustomerRepository { get; }
+        IRepository<Document, int> DocumentRepository { get; }
 
         IRepository<CustomerToDelivery, int> CustomerToDeliveryRepository { get; }
 
-        IRepository<Delivery, string> DeliveryRepository { get; }
+        IRepository<Transaction, string> TransactionRepository { get; }
 
-        IRepository<Location, int> LocationRepository { get; }
+        IRepository<Interface, int> InterfaceRepository { get; }
 
-        IRepository<Transporter, int> TransporterRepository { get; }
+        IRepository<Entity, int> EntityRepository { get; }
 
         IRepository<TruckCompany, int> TruckCompanyRepository { get; }
 
         IRepository<TruckCompanyToDelivery, int> TruckCompanyToDeliveryRepository { get; }
+
+        IRepository<TransactionStatus, int> TransactionStatusRepository { get; }
 
         void BeginTransaction();
 
