@@ -41,8 +41,12 @@ namespace AXERP.API.Functions.Commands
 
             if (data.Data.Count == 0)
             {
+                _logger.LogInformation("There are no blob files to process.");
+
                 return response;
             }
+
+            _logger.LogInformation("Processing blob files. Amount of processable files found: {count}", data.Data.Count);
 
             try
             {
@@ -70,17 +74,23 @@ namespace AXERP.API.Functions.Commands
                                 var referenceName = item.Matches[0].Groups[regexKey].Value.Trim();
                                 var fileName = item.Matches[0].Value;
 
+                                _logger.LogInformation("Processing: {0}", fileName);
+
                                 var alreadyProcessed = entities.FirstOrDefault(x => x.OriginalName?.Trim() == referenceName);
                                 if (alreadyProcessed != null)
                                 {
-                                    response.Errors.Add($"Document '{fileName}' was already processed at {alreadyProcessed.ProcessedAt}.");
+                                    var msg = $"Document '{fileName}' was already processed at {alreadyProcessed.ProcessedAt}.";
+                                    _logger.LogInformation(msg);
+                                    response.Errors.Add(msg);
                                     continue;
                                 }
 
                                 var referenced = entities.FirstOrDefault(x => x.Name.Trim() == referenceName);
                                 if (referenced == null)
                                 {
-                                    response.Errors.Add($"No document found in database with name: {referenceName}");
+                                    var msg = $"No document found in database with name: {referenceName}";
+                                    _logger.LogInformation(msg);
+                                    response.Errors.Add(msg);
                                     continue;
                                 }
 
@@ -107,6 +117,8 @@ namespace AXERP.API.Functions.Commands
                         uow.CommitTransaction();
 
                         response.Processed = processed;
+
+                        _logger.LogInformation("All blob files processed.");
                     }
                     catch (Exception ex)
                     {
