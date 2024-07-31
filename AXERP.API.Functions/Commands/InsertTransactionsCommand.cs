@@ -95,21 +95,21 @@ namespace AXERP.API.Business.Commands
                             interfaces.Add(newSpecificPoint);
                         }
 
-                        var newRef = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference);
+                        var newRef = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference || x.OriginalName == newSheetRow.Reference);
                         if (newRef == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference) && !documents.Any(x => x.Name == newSheetRow.Reference))
                         {
                             newRef = uow.DocumentRepository.Add(new Document { Name = newSheetRow.Reference });
                             documents.Add(newRef);
                         }
 
-                        var newRef2 = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference2);
+                        var newRef2 = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference2 || x.OriginalName == newSheetRow.Reference2);
                         if (newRef2 == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference2) && !documents.Any(x => x.Name == newSheetRow.Reference2))
                         {
                             newRef2 = uow.DocumentRepository.Add(new Document { Name = newSheetRow.Reference2 });
                             documents.Add(newRef2);
                         }
 
-                        var newRef3 = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference3);
+                        var newRef3 = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference3 || x.OriginalName == newSheetRow.Reference3);
                         if (newRef3 == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference3) && !documents.Any(x => x.Name == newSheetRow.Reference3))
                         {
                             newRef3 = uow.DocumentRepository.Add(new Document { Name = newSheetRow.Reference3 });
