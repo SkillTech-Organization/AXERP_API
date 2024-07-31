@@ -105,6 +105,9 @@ namespace AXERP.API.Domain.Entities
         [JsonProperty("Reference 3")]
         public string Reference3 { get; set; }
 
+        [JsonProperty("BL Filename")]
+        public string BLFilename { get; set; }
+
         [JsonProperty("Truck Loading Customer Comment")]
         public string TruckLoadingCompanyComment { get; set; }
 

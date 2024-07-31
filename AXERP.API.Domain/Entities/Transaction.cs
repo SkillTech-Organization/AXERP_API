@@ -64,10 +64,12 @@ namespace AXERP.API.Domain.Entities
 
         public string Comment { get; set; }
 
-        public int? ReferenceID1 { get; set; }
+        public string? Reference { get; set; }
 
-        public int? ReferenceID2 { get; set; }
+        public string? Reference2 { get; set; }
 
-        public int? ReferenceID3 { get; set; }
+        public string? Reference3 { get; set; }
+
+        public int? BlFileID { get; set; }
     }
 }

@@ -7,7 +7,7 @@ namespace AXERP.API.Domain.Entities
     {
         public string Name { get; set; }
 
-        public string OriginalName { get; set; }
+        public string FileName { get; set; }
 
         public DateTime? ProcessedAt { get; set; }
     }

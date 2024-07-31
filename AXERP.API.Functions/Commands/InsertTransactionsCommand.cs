@@ -95,26 +95,26 @@ namespace AXERP.API.Business.Commands
                             interfaces.Add(newSpecificPoint);
                         }
 
-                        var newRef = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference || x.OriginalName == newSheetRow.Reference);
+                        var newRef = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference);
                         if (newRef == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference) && !documents.Any(x => x.Name == newSheetRow.Reference))
                         {
                             newRef = uow.DocumentRepository.Add(new Document { Name = newSheetRow.Reference });
                             documents.Add(newRef);
                         }
 
-                        var newRef2 = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference2 || x.OriginalName == newSheetRow.Reference2);
-                        if (newRef2 == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference2) && !documents.Any(x => x.Name == newSheetRow.Reference2))
-                        {
-                            newRef2 = uow.DocumentRepository.Add(new Document { Name = newSheetRow.Reference2 });
-                            documents.Add(newRef2);
-                        }
+                        //var newRef2 = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference2 || x.OriginalName == newSheetRow.Reference2);
+                        //if (newRef2 == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference2) && !documents.Any(x => x.Name == newSheetRow.Reference2))
+                        //{
+                        //    newRef2 = uow.DocumentRepository.Add(new Document { Name = newSheetRow.Reference2 });
+                        //    documents.Add(newRef2);
+                        //}
 
-                        var newRef3 = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference3 || x.OriginalName == newSheetRow.Reference3);
-                        if (newRef3 == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference3) && !documents.Any(x => x.Name == newSheetRow.Reference3))
-                        {
-                            newRef3 = uow.DocumentRepository.Add(new Document { Name = newSheetRow.Reference3 });
-                            documents.Add(newRef3);
-                        }
+                        //var newRef3 = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference3 || x.OriginalName == newSheetRow.Reference3);
+                        //if (newRef3 == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference3) && !documents.Any(x => x.Name == newSheetRow.Reference3))
+                        //{
+                        //    newRef3 = uow.DocumentRepository.Add(new Document { Name = newSheetRow.Reference3 });
+                        //    documents.Add(newRef3);
+                        //}
 
                         var newTransporter = entities.FirstOrDefault(x => x.Name == newSheetRow.Transporter);
                         if (newTransporter == null && !string.IsNullOrWhiteSpace(newSheetRow.Transporter) && !entities.Any(x => x.Name == newSheetRow.Transporter))
@@ -142,9 +142,7 @@ namespace AXERP.API.Business.Commands
                         transaction.DeliveryPointID = newDeliveryPoint?.ID;
                         transaction.SpecificDeliveryPointID = newSpecificPoint?.ID;
 
-                        transaction.ReferenceID1 = newRef?.ID;
-                        transaction.ReferenceID2 = newRef2?.ID;
-                        transaction.ReferenceID3 = newRef3?.ID;
+                        transaction.BlFileID = newRef?.ID;
 
                         transaction.TransporterID = newTransporter?.ID;
 

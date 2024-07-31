@@ -3,6 +3,7 @@ using AXERP.API.BlobHelper.ServiceContracts.Responses;
 using AXERP.API.Business.Factories;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
+using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace AXERP.API.Functions.Commands
@@ -76,26 +77,25 @@ namespace AXERP.API.Functions.Commands
 
                                 _logger.LogInformation("Processing: {0}", fileName);
 
-                                var alreadyProcessed = entities.FirstOrDefault(x => x.OriginalName?.Trim() == referenceName);
-                                if (alreadyProcessed != null)
+                                var referenced = entities.FirstOrDefault(x => x.Name?.Trim() == referenceName);
+
+                                if (referenced != null && !string.IsNullOrWhiteSpace(referenced.FileName))
                                 {
-                                    var msg = $"Document '{fileName}' was already processed at {alreadyProcessed.ProcessedAt}.";
+                                    var msg = $"Blob file '{fileName}' was already processed at {referenced.ProcessedAt}.";
                                     _logger.LogInformation(msg);
                                     response.Errors.Add(msg);
                                     continue;
                                 }
 
-                                var referenced = entities.FirstOrDefault(x => x.Name.Trim() == referenceName);
                                 if (referenced == null)
                                 {
-                                    var msg = $"No document found in database with name: {referenceName}";
+                                    var msg = $"No 'Reference' found with value: {referenceName}";
                                     _logger.LogInformation(msg);
                                     response.Errors.Add(msg);
                                     continue;
                                 }
 
-                                referenced.OriginalName = referenced.Name;
-                                referenced.Name = fileName;
+                                referenced.FileName = fileName;
                                 referenced.ProcessedAt = DateTime.Now;
 
                                 uow.DocumentRepository.Update(referenced);

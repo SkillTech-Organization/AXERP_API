@@ -187,6 +187,18 @@ namespace AXERP.API.Functions.Transactions
             }
         }
 
+        //[Function(nameof(CountGasTransactions))]
+        //[OpenApiOperation(operationId: nameof(CountGasTransactions), tags: new[] { "gas-transactions" })]
+        //[OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/plain", bodyType: typeof(string), Description = "The OK response")]
+        //public IActionResult GetAllGasTransactions(
+        //        [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
+        //{
+        //    using (var uow = _unitOfWorkFactory.Create())
+        //    {
+        //        return uow.GenericRepository.GetAll<Delivery>();
+        //    }
+        //}
+
         [Function(nameof(QueryGasTransactions))]
         [OpenApiOperation(operationId: nameof(QueryGasTransactions), tags: new[] { "gas-transactions" })]
         [OpenApiParameter(name: "Search", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Search in all columns, type Column = Search for specific search, eg. DeliveryID = 5")]
