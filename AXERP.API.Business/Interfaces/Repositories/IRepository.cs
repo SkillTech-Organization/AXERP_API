@@ -14,8 +14,12 @@
 
         bool Update(RowType entity);
 
+        bool Update(List<RowType> entities);
+
         bool Delete(RowType entity);
 
         bool Delete(KeyType id);
+
+        List<RowType> Where(string column, object? value);
     }
 }

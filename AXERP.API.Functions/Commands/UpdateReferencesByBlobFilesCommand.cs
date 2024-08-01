@@ -1,6 +1,7 @@
 ﻿using AXERP.API.BlobHelper.Managers;
 using AXERP.API.BlobHelper.ServiceContracts.Responses;
 using AXERP.API.Business.Factories;
+using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Extensions;
@@ -63,6 +64,7 @@ namespace AXERP.API.Functions.Commands
                     {
                         var entities = uow.DocumentRepository.GetAll();
                         var processed = new List<string>();
+                        var transactrions = uow.TransactionRepository.Where(nameof(Transaction.BlFileID), null);
 
                         uow.BeginTransaction();
 
@@ -99,6 +101,18 @@ namespace AXERP.API.Functions.Commands
                                 referenced.ProcessedAt = DateTime.Now;
 
                                 uow.DocumentRepository.Update(referenced);
+
+                                // Updating transactions without a bl file
+                                // Order of priority: Reference > Reference2 > Reference3
+                                var matchingTransactions = transactrions
+                                    .Where(x => x.Reference == referenceName ||
+                                                x.Reference2 == referenceName ||
+                                                x.Reference3 == referenceName);
+                                foreach (var transaction in matchingTransactions)
+                                {
+                                    transaction.BlFileID = referenced.ID;
+                                }
+                                uow.TransactionRepository.Update(transactrions);
 
                                 await containerHelper.MoveFile(item.BlobItem, fileName, request.BlobStorageProcessedFolder);
 

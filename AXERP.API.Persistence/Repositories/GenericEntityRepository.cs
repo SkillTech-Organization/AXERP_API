@@ -140,5 +140,47 @@ namespace AXERP.API.Persistence.Repositories
 
             return rowsEffected > 0 ? true : false;
         }
+
+        public bool Update(List<RowType> entities)
+        {
+            int rowsEffected = 0;
+
+            var t = typeof(RowType);
+
+            string tableName = t.GetTableName();
+            string cols = t.GetColumnNamesAsSqlAssignmentList(null, true);
+            string key = t.GetKeyColumnName();
+
+            StringBuilder query = new StringBuilder();
+
+            query.Append($"UPDATE {tableName} SET {cols}");
+
+            query.Append($" WHERE {key} = @{key}");
+
+            rowsEffected = _connection.Execute(query.ToString(), entities, transaction: _sqlTransaction);
+
+            return rowsEffected > 0 ? true : false;
+        }
+
+        public List<RowType> Where(string column, object? value)
+        {
+            var rows = new List<RowType>();
+
+            string tableName = typeof(RowType).GetTableName();
+
+            if (typeof(RowType).FilterValidColumn(column) == null)
+            {
+                throw new Exception($"Invalid column '{column}' for table '{tableName}'");
+            }
+
+            StringBuilder query = new StringBuilder();
+
+            query.Append($"SELECT * FROM {typeof(RowType).GetTableName()}");
+            query.Append($" WHERE {column} = @param");
+
+            rows = _connection.Query<RowType>(query.ToString(), new { param = value }, transaction: _sqlTransaction).ToList();
+
+            return rows;
+        }
     }
 }
