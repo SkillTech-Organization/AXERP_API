@@ -95,11 +95,12 @@ namespace AXERP.API.Business.Commands
                             interfaces.Add(newSpecificPoint);
                         }
 
-                        var newRef = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference);
-                        if (newRef == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference) && !documents.Any(x => x.Name == newSheetRow.Reference))
+                        var newRef3 = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference3);
+                        if (newRef3 == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference3) && !documents.Any(x => x.Name == newSheetRow.Reference3))
                         {
-                            newRef = uow.DocumentRepository.Add(new Document { Name = newSheetRow.Reference });
-                            documents.Add(newRef);
+                            newRef3 = uow.DocumentRepository.Add(new Document { Name = newSheetRow.Reference3 });
+                            documents.Add(newRef3);
+                            transaction.BlFileID = newRef3.ID;
                         }
 
                         var newRef2 = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference2);
@@ -107,13 +108,15 @@ namespace AXERP.API.Business.Commands
                         {
                             newRef2 = uow.DocumentRepository.Add(new Document { Name = newSheetRow.Reference2 });
                             documents.Add(newRef2);
+                            transaction.BlFileID = newRef2.ID;
                         }
 
-                        var newRef3 = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference3);
-                        if (newRef3 == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference3) && !documents.Any(x => x.Name == newSheetRow.Reference3))
+                        var newRef = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference);
+                        if (newRef == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference) && !documents.Any(x => x.Name == newSheetRow.Reference))
                         {
-                            newRef3 = uow.DocumentRepository.Add(new Document { Name = newSheetRow.Reference3 });
-                            documents.Add(newRef3);
+                            newRef = uow.DocumentRepository.Add(new Document { Name = newSheetRow.Reference });
+                            documents.Add(newRef);
+                            transaction.BlFileID = newRef.ID;
                         }
 
                         var newTransporter = entities.FirstOrDefault(x => x.Name == newSheetRow.Transporter);
@@ -141,8 +144,6 @@ namespace AXERP.API.Business.Commands
 
                         transaction.DeliveryPointID = newDeliveryPoint?.ID;
                         transaction.SpecificDeliveryPointID = newSpecificPoint?.ID;
-
-                        transaction.BlFileID = newRef?.ID ?? newRef2?.ID ?? newRef3?.ID;
 
                         transaction.TransporterID = newTransporter?.ID;
 
