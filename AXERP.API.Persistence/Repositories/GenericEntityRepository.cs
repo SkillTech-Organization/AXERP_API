@@ -120,14 +120,14 @@ namespace AXERP.API.Persistence.Repositories
             return result;
         }
 
-        public bool Update(RowType entity)
+        public bool Update(RowType entity, List<string>? columnFilter = null)
         {
             int rowsEffected = 0;
 
             var t = typeof(RowType);
 
             string tableName = t.GetTableName();
-            string cols = t.GetColumnNamesAsSqlAssignmentList(null, true);
+            string cols = t.GetColumnNamesAsSqlAssignmentList(columnFilter, true);
             string key = t.GetKeyColumnName();
 
             StringBuilder query = new StringBuilder();
@@ -139,6 +139,58 @@ namespace AXERP.API.Persistence.Repositories
             rowsEffected = _connection.Execute(query.ToString(), entity, transaction: _sqlTransaction);
 
             return rowsEffected > 0 ? true : false;
+        }
+
+        public bool Update(IEnumerable<RowType> entities, List<string>? columnFilter = null)
+        {
+            int rowsEffected = 0;
+
+            var t = typeof(RowType);
+
+            string tableName = t.GetTableName();
+            string cols = t.GetColumnNamesAsSqlAssignmentList(columnFilter, true);
+            string key = t.GetKeyColumnName();
+
+            StringBuilder query = new StringBuilder();
+
+            query.Append($"UPDATE {tableName} SET {cols}");
+
+            query.Append($" WHERE {key} = @{key}");
+
+            rowsEffected = _connection.Execute(query.ToString(), entities, transaction: _sqlTransaction);
+
+            return rowsEffected > 0 ? true : false;
+        }
+
+        public List<RowType> Where(string column, object? value)
+        {
+            var rows = new List<RowType>();
+
+            string tableName = typeof(RowType).GetTableName();
+
+            if (typeof(RowType).FilterValidColumn(column) == null)
+            {
+                throw new Exception($"Invalid column '{column}' for table '{tableName}'");
+            }
+
+            SqlBuilder query = new SqlBuilder();
+
+            var tmp = query.AddTemplate(
+                @$"SELECT * FROM {typeof(RowType).GetTableName()} /**where**/"
+            );
+
+            if (value != null)
+            {
+                query.Where($"{column} = @{nameof(value)}", new { value });
+            }
+            else
+            {
+                query.Where($"{column} is null");
+            }
+
+            rows = _connection.Query<RowType>(tmp.RawSql, transaction: _sqlTransaction).ToList();
+
+            return rows;
         }
     }
 }

@@ -12,10 +12,14 @@
 
         RowType Add(RowType entity, bool insertId = false);
 
-        bool Update(RowType entity);
+        bool Update(RowType entity, List<string>? columnFilter = null);
+
+        bool Update(IEnumerable<RowType> entities, List<string>? columnFilter = null);
 
         bool Delete(RowType entity);
 
         bool Delete(KeyType id);
+
+        List<RowType> Where(string column, object? value);
     }
 }

@@ -3,8 +3,8 @@ using AXERP.API.BlobHelper.ServiceContracts.Responses;
 using AXERP.API.Business.Factories;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
-using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Extensions;
 using Microsoft.Extensions.Logging;
+using Transaction = AXERP.API.Domain.Entities.Transaction;
 
 namespace AXERP.API.Functions.Commands
 {
@@ -68,7 +68,18 @@ namespace AXERP.API.Functions.Commands
 
                         foreach (var item in data.Data)
                         {
+
                             var blob_name = item.BlobItem.Blob.Name;
+
+                            _logger.LogInformation("Querying transactions without BL File.");
+
+                            var transactrions = uow.TransactionRepository.Where(nameof(Transaction.BlFileID), null);
+                            if (transactrions == null)
+                            {
+                                throw new Exception("Query transactions without BL File failed!");
+                            }
+
+                            _logger.LogInformation("Transactions without BL File: {count}", transactrions.Count());
 
                             try
                             {
@@ -98,7 +109,28 @@ namespace AXERP.API.Functions.Commands
                                 referenced.FileName = fileName;
                                 referenced.ProcessedAt = DateTime.Now;
 
+                                _logger.LogInformation("Updating Document record.");
+
                                 uow.DocumentRepository.Update(referenced);
+
+                                _logger.LogInformation("Document updated.");
+
+                                // Updating transactions without a bl file
+                                // Order of priority: Reference > Reference2 > Reference3
+                                var matchingTransactions = transactrions
+                                    .Where(x => x.Reference == referenceName ||
+                                                x.Reference2 == referenceName ||
+                                                x.Reference3 == referenceName);
+
+                                _logger.LogInformation("Matching transactions: {count}", matchingTransactions.Count());
+
+                                foreach (var transaction in matchingTransactions)
+                                {
+                                    transaction.BlFileID = referenced.ID;
+                                }
+                                uow.TransactionRepository.Update(matchingTransactions, new List<string> { nameof(Transaction.BlFileID) });
+
+                                _logger.LogInformation("Matching transactions updated.");
 
                                 await containerHelper.MoveFile(item.BlobItem, fileName, request.BlobStorageProcessedFolder);
 
