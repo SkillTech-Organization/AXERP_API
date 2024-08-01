@@ -1,6 +1,7 @@
 ﻿using AXERP.API.Business.Interfaces.Repositories;
 using AXERP.API.Business.Interfaces.UnitOfWork;
 using AXERP.API.Persistence.Utils;
+using Azure.Core;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using System.Text;
@@ -173,12 +174,22 @@ namespace AXERP.API.Persistence.Repositories
                 throw new Exception($"Invalid column '{column}' for table '{tableName}'");
             }
 
-            StringBuilder query = new StringBuilder();
+            SqlBuilder query = new SqlBuilder();
 
-            query.Append($"SELECT * FROM {typeof(RowType).GetTableName()}");
-            query.Append($" WHERE {column} = @param");
+            var tmp = query.AddTemplate(
+                @$"SELECT * FROM {typeof(RowType).GetTableName()} /**where**/"
+            );
 
-            rows = _connection.Query<RowType>(query.ToString(), new { param = value }, transaction: _sqlTransaction).ToList();
+            if (value != null)
+            {
+                query.Where($"{column} = @{nameof(value)}", new { value });
+            }
+            else
+            {
+                query.Where($"{column} is null");
+            }
+
+            rows = _connection.Query<RowType>(tmp.RawSql, transaction: _sqlTransaction).ToList();
 
             return rows;
         }
