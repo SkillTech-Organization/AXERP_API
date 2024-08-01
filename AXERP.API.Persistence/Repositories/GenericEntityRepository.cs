@@ -1,7 +1,6 @@
 ﻿using AXERP.API.Business.Interfaces.Repositories;
 using AXERP.API.Business.Interfaces.UnitOfWork;
 using AXERP.API.Persistence.Utils;
-using Azure.Core;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using System.Text;
@@ -121,14 +120,14 @@ namespace AXERP.API.Persistence.Repositories
             return result;
         }
 
-        public bool Update(RowType entity)
+        public bool Update(RowType entity, List<string>? columnFilter = null)
         {
             int rowsEffected = 0;
 
             var t = typeof(RowType);
 
             string tableName = t.GetTableName();
-            string cols = t.GetColumnNamesAsSqlAssignmentList(null, true);
+            string cols = t.GetColumnNamesAsSqlAssignmentList(columnFilter, true);
             string key = t.GetKeyColumnName();
 
             StringBuilder query = new StringBuilder();
@@ -142,14 +141,14 @@ namespace AXERP.API.Persistence.Repositories
             return rowsEffected > 0 ? true : false;
         }
 
-        public bool Update(List<RowType> entities)
+        public bool Update(IEnumerable<RowType> entities, List<string>? columnFilter = null)
         {
             int rowsEffected = 0;
 
             var t = typeof(RowType);
 
             string tableName = t.GetTableName();
-            string cols = t.GetColumnNamesAsSqlAssignmentList(null, true);
+            string cols = t.GetColumnNamesAsSqlAssignmentList(columnFilter, true);
             string key = t.GetKeyColumnName();
 
             StringBuilder query = new StringBuilder();

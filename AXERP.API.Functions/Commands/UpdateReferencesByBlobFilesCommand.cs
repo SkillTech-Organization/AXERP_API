@@ -1,11 +1,10 @@
 ﻿using AXERP.API.BlobHelper.Managers;
 using AXERP.API.BlobHelper.ServiceContracts.Responses;
 using AXERP.API.Business.Factories;
-using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
-using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Extensions;
 using Microsoft.Extensions.Logging;
+using Transaction = AXERP.API.Domain.Entities.Transaction;
 
 namespace AXERP.API.Functions.Commands
 {
@@ -129,7 +128,7 @@ namespace AXERP.API.Functions.Commands
                                 {
                                     transaction.BlFileID = referenced.ID;
                                 }
-                                uow.TransactionRepository.Update(transactrions);
+                                uow.TransactionRepository.Update(matchingTransactions, new List<string> { nameof(Transaction.BlFileID) });
 
                                 _logger.LogInformation("Matching transactions updated.");
 
