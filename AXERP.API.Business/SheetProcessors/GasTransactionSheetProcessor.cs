@@ -1,4 +1,4 @@
-﻿using AXERP.API.Business.Factories;
+﻿using AXERP.API.Persistence.Factories;
 using AXERP.API.Domain.Entities;
 using AXERP.API.GoogleHelper.Models;
 using Microsoft.Extensions.Logging;
@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 using System.Globalization;
 using System.Reflection;
 
-namespace AXERP.API.Functions.SheetProcessors
+namespace AXERP.API.Business.SheetProcessors
 {
     public class GasTransactionSheetProcessor : BaseSheetProcessors<Delivery>
     {

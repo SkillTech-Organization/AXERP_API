@@ -1,5 +1,5 @@
-﻿using AXERP.API.Business.Interfaces.Repositories;
-using AXERP.API.Business.Interfaces.UnitOfWork;
+﻿using AXERP.API.Domain.Interfaces.Repositories;
+using AXERP.API.Domain.Interfaces.UnitOfWork;
 using AXERP.API.Persistence.Utils;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -79,6 +79,21 @@ namespace AXERP.API.Persistence.Repositories
             string query = $"DELETE FROM {tableName} WHERE {key} = @{key}";
 
             rowsEffected = _connection.Execute(query, entity, transaction: _sqlTransaction);
+
+            return rowsEffected > 0 ? true : false;
+        }
+
+        public bool Delete(IEnumerable<RowType> entities)
+        {
+            int rowsEffected = 0;
+
+            var t = typeof(RowType);
+
+            string tableName = t.GetTableName();
+            string key = t.GetKeyColumnName();
+            string query = $"DELETE FROM {tableName} WHERE {key} = @{key}";
+
+            rowsEffected = _connection.Execute(query, entities, transaction: _sqlTransaction);
 
             return rowsEffected > 0 ? true : false;
         }

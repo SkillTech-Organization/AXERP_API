@@ -1,6 +1,6 @@
 ﻿using Microsoft.Data.SqlClient;
 
-namespace AXERP.API.Business.Interfaces.UnitOfWork
+namespace AXERP.API.Domain.Interfaces.UnitOfWork
 {
     public interface IConnectionProvider
     {

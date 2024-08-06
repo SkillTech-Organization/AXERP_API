@@ -11,7 +11,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\AXERP.API.BlobHelper\AXERP.API.BlobHelper.csproj" />
     <ProjectReference Include="..\AXERP.API.Domain\AXERP.API.Domain.csproj" />
+    <ProjectReference Include="..\AXERP.API.GoogleHelper\AXERP.API.GoogleHelper.csproj" />
+    <ProjectReference Include="..\AXERP.API.Persistence\AXERP.API.Persistence.csproj" />
   </ItemGroup>
 
 </Project>

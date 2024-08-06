@@ -1,4 +1,4 @@
-﻿namespace AXERP.API.Business.Interfaces.Repositories
+﻿namespace AXERP.API.Domain.Interfaces.Repositories
 {
     public interface IRepository<RowType, KeyType> where RowType : class
     {
@@ -15,6 +15,8 @@
         bool Update(RowType entity, List<string>? columnFilter = null);
 
         bool Update(IEnumerable<RowType> entities, List<string>? columnFilter = null);
+
+        bool Delete(IEnumerable<RowType> entities);
 
         bool Delete(RowType entity);
 

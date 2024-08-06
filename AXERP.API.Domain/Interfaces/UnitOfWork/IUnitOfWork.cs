@@ -1,7 +1,7 @@
-﻿using AXERP.API.Business.Interfaces.Repositories;
+﻿using AXERP.API.Domain.Interfaces.Repositories;
 using AXERP.API.Domain.Entities;
 
-namespace AXERP.API.Business.Interfaces.UnitOfWork
+namespace AXERP.API.Domain.Interfaces.UnitOfWork
 {
     public interface IUnitOfWork : IDisposable, IConnectionProvider
     {

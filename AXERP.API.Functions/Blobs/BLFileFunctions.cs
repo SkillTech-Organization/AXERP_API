@@ -1,5 +1,5 @@
 using AXERP.API.Domain.ServiceContracts.Responses;
-using AXERP.API.Functions.Commands;
+using AXERP.API.Business.Commands;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;

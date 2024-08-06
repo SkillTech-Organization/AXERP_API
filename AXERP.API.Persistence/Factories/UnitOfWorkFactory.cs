@@ -1,7 +1,7 @@
-﻿using AXERP.API.Business.Interfaces.UnitOfWork;
-using AXERP.API.Persistence.UnitOfWork;
+﻿using AXERP.API.Domain.Interfaces.UnitOfWork;
+using AXERP.API.Persistence.UnitOfWorks;
 
-namespace AXERP.API.Business.Factories
+namespace AXERP.API.Persistence.Factories
 {
     public class UnitOfWorkFactory
     {

@@ -1,10 +1,10 @@
-﻿using AXERP.API.Business.Interfaces.Repositories;
-using AXERP.API.Business.Interfaces.UnitOfWork;
+﻿using AXERP.API.Domain.Interfaces.Repositories;
+using AXERP.API.Domain.Interfaces.UnitOfWork;
 using AXERP.API.Domain.Entities;
 using AXERP.API.Persistence.Repositories;
 using Microsoft.Data.SqlClient;
 
-namespace AXERP.API.Persistence.UnitOfWork
+namespace AXERP.API.Persistence.UnitOfWorks
 {
     public class UnitOfWork : IUnitOfWork
     {

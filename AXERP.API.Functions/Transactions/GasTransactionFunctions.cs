@@ -1,10 +1,10 @@
 using AutoMapper;
 using AXERP.API.Business.Commands;
-using AXERP.API.Business.Factories;
+using AXERP.API.Persistence.Factories;
 using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
-using AXERP.API.Functions.SheetProcessors;
+using AXERP.API.Business.SheetProcessors;
 using AXERP.API.GoogleHelper.Managers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
@@ -13,6 +13,9 @@ using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using System.Net;
+using Newtonsoft.Json;
+using AXERP.API.Persistence.Queries;
+using FromBodyAttribute = Microsoft.Azure.Functions.Worker.Http.FromBodyAttribute;
 
 namespace AXERP.API.Functions.Transactions
 {
@@ -22,6 +25,7 @@ namespace AXERP.API.Functions.Transactions
         private readonly GasTransactionSheetProcessor _gasTransactionSheetProcessor;
         private readonly UnitOfWorkFactory _unitOfWorkFactory;
         private readonly InsertTransactionsCommand _insertTransactionsCommand;
+        private readonly DeleteTransactionsCommand _deleteTransactionsCommand;
         private readonly IMapper _mapper;
 
         public GasTransactionFunctions(
@@ -29,6 +33,7 @@ namespace AXERP.API.Functions.Transactions
             GasTransactionSheetProcessor gasTransactionSheetProcessor,
             UnitOfWorkFactory unitOfWorkFactory,
             InsertTransactionsCommand insertTransactionsCommand,
+            DeleteTransactionsCommand deleteTransactionsCommand,
             IMapper mapper)
         {
             _logger = logger;
@@ -36,92 +41,8 @@ namespace AXERP.API.Functions.Transactions
             _unitOfWorkFactory = unitOfWorkFactory;
             _mapper = mapper;
             _insertTransactionsCommand = insertTransactionsCommand;
+            _deleteTransactionsCommand = deleteTransactionsCommand;
         }
-
-        #region SQL Scripts
-
-        public readonly string Sql_Insert_Delivery = @"
-                INSERT INTO Transactions
-                       (ID
-                       ,DateLoadedEnd
-                       ,DateDelivered
-                       ,SalesContractID
-                       ,SalesStatus
-                       ,TerminalID
-                       ,QtyLoaded
-                       ,ToDeliveryID
-                       ,Status
-                       ,SpecificDeliveryPointID
-                       ,DeliveryPointID
-                       ,TransporterID
-                       ,DeliveryUP
-                       ,TransportCharges
-                       ,UnitSlotCharge
-                       ,ServiceCharges
-                       ,UnitStorageCharge
-                       ,StorageCharge
-                       ,OtherCharges
-                       ,Sales
-                       ,CMR
-                       ,BioMWh
-                       ,BillOfLading
-                       ,BioAddendum
-                       ,Comment
-                       ,ReferenceID1
-                       ,ReferenceID2
-                       ,ReferenceID3)
-                 VALUES
-                       (@ID
-                       ,@DateLoadedEnd
-                       ,@DateDelivered
-                       ,@SalesContractID
-                       ,@SalesStatus
-                       ,@TerminalID
-                       ,@QtyLoaded
-                       ,@ToDeliveryID
-                       ,@Status
-                       ,@SpecificDeliveryPointID
-                       ,@DeliveryPointID
-                       ,@TransporterID
-                       ,@DeliveryUP
-                       ,@TransportCharges
-                       ,@UnitSlotCharge
-                       ,@ServiceCharges
-                       ,@UnitStorageCharge
-                       ,@StorageCharge
-                       ,@OtherCharges
-                       ,@Sales
-                       ,@CMR
-                       ,@BioMWh
-                       ,@BillOfLading
-                       ,@BioAddendum
-                       ,@Comment
-                       ,@ReferenceID1
-                       ,@ReferenceID2
-                       ,@ReferenceID3)
-            ";
-
-        public readonly string Sql_Select_Delivery_IDs = @"
-                select ID from Deliveries
-            ";
-
-        public readonly string Sql_Query_Paged_GasTransactions =
-            @"
-            select X.* from 
-                (select _table.*, ROW_NUMBER() OVER (/**orderby**/) AS RowNumber from Deliveries _table /**where**/)
-            as X where RowNumber between @start and @finish
-            ";
-
-        public readonly string Sql_Query_Paged_GasTransactions_Dynamic_Columns =
-            @"
-            select /**select**/ from 
-                (select _table.*, ROW_NUMBER() OVER (/**orderby**/) AS RowNumber from Deliveries _table /**where**/)
-            as X where RowNumber between @start and @finish
-            ";
-
-        public readonly string Sql_Query_Count_GasTransactions = "SELECT COUNT(*) FROM Deliveries";
-
-        #endregion
 
         [Function(nameof(ImportGasTransactions))]
         [OpenApiOperation(operationId: nameof(ImportGasTransactions), tags: new[] { "gas-transactions" })]
@@ -175,6 +96,38 @@ namespace AXERP.API.Functions.Transactions
             }
         }
 
+        [Function(nameof(DeleteGasTransactions))]
+        [OpenApiOperation(operationId: nameof(DeleteGasTransactions), tags: new[] { "gas-transactions" })]
+        [OpenApiRequestBody("application/json", typeof(DeleteTransactionRequest), Required = true)]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(string), Description = "The OK response")]
+        public async Task<IActionResult> DeleteGasTransactions(
+                [HttpTrigger(AuthorizationLevel.Anonymous, "delete")] HttpRequestData req, [FromBody] DeleteTransactionRequest data)
+        {
+            try
+            {
+                if (data == null)
+                {
+                    throw new Exception("Request is null");
+                }
+
+                var response = _deleteTransactionsCommand.Execute(data);
+                return new OkObjectResult(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while deleting transaction(s)");
+                var res = new ObjectResult(new BaseResponse
+                {
+                    HttpStatusCode = HttpStatusCode.InternalServerError,
+                    RequestError = ex.Message
+                })
+                {
+                    StatusCode = 500
+                };
+                return res;
+            }
+        }
+
         [Function(nameof(CountGasTransactions))]
         [OpenApiOperation(operationId: nameof(CountGasTransactions), tags: new[] { "gas-transactions" })]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/plain", bodyType: typeof(string), Description = "The OK response")]
@@ -186,18 +139,6 @@ namespace AXERP.API.Functions.Transactions
                 return uow.GenericRepository.CountAll<Delivery>();
             }
         }
-
-        //[Function(nameof(CountGasTransactions))]
-        //[OpenApiOperation(operationId: nameof(CountGasTransactions), tags: new[] { "gas-transactions" })]
-        //[OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/plain", bodyType: typeof(string), Description = "The OK response")]
-        //public IActionResult GetAllGasTransactions(
-        //        [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
-        //{
-        //    using (var uow = _unitOfWorkFactory.Create())
-        //    {
-        //        return uow.GenericRepository.GetAll<Delivery>();
-        //    }
-        //}
 
         [Function(nameof(QueryGasTransactions))]
         [OpenApiOperation(operationId: nameof(QueryGasTransactions), tags: new[] { "gas-transactions" })]
@@ -212,8 +153,10 @@ namespace AXERP.API.Functions.Transactions
         public IActionResult QueryGasTransactions(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
-            var queryTemplate = Environment.GetEnvironmentVariable(nameof(Sql_Query_Paged_GasTransactions_Dynamic_Columns)) ?? Sql_Query_Paged_GasTransactions_Dynamic_Columns;
-            var countTemplate = Environment.GetEnvironmentVariable(nameof(Sql_Query_Count_GasTransactions)) ?? Sql_Query_Count_GasTransactions;
+            var queryTemplate = Environment.GetEnvironmentVariable(
+                nameof(TransactionQueries.Sql_Query_Paged_GasTransactions_Dynamic_Columns)) ?? TransactionQueries.Sql_Query_Paged_GasTransactions_Dynamic_Columns;
+            var countTemplate = Environment.GetEnvironmentVariable(
+                nameof(TransactionQueries.Sql_Query_Count_GasTransactions)) ?? TransactionQueries.Sql_Query_Count_GasTransactions;
 
             var cols = req.Query["Columns"]?.ToString()?.Split(",", StringSplitOptions.TrimEntries)?.ToList() ?? new List<string>();
 

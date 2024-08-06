@@ -1,7 +1,7 @@
 ﻿using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
 
-namespace AXERP.API.Business.Interfaces.Repositories
+namespace AXERP.API.Domain.Interfaces.Repositories
 {
     public interface IGenericRepository
     {
