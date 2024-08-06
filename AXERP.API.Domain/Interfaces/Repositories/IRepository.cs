@@ -16,6 +16,8 @@
 
         bool Update(IEnumerable<RowType> entities, List<string>? columnFilter = null);
 
+        bool Delete(IEnumerable<RowType> entities);
+
         bool Delete(RowType entity);
 
         bool Delete(KeyType id);

@@ -13,6 +13,7 @@ using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using System.Net;
+using Newtonsoft.Json;
 
 namespace AXERP.API.Functions.Transactions
 {
@@ -22,6 +23,7 @@ namespace AXERP.API.Functions.Transactions
         private readonly GasTransactionSheetProcessor _gasTransactionSheetProcessor;
         private readonly UnitOfWorkFactory _unitOfWorkFactory;
         private readonly InsertTransactionsCommand _insertTransactionsCommand;
+        private readonly DeleteTransactionsCommand _deleteTransactionsCommand;
         private readonly IMapper _mapper;
 
         public GasTransactionFunctions(
@@ -29,6 +31,7 @@ namespace AXERP.API.Functions.Transactions
             GasTransactionSheetProcessor gasTransactionSheetProcessor,
             UnitOfWorkFactory unitOfWorkFactory,
             InsertTransactionsCommand insertTransactionsCommand,
+            DeleteTransactionsCommand deleteTransactionsCommand,
             IMapper mapper)
         {
             _logger = logger;
@@ -36,6 +39,7 @@ namespace AXERP.API.Functions.Transactions
             _unitOfWorkFactory = unitOfWorkFactory;
             _mapper = mapper;
             _insertTransactionsCommand = insertTransactionsCommand;
+            _deleteTransactionsCommand = deleteTransactionsCommand;
         }
 
         #region SQL Scripts
@@ -164,6 +168,35 @@ namespace AXERP.API.Functions.Transactions
             {
                 _logger.LogError(ex, "Error while importing GasTransactions");
                 var res = new ObjectResult(new ImportGasTransactionResponse
+                {
+                    HttpStatusCode = HttpStatusCode.InternalServerError,
+                    RequestError = ex.Message
+                })
+                {
+                    StatusCode = 500
+                };
+                return res;
+            }
+        }
+
+        [Function(nameof(DeleteGasTransactions))]
+        [OpenApiOperation(operationId: nameof(DeleteGasTransactions), tags: new[] { "gas-transactions" })]
+        [OpenApiRequestBody("text/json", typeof(DeleteTransactionRequest), Required = true)]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
+        public async Task<IActionResult> DeleteGasTransactions(
+                [HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
+        {
+            try
+            {
+                string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+                var request = JsonConvert.DeserializeObject<DeleteTransactionRequest>(requestBody);
+                var response = _deleteTransactionsCommand.Execute(request);
+                return new OkObjectResult(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while deleting GasTransaction(s)");
+                var res = new ObjectResult(new BaseResponse
                 {
                     HttpStatusCode = HttpStatusCode.InternalServerError,
                     RequestError = ex.Message

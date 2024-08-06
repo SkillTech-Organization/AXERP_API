@@ -83,6 +83,21 @@ namespace AXERP.API.Persistence.Repositories
             return rowsEffected > 0 ? true : false;
         }
 
+        public bool Delete(IEnumerable<RowType> entities)
+        {
+            int rowsEffected = 0;
+
+            var t = typeof(RowType);
+
+            string tableName = t.GetTableName();
+            string key = t.GetKeyColumnName();
+            string query = $"DELETE FROM {tableName} WHERE {key} = @{key}";
+
+            rowsEffected = _connection.Execute(query, entities, transaction: _sqlTransaction);
+
+            return rowsEffected > 0 ? true : false;
+        }
+
         public bool Delete(KeyType id)
         {
             int rowsEffected = 0;
