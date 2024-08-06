@@ -42,8 +42,13 @@ namespace AXERP.API.Business.Commands
                     var transactions = uow.TransactionRepository.GetAll().Where(x => request.TransactionIds.Contains(x.ID));
 
                     //TODO: cascade delete on DB level
+                    _logger.LogInformation("Deleting {count} CustomerToDelivery records...", customerToDeliveries.Count());
                     uow.CustomerToDeliveryRepository.Delete(customerToDeliveries);
+
+                    _logger.LogInformation("Deleting {count} TruckCompanyToDelivery records...", truckCompanyToDeliveries.Count());
                     uow.TruckCompanyToDeliveryRepository.Delete(truckCompanyToDeliveries);
+
+                    _logger.LogInformation("Deleting {count} Transaction records...", transactions.Count());
                     uow.TransactionRepository.Delete(transactions);
 
                     uow.CommitTransaction();
