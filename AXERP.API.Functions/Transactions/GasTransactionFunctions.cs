@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using System.Net;
 using Newtonsoft.Json;
+using AXERP.API.Persistence.Queries;
 
 namespace AXERP.API.Functions.Transactions
 {
@@ -41,91 +42,6 @@ namespace AXERP.API.Functions.Transactions
             _insertTransactionsCommand = insertTransactionsCommand;
             _deleteTransactionsCommand = deleteTransactionsCommand;
         }
-
-        #region SQL Scripts
-
-        public readonly string Sql_Insert_Delivery = @"
-                INSERT INTO Transactions
-                       (ID
-                       ,DateLoadedEnd
-                       ,DateDelivered
-                       ,SalesContractID
-                       ,SalesStatus
-                       ,TerminalID
-                       ,QtyLoaded
-                       ,ToDeliveryID
-                       ,Status
-                       ,SpecificDeliveryPointID
-                       ,DeliveryPointID
-                       ,TransporterID
-                       ,DeliveryUP
-                       ,TransportCharges
-                       ,UnitSlotCharge
-                       ,ServiceCharges
-                       ,UnitStorageCharge
-                       ,StorageCharge
-                       ,OtherCharges
-                       ,Sales
-                       ,CMR
-                       ,BioMWh
-                       ,BillOfLading
-                       ,BioAddendum
-                       ,Comment
-                       ,ReferenceID1
-                       ,ReferenceID2
-                       ,ReferenceID3)
-                 VALUES
-                       (@ID
-                       ,@DateLoadedEnd
-                       ,@DateDelivered
-                       ,@SalesContractID
-                       ,@SalesStatus
-                       ,@TerminalID
-                       ,@QtyLoaded
-                       ,@ToDeliveryID
-                       ,@Status
-                       ,@SpecificDeliveryPointID
-                       ,@DeliveryPointID
-                       ,@TransporterID
-                       ,@DeliveryUP
-                       ,@TransportCharges
-                       ,@UnitSlotCharge
-                       ,@ServiceCharges
-                       ,@UnitStorageCharge
-                       ,@StorageCharge
-                       ,@OtherCharges
-                       ,@Sales
-                       ,@CMR
-                       ,@BioMWh
-                       ,@BillOfLading
-                       ,@BioAddendum
-                       ,@Comment
-                       ,@ReferenceID1
-                       ,@ReferenceID2
-                       ,@ReferenceID3)
-            ";
-
-        public readonly string Sql_Select_Delivery_IDs = @"
-                select ID from Deliveries
-            ";
-
-        public readonly string Sql_Query_Paged_GasTransactions =
-            @"
-            select X.* from 
-                (select _table.*, ROW_NUMBER() OVER (/**orderby**/) AS RowNumber from Deliveries _table /**where**/)
-            as X where RowNumber between @start and @finish
-            ";
-
-        public readonly string Sql_Query_Paged_GasTransactions_Dynamic_Columns =
-            @"
-            select /**select**/ from 
-                (select _table.*, ROW_NUMBER() OVER (/**orderby**/) AS RowNumber from Deliveries _table /**where**/)
-            as X where RowNumber between @start and @finish
-            ";
-
-        public readonly string Sql_Query_Count_GasTransactions = "SELECT COUNT(*) FROM Deliveries";
-
-        #endregion
 
         [Function(nameof(ImportGasTransactions))]
         [OpenApiOperation(operationId: nameof(ImportGasTransactions), tags: new[] { "gas-transactions" })]
@@ -220,18 +136,6 @@ namespace AXERP.API.Functions.Transactions
             }
         }
 
-        //[Function(nameof(CountGasTransactions))]
-        //[OpenApiOperation(operationId: nameof(CountGasTransactions), tags: new[] { "gas-transactions" })]
-        //[OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/plain", bodyType: typeof(string), Description = "The OK response")]
-        //public IActionResult GetAllGasTransactions(
-        //        [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
-        //{
-        //    using (var uow = _unitOfWorkFactory.Create())
-        //    {
-        //        return uow.GenericRepository.GetAll<Delivery>();
-        //    }
-        //}
-
         [Function(nameof(QueryGasTransactions))]
         [OpenApiOperation(operationId: nameof(QueryGasTransactions), tags: new[] { "gas-transactions" })]
         [OpenApiParameter(name: "Search", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Search in all columns, type Column = Search for specific search, eg. DeliveryID = 5")]
@@ -245,8 +149,10 @@ namespace AXERP.API.Functions.Transactions
         public IActionResult QueryGasTransactions(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
-            var queryTemplate = Environment.GetEnvironmentVariable(nameof(Sql_Query_Paged_GasTransactions_Dynamic_Columns)) ?? Sql_Query_Paged_GasTransactions_Dynamic_Columns;
-            var countTemplate = Environment.GetEnvironmentVariable(nameof(Sql_Query_Count_GasTransactions)) ?? Sql_Query_Count_GasTransactions;
+            var queryTemplate = Environment.GetEnvironmentVariable(
+                nameof(TransactionQueries.Sql_Query_Paged_GasTransactions_Dynamic_Columns)) ?? TransactionQueries.Sql_Query_Paged_GasTransactions_Dynamic_Columns;
+            var countTemplate = Environment.GetEnvironmentVariable(
+                nameof(TransactionQueries.Sql_Query_Count_GasTransactions)) ?? TransactionQueries.Sql_Query_Count_GasTransactions;
 
             var cols = req.Query["Columns"]?.ToString()?.Split(",", StringSplitOptions.TrimEntries)?.ToList() ?? new List<string>();
 
