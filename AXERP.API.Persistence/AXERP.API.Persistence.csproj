@@ -12,7 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AXERP.API.Business\AXERP.API.Business.csproj" />
     <ProjectReference Include="..\AXERP.API.Domain\AXERP.API.Domain.csproj" />
   </ItemGroup>
 

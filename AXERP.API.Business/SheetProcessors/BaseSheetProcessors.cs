@@ -1,6 +1,6 @@
 ﻿using AXERP.API.GoogleHelper.Models;
 
-namespace AXERP.API.Functions.SheetProcessors
+namespace AXERP.API.Business.SheetProcessors
 {
     public abstract class BaseSheetProcessors<RowType>
     {

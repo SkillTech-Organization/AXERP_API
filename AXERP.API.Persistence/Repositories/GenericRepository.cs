@@ -1,5 +1,5 @@
-﻿using AXERP.API.Business.Interfaces.Repositories;
-using AXERP.API.Business.Interfaces.UnitOfWork;
+﻿using AXERP.API.Domain.Interfaces.Repositories;
+using AXERP.API.Domain.Interfaces.UnitOfWork;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.Persistence.Queries;

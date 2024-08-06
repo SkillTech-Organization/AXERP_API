@@ -1,10 +1,10 @@
 using AutoMapper;
 using AXERP.API.Business.Commands;
-using AXERP.API.Business.Factories;
+using AXERP.API.Persistence.Factories;
 using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
-using AXERP.API.Functions.SheetProcessors;
+using AXERP.API.Business.SheetProcessors;
 using AXERP.API.GoogleHelper.Managers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;

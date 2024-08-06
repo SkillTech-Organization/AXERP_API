@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using AXERP.API.Business.Factories;
+using AXERP.API.Persistence.Factories;
 using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.GoogleHelper.Models;

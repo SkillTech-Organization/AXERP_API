@@ -1,4 +1,4 @@
-﻿namespace AXERP.API.Business.Interfaces.Repositories
+﻿namespace AXERP.API.Domain.Interfaces.Repositories
 {
     public interface IRepository<RowType, KeyType> where RowType : class
     {

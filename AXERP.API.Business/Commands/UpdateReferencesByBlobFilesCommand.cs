@@ -1,12 +1,12 @@
 ﻿using AXERP.API.BlobHelper.Managers;
 using AXERP.API.BlobHelper.ServiceContracts.Responses;
-using AXERP.API.Business.Factories;
+using AXERP.API.Persistence.Factories;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using Microsoft.Extensions.Logging;
 using Transaction = AXERP.API.Domain.Entities.Transaction;
 
-namespace AXERP.API.Functions.Commands
+namespace AXERP.API.Business.Commands
 {
     public class UpdateReferencesByBlobFilesCommand
     {
