@@ -2,6 +2,7 @@
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.Persistence.Factories;
 using Microsoft.Extensions.Logging;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace AXERP.API.Business.Commands
 {
@@ -24,8 +25,11 @@ namespace AXERP.API.Business.Commands
 
             if (!request.TransactionIds.Any())
             {
+                _logger.LogWarning("Transactions cannot be deleted, an empty list of ids were provided!");
                 return res;
             }
+
+            _logger.LogInformation("Deleting transactions with ids: {ids}", string.Join(", ", request.TransactionIds));
 
             using (var uow = _uowFactory.Create())
             {
@@ -50,6 +54,8 @@ namespace AXERP.API.Business.Commands
                     throw;
                 }
             }
+
+            _logger.LogInformation("Transactions were successfully deleted!");
 
             return res;
         }

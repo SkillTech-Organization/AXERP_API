@@ -15,6 +15,7 @@ using Microsoft.OpenApi.Models;
 using System.Net;
 using Newtonsoft.Json;
 using AXERP.API.Persistence.Queries;
+using FromBodyAttribute = Microsoft.Azure.Functions.Worker.Http.FromBodyAttribute;
 
 namespace AXERP.API.Functions.Transactions
 {
@@ -97,21 +98,24 @@ namespace AXERP.API.Functions.Transactions
 
         [Function(nameof(DeleteGasTransactions))]
         [OpenApiOperation(operationId: nameof(DeleteGasTransactions), tags: new[] { "gas-transactions" })]
-        [OpenApiRequestBody("text/json", typeof(DeleteTransactionRequest), Required = true)]
-        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
+        [OpenApiRequestBody("application/json", typeof(DeleteTransactionRequest), Required = true)]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(string), Description = "The OK response")]
         public async Task<IActionResult> DeleteGasTransactions(
-                [HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
+                [HttpTrigger(AuthorizationLevel.Anonymous, "delete")] HttpRequestData req, [FromBody] DeleteTransactionRequest data)
         {
             try
             {
-                string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-                var request = JsonConvert.DeserializeObject<DeleteTransactionRequest>(requestBody);
-                var response = _deleteTransactionsCommand.Execute(request);
+                if (data == null)
+                {
+                    throw new Exception("Request is null");
+                }
+
+                var response = _deleteTransactionsCommand.Execute(data);
                 return new OkObjectResult(response);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error while deleting GasTransaction(s)");
+                _logger.LogError(ex, "Error while deleting transaction(s)");
                 var res = new ObjectResult(new BaseResponse
                 {
                     HttpStatusCode = HttpStatusCode.InternalServerError,
