@@ -15,11 +15,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AXERP.API.Persistence", "AX
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AXERP.API.BlobHelper", "AXERP.API.BlobHelper\AXERP.API.BlobHelper.csproj", "{35024675-E2E5-43A4-B106-658898EF4FC1}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MiscFiles", "MiscFiles", "{7336937D-50EF-45A9-891F-3E076EF951E5}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MiscFiles", "MiscFiles", "{0B5BB711-695D-43D9-BB95-7A56F12F6E22}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SQLScripts", "SQLScripts", "{34A1CE01-CCA5-4483-9446-B37EFEFBA4D1}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SQLScripts", "SQLScripts", "{3C58B7BD-0A01-4C2F-967C-B30BCB0399A2}"
 	ProjectSection(SolutionItems) = preProject
-		clear_tables.sql = clear_tables.sql
+		MiscFiles\SQLScripts\clear_tables.sql = MiscFiles\SQLScripts\clear_tables.sql
 	EndProjectSection
 EndProject
 Global
@@ -57,7 +57,7 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{34A1CE01-CCA5-4483-9446-B37EFEFBA4D1} = {7336937D-50EF-45A9-891F-3E076EF951E5}
+		{3C58B7BD-0A01-4C2F-967C-B30BCB0399A2} = {0B5BB711-695D-43D9-BB95-7A56F12F6E22}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {73E379E6-CE69-4713-9A7C-BCA57EFA015D}
