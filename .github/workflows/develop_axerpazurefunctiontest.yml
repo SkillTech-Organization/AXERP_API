@@ -37,6 +37,6 @@ jobs:
         id: fa
         with:
           app-name: 'axerpazurefunctiontest'
-          slot-name: 'Production'
+          slot-name: 'Development'
           package: '${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/output'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_7E07870CABED4D0794B911FD04203F36 }}
