@@ -1,9 +1,9 @@
 ﻿using AutoMapper;
 using AXERP.API.Persistence.Factories;
 using AXERP.API.Domain.Entities;
-using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.GoogleHelper.Models;
 using Microsoft.Extensions.Logging;
+using AXERP.API.Domain.ServiceContracts.Responses.Transactions;
 
 namespace AXERP.API.Business.Commands
 {

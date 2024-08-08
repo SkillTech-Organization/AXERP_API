@@ -1,4 +1,4 @@
-﻿namespace AXERP.API.Domain.ServiceContracts.Requests
+﻿namespace AXERP.API.Domain.ServiceContracts.Requests.Blob
 {
     public class ProcessBlobFilesRequest
     {

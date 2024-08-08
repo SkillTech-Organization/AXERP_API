@@ -1,10 +1,10 @@
 ﻿using AXERP.API.BlobHelper.Managers;
 using AXERP.API.BlobHelper.ServiceContracts.Responses;
 using AXERP.API.Persistence.Factories;
-using AXERP.API.Domain.ServiceContracts.Requests;
-using AXERP.API.Domain.ServiceContracts.Responses;
 using Microsoft.Extensions.Logging;
 using Transaction = AXERP.API.Domain.Entities.Transaction;
+using AXERP.API.Domain.ServiceContracts.Responses.Blob;
+using AXERP.API.Domain.ServiceContracts.Requests.Blob;
 
 namespace AXERP.API.Business.Commands
 {

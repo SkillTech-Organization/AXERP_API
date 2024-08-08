@@ -1,4 +1,6 @@
-﻿namespace AXERP.API.Domain.ServiceContracts.Responses
+﻿using AXERP.API.Domain.ServiceContracts.Responses.Base;
+
+namespace AXERP.API.Domain.ServiceContracts.Responses.Transactions
 {
     public class ImportGasTransactionResponse : BaseResponse
     {

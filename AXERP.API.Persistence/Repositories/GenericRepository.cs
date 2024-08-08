@@ -1,7 +1,7 @@
 ﻿using AXERP.API.Domain.Interfaces.Repositories;
 using AXERP.API.Domain.Interfaces.UnitOfWork;
-using AXERP.API.Domain.ServiceContracts.Requests;
-using AXERP.API.Domain.ServiceContracts.Responses;
+using AXERP.API.Domain.ServiceContracts.Requests.General;
+using AXERP.API.Domain.ServiceContracts.Responses.General;
 using AXERP.API.Persistence.Queries;
 using AXERP.API.Persistence.Utils;
 using Dapper;

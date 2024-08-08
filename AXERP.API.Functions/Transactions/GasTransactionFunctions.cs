@@ -16,6 +16,7 @@ using System.Net;
 using Newtonsoft.Json;
 using AXERP.API.Persistence.Queries;
 using FromBodyAttribute = Microsoft.Azure.Functions.Worker.Http.FromBodyAttribute;
+using AXERP.API.Domain.ServiceContracts.Requests.CRUD;
 
 namespace AXERP.API.Functions.Transactions
 {

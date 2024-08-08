@@ -22,6 +22,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SQLScripts", "SQLScripts", 
 		MiscFiles\SQLScripts\clear_tables.sql = MiscFiles\SQLScripts\clear_tables.sql
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AXERP.API.AppInsightsHelper", "AXERP.API.AppInsightsHelper\AXERP.API.AppInsightsHelper.csproj", "{A419A73C-4162-409A-B336-184C5BCE735F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -52,6 +54,10 @@ Global
 		{35024675-E2E5-43A4-B106-658898EF4FC1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{35024675-E2E5-43A4-B106-658898EF4FC1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{35024675-E2E5-43A4-B106-658898EF4FC1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A419A73C-4162-409A-B336-184C5BCE735F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A419A73C-4162-409A-B336-184C5BCE735F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A419A73C-4162-409A-B336-184C5BCE735F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A419A73C-4162-409A-B336-184C5BCE735F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

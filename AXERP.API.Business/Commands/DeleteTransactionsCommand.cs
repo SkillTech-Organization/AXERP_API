@@ -1,5 +1,5 @@
-﻿using AXERP.API.Domain.ServiceContracts.Requests;
-using AXERP.API.Domain.ServiceContracts.Responses;
+﻿using AXERP.API.Domain.ServiceContracts.Requests.CRUD;
+using AXERP.API.Domain.ServiceContracts.Responses.Base;
 using AXERP.API.Persistence.Factories;
 using Microsoft.Extensions.Logging;
 using static System.Runtime.InteropServices.JavaScript.JSType;

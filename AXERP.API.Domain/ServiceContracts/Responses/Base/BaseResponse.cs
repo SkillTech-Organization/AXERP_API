@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace AXERP.API.Domain.ServiceContracts.Responses
+namespace AXERP.API.Domain.ServiceContracts.Responses.Base
 {
     public class BaseResponse
     {
