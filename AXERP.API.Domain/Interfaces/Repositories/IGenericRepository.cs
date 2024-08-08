@@ -1,5 +1,5 @@
-﻿using AXERP.API.Domain.ServiceContracts.Requests.General;
-using AXERP.API.Domain.ServiceContracts.Responses.General;
+﻿using AXERP.API.Domain.ServiceContracts.Requests;
+using AXERP.API.Domain.ServiceContracts.Responses;
 
 namespace AXERP.API.Domain.Interfaces.Repositories
 {

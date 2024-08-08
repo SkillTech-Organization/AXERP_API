@@ -3,7 +3,7 @@ using AXERP.API.Persistence.Factories;
 using AXERP.API.Domain.Entities;
 using AXERP.API.GoogleHelper.Models;
 using Microsoft.Extensions.Logging;
-using AXERP.API.Domain.ServiceContracts.Responses.Transactions;
+using AXERP.API.Domain.ServiceContracts.Responses;
 
 namespace AXERP.API.Business.Commands
 {

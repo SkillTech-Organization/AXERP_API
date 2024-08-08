@@ -1,12 +1,8 @@
-﻿using Azure;
+﻿using AXERP.API.AppInsightsHelper.Models;
+using AXERP.API.Domain.ServiceContracts.Requests;
+using Azure;
 using Azure.Identity;
 using Azure.Monitor.Query;
-using Azure.Monitor.Query.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AXERP.API.AppInsightsHelper.Managers
 {
@@ -19,8 +15,10 @@ namespace AXERP.API.AppInsightsHelper.Managers
             _logsQueryClient = new LogsQueryClient(new DefaultAzureCredential());
         }
 
-        public async Task QueryLogs()
+        public async Task<List<AppInsightsLogEntry>> QueryLogs(PagedQueryRequest request)
         {
+            var entries = new List<AppInsightsLogEntry>();
+
             /*
             LogsQueryResult
             |---Error
@@ -34,20 +32,21 @@ namespace AXERP.API.AppInsightsHelper.Managers
                     |---Count
             |---AllTables (list of `LogsTable` objects)
             */
+
             string workspaceId = "<workspace_id>";
 
-            Response<LogsQueryResult> result = await _logsQueryClient.QueryWorkspaceAsync(
+            // Query TOP 10 resource groups by event count
+            Response<IReadOnlyList<AppInsightsLogEntry>> response = await _logsQueryClient.QueryWorkspaceAsync<AppInsightsLogEntry>(
                 workspaceId,
-                "AzureActivity | top 10 by TimeGenerated",
-                new QueryTimeRange(TimeSpan.FromDays(1))
-            );
+                "AzureActivity | summarize Count = count() by ResourceGroup | top 10 by Count",
+                new QueryTimeRange(TimeSpan.FromDays(1)));
 
-            LogsTable table = result.Value.Table;
-
-            foreach (var row in table.Rows)
+            foreach (var logEntryModel in response.Value)
             {
-                Console.WriteLine($"{row["OperationName"]} {row["ResourceGroup"]}");
+                Console.WriteLine($"{logEntryModel.RowNumber}, {logEntryModel.Message}, {logEntryModel.TimeStamp}");
             }
+
+            return entries;
         }
     }
 }

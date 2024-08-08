@@ -1,7 +1,7 @@
 ﻿using System.Runtime.Serialization;
-using AXERP.API.Domain.ServiceContracts.Responses.Base;
+using AXERP.API.Domain.ServiceContracts.Responses;
 
-namespace AXERP.API.Domain.ServiceContracts.Responses.Blob
+namespace AXERP.API.Domain.ServiceContracts.Responses
 {
     [DataContract]
     public class ProcessBlobFilesResponse : BaseResponse

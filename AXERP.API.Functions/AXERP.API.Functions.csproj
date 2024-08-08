@@ -27,6 +27,7 @@
     <PackageReference Include="Microsoft.Azure.Functions.Worker.ApplicationInsights" Version="1.2.0" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\AXERP.API.AppInsightsHelper\AXERP.API.AppInsightsHelper.csproj" />
     <ProjectReference Include="..\AXERP.API.BlobHelper\AXERP.API.BlobHelper.csproj" />
     <ProjectReference Include="..\AXERP.API.Business\AXERP.API.Business.csproj" />
     <ProjectReference Include="..\AXERP.API.Domain\AXERP.API.Domain.csproj" />

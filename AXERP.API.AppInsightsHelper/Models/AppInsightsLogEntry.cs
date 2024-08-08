@@ -2,8 +2,10 @@
 {
     public class AppInsightsLogEntry
     {
-        public string ResourceGroup { get; set; }
+        public int RowNumber { get; set; }
 
-        public int Count { get; set; }
+        public string Message { get; set; }
+
+        public DateTime TimeStamp { get; set; }
     }
 }
