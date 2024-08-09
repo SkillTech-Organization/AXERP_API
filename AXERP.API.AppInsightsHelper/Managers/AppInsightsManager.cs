@@ -12,41 +12,66 @@ namespace AXERP.API.AppInsightsHelper.Managers
 
         public AppInsightsManager()
         {
-            _logsQueryClient = new LogsQueryClient(new DefaultAzureCredential());
+            _logsQueryClient = new LogsQueryClient(
+                new DefaultAzureCredential()
+            );
         }
 
-        public async Task<List<AppInsightsLogEntry>> QueryLogs(PagedQueryRequest request)
+        public async Task<(int, List<AppInsightsLogEntry>)> QueryLogs(PagedAppInsightsQueryRequest request, string workSpaceId)
         {
             var entries = new List<AppInsightsLogEntry>();
 
-            /*
-            LogsQueryResult
-            |---Error
-            |---Status
-            |---Table
-                |---Name
-                |---Columns (list of `LogsTableColumn` objects)
-                    |---Name
-                    |---Type
-                |---Rows (list of `LogsTableRows` objects)
-                    |---Count
-            |---AllTables (list of `LogsTable` objects)
-            */
+            var orderBy = request.OrderBy;
+            var orderByMode = request.OrderDesc ? "desc" : "asc";
+            var rowStart = request.RowNumberStart;
+            var rowFinish = request.RowNumberFinish;
+            var extra_where = string.Empty;
 
-            string workspaceId = "<workspace_id>";
+            var count_query = @"
+            traces
+            | project customDimensions
+            | where customDimensions has 'AzureFunctions_FunctionName' and customDimensions['CategoryName'] has 'AXERP.API'
+            | summarize Count=count()
+            ";
 
-            // Query TOP 10 resource groups by event count
+            var query = $@"
+            traces
+            | project message, timestamp, customDimensions
+            | order by {orderBy} {orderByMode}
+            | where customDimensions has 'AzureFunctions_FunctionName' and customDimensions['CategoryName'] has 'AXERP.API'
+            {extra_where}
+            // squishes things down to 1 row where ach column is a huge list of values
+            | summarize
+                // make up a row number
+                rowNum = range(1, 1000000, 1),
+                datestamp=make_list(timestamp, 1000000),
+                msg=make_list(message, 1000000)
+            // expand single rows into real rows
+            | mv-expand datestamp, msg, rowNum limit 1000000
+            | where rowNum >= {rowStart} and rowNum  <= {rowFinish} and isnotempty(msg)  // for pagination
+            ";
+
+            var timeRange = new QueryTimeRange(request.From, request.To);
+
+            Response<IReadOnlyList<int>> countResponse = await _logsQueryClient.QueryWorkspaceAsync<int>(
+                workSpaceId,
+                count_query,
+                timeRange
+            );
+            var count = countResponse.Value.FirstOrDefault();
+
             Response<IReadOnlyList<AppInsightsLogEntry>> response = await _logsQueryClient.QueryWorkspaceAsync<AppInsightsLogEntry>(
-                workspaceId,
-                "AzureActivity | summarize Count = count() by ResourceGroup | top 10 by Count",
-                new QueryTimeRange(TimeSpan.FromDays(1)));
+                workSpaceId,
+                query,
+                timeRange
+            );
 
-            foreach (var logEntryModel in response.Value)
-            {
-                Console.WriteLine($"{logEntryModel.RowNumber}, {logEntryModel.Message}, {logEntryModel.TimeStamp}");
-            }
+            //foreach (var logEntryModel in response.Value)
+            //{
+            //    Console.WriteLine($"{logEntryModel.RowNumber}, {logEntryModel.Message}, {logEntryModel.TimeStamp}");
+            //}
 
-            return entries;
+            return (count, entries);
         }
     }
 }

@@ -9,7 +9,7 @@ namespace AXERP.API.Persistence.Utils
 {
     public static class RowTypeExtensions
     {
-        public static List<ColumnData> GetColumnDatas(this Type t, List<string> columnList)
+        public static List<ColumnData> GetColumnDatas(this Type t, List<string>? columnList = null)
         {
             var columns = new List<ColumnData>();
 
