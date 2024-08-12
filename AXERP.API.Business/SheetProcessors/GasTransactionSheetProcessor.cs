@@ -515,6 +515,16 @@ namespace AXERP.API.Business.SheetProcessors
 
                     gasTransaction.TruckCompany = row[field_idx]?.ToString();
 
+                    // AXERP Hash
+                    field_idx = field_names[nameof(gasTransaction.AXERPHash)];
+                    if (row.Count <= field_idx)
+                    {
+                        result.Add(gasTransaction);
+                        continue;
+                    }
+
+                    gasTransaction.AXERPHash = row[field_idx]?.ToString();
+
                     // Add to result
 
                     result.Add(gasTransaction);

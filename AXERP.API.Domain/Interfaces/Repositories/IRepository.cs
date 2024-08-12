@@ -24,6 +24,10 @@
 
         bool Delete(IEnumerable<KeyType> ids);
 
+        bool Delete(string column, object? value);
+
+        bool Delete(string column, IEnumerable<object?> values);
+
         List<RowType> Where(string column, object? value);
     }
 }

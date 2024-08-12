@@ -128,6 +128,68 @@ namespace AXERP.API.Persistence.Repositories
             return rowsEffected > 0 ? true : false;
         }
 
+        public bool Delete(string column, object? value)
+        {
+            int rows;
+
+            string tableName = typeof(RowType).GetTableName();
+
+            if (typeof(RowType).FilterValidColumn(column) == null)
+            {
+                throw new Exception($"Invalid column '{column}' for table '{tableName}'");
+            }
+
+            SqlBuilder query = new SqlBuilder();
+
+            var tmp = query.AddTemplate(
+                @$"DELETE * FROM {typeof(RowType).GetTableName()} /**where**/"
+            );
+
+            if (value != null)
+            {
+                query.Where($"{column} = @{nameof(value)}", new { value });
+            }
+            else
+            {
+                query.Where($"{column} is null");
+            }
+
+            rows = _connection.Execute(tmp.RawSql, transaction: _sqlTransaction);
+
+            return rows > 0;
+        }
+
+        public bool Delete(string column, IEnumerable<object?> values)
+        {
+            int rows;
+
+            string tableName = typeof(RowType).GetTableName();
+
+            if (typeof(RowType).FilterValidColumn(column) == null)
+            {
+                throw new Exception($"Invalid column '{column}' for table '{tableName}'");
+            }
+
+            SqlBuilder query = new SqlBuilder();
+
+            var tmp = query.AddTemplate(
+                @$"DELETE * FROM {typeof(RowType).GetTableName()} /**where**/"
+            );
+
+            if (values != null && values.Any())
+            {
+                query.Where($"{column} = @value", values.Select(x => new { value = x }));
+            }
+            else
+            {
+                throw new Exception("Parameters 'values' is null or empty!");
+            }
+
+            rows = _connection.Execute(tmp.RawSql, transaction: _sqlTransaction);
+
+            return rows > 0;
+        }
+
         public IEnumerable<RowType> GetAll()
         {
             IEnumerable<RowType> result = _connection.Query<RowType>($"SELECT * FROM {typeof(RowType).GetTableName()}", transaction: _sqlTransaction);
