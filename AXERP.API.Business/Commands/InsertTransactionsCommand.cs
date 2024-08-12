@@ -4,6 +4,7 @@ using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.GoogleHelper.Models;
 using Microsoft.Extensions.Logging;
+using AXERP.API.Domain.Interfaces.UnitOfWork;
 
 namespace AXERP.API.Business.Commands
 {
@@ -13,6 +14,14 @@ namespace AXERP.API.Business.Commands
         private readonly UnitOfWorkFactory _uowFactory;
         private readonly IMapper _mapper;
 
+        private IEnumerable<Transaction> Transactions { get; set; }
+        private IEnumerable<string> TransactionIds { get; set; }
+        private IEnumerable<Interface> Interfaces { get; set; }
+        private IEnumerable<string> Statuses { get; set; }
+        private IEnumerable<Document> Documents { get; set; }
+        private IEnumerable<TruckCompany> TruckCompanies { get; set; }
+        private IEnumerable<Entity> Entities { get; set; }
+
         public InsertTransactionsCommand(
             ILogger<InsertTransactionsCommand> logger,
             UnitOfWorkFactory uowFactory,
@@ -21,6 +30,23 @@ namespace AXERP.API.Business.Commands
             _logger = logger;
             _uowFactory = uowFactory;
             _mapper = mapper;
+        }
+
+        private void PrepareData(IUnitOfWork uow)
+        {
+            Transactions = uow.TransactionRepository.GetAll();
+            TransactionIds = Transactions.Select(x => x.ID);
+            Interfaces = uow.InterfaceRepository.GetAll();
+            Statuses = uow.TransactionStatusRepository.GetAll().Select(x => x.Name);
+            Documents = uow.DocumentRepository.GetAll();
+            TruckCompanies = uow.TruckCompanyRepository.GetAll();
+            Entities = uow.EntityRepository.GetAll();
+        }
+
+        private void Delete(IUnitOfWork uow, IEnumerable<string> ids)
+        {
+            uow.TransactionRepository.Delete(ids);
+            uow.Save("delete_done");
         }
 
         public ImportGasTransactionResponse Execute(GenericSheetImportResult<Delivery> importResult)
