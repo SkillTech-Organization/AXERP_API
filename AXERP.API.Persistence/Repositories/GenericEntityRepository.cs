@@ -113,6 +113,21 @@ namespace AXERP.API.Persistence.Repositories
             return rowsEffected > 0 ? true : false;
         }
 
+        public bool Delete(IEnumerable<KeyType> ids)
+        {
+            int rowsEffected = 0;
+
+            var t = typeof(RowType);
+
+            string tableName = t.GetTableName();
+            string key = t.GetKeyColumnName();
+            string query = $"DELETE FROM {tableName} WHERE {key} = @id";
+
+            rowsEffected = _connection.Execute(query, ids.Select(x => new { id = x }), transaction: _sqlTransaction);
+
+            return rowsEffected > 0 ? true : false;
+        }
+
         public IEnumerable<RowType> GetAll()
         {
             IEnumerable<RowType> result = _connection.Query<RowType>($"SELECT * FROM {typeof(RowType).GetTableName()}", transaction: _sqlTransaction);

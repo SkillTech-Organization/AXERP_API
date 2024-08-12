@@ -8,7 +8,11 @@
 
         public int InvalidRows { get; set; }
 
-        public int NewRowsInsertedIntoDatabase { get; set; }
+        public int NewRows { get; set; }
+
+        public int UpdatedRows { get; set; }
+
+        public int DeletedRows { get; set; }
 
         public List<string> ImportErrors { get; set; }
     }

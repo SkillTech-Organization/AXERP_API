@@ -22,6 +22,8 @@
 
         bool Delete(KeyType id);
 
+        bool Delete(IEnumerable<KeyType> ids);
+
         List<RowType> Where(string column, object? value);
     }
 }
