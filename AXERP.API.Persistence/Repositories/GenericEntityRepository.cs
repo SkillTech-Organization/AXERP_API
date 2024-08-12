@@ -85,11 +85,16 @@ namespace AXERP.API.Persistence.Repositories
 
             rowsEffected = _connection.Execute(query, entity, transaction: _sqlTransaction);
 
-            return rowsEffected > 0 ? true : false;
+            return rowsEffected == 1;
         }
 
-        public bool Delete(IEnumerable<RowType> entities)
+        public int Delete(IEnumerable<RowType> entities)
         {
+            if (!entities.Any())
+            {
+                return 0;
+            }
+
             int rowsEffected = 0;
 
             var t = typeof(RowType);
@@ -100,7 +105,7 @@ namespace AXERP.API.Persistence.Repositories
 
             rowsEffected = _connection.Execute(query, entities, transaction: _sqlTransaction);
 
-            return rowsEffected > 0 ? true : false;
+            return rowsEffected;
         }
 
         public bool Delete(KeyType id)
@@ -115,11 +120,16 @@ namespace AXERP.API.Persistence.Repositories
 
             rowsEffected = _connection.Execute(query, new { id = id }, transaction: _sqlTransaction);
 
-            return rowsEffected > 0 ? true : false;
+            return rowsEffected == 1;
         }
 
-        public bool Delete(IEnumerable<KeyType> ids)
+        public int Delete(IEnumerable<KeyType> ids)
         {
+            if (!ids.Any())
+            {
+                return 0;
+            }
+
             int rowsEffected = 0;
 
             var t = typeof(RowType);
@@ -130,10 +140,10 @@ namespace AXERP.API.Persistence.Repositories
 
             rowsEffected = _connection.Execute(query, ids.Select(x => new { id = x }), transaction: _sqlTransaction);
 
-            return rowsEffected > 0 ? true : false;
+            return rowsEffected;
         }
 
-        public bool Delete(string column, object? value)
+        public int Delete(string column, object? value)
         {
             int rows;
 
@@ -161,11 +171,16 @@ namespace AXERP.API.Persistence.Repositories
 
             rows = _connection.Execute(tmp.RawSql, transaction: _sqlTransaction);
 
-            return rows > 0;
+            return rows;
         }
 
-        public bool Delete(string column, IEnumerable<object?> values)
+        public int Delete(string column, IEnumerable<object?> values)
         {
+            if (!values.Any())
+            {
+                return 0;
+            }
+
             int rows;
 
             string tableName = typeof(RowType).GetTableName();
@@ -185,14 +200,10 @@ namespace AXERP.API.Persistence.Repositories
             {
                 query.Where($"{column} = @value");
             }
-            else
-            {
-                throw new Exception("Parameters 'values' is null or empty!");
-            }
 
             rows = _connection.Execute(tmp.RawSql, values.Select(x => new { value = x }), transaction: _sqlTransaction);
 
-            return rows > 0;
+            return rows;
         }
 
         public IEnumerable<RowType> GetAll()
@@ -235,14 +246,14 @@ namespace AXERP.API.Persistence.Repositories
 
             rowsEffected = _connection.Execute(query.ToString(), entity, transaction: _sqlTransaction);
 
-            return rowsEffected > 0 ? true : false;
+            return rowsEffected == 1;
         }
 
-        public bool Update(IEnumerable<RowType> entities, List<string>? columnFilter = null)
+        public int Update(IEnumerable<RowType> entities, List<string>? columnFilter = null)
         {
             if (!entities.Any())
             {
-                return false;
+                return 0;
             }
 
             int rowsEffected = 0;
@@ -261,7 +272,7 @@ namespace AXERP.API.Persistence.Repositories
 
             rowsEffected = _connection.Execute(query.ToString(), entities, transaction: _sqlTransaction);
 
-            return rowsEffected > 0 ? true : false;
+            return rowsEffected;
         }
 
         public List<RowType> Where(string column, object? value)

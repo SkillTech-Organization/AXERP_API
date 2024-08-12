@@ -14,19 +14,19 @@
 
         bool Update(RowType entity, List<string>? columnFilter = null);
 
-        bool Update(IEnumerable<RowType> entities, List<string>? columnFilter = null);
+        int Update(IEnumerable<RowType> entities, List<string>? columnFilter = null);
 
-        bool Delete(IEnumerable<RowType> entities);
+        int Delete(IEnumerable<RowType> entities);
 
         bool Delete(RowType entity);
 
         bool Delete(KeyType id);
 
-        bool Delete(IEnumerable<KeyType> ids);
+        int Delete(IEnumerable<KeyType> ids);
 
-        bool Delete(string column, object? value);
+        int Delete(string column, object? value);
 
-        bool Delete(string column, IEnumerable<object?> values);
+        int Delete(string column, IEnumerable<object?> values);
 
         List<RowType> Where(string column, object? value);
     }

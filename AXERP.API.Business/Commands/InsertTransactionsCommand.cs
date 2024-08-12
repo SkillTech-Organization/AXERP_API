@@ -62,7 +62,7 @@ namespace AXERP.API.Business.Commands
                      */
                     _logger.LogInformation("Querying data for processing. Transactions, entities...");
 
-                    CacheBusinessData(uow);
+                    RefreshBusinessDataCache(uow);
 
                     /*
                      * FILTER NEW / UPDATED / DELETED DATA
@@ -101,12 +101,20 @@ namespace AXERP.API.Business.Commands
 
                     Delete(uow, deletedSheetRowIds);
 
+
+                    _logger.LogInformation("Refreshing data for processing. Transactions, entities...");
+                    RefreshBusinessDataCache(uow);
+
                     /*
                      * UPDATE TRANSACTIONS
                      */
                     _logger.LogInformation("Updating transactions...");
 
                     Update(uow, updatedSheetRows);
+
+
+                    _logger.LogInformation("Refreshing data for processing. Transactions, entities...");
+                    RefreshBusinessDataCache(uow);
 
                     /*
                      * CREATE TRANSACTIONS
@@ -129,7 +137,7 @@ namespace AXERP.API.Business.Commands
             return res;
         }
 
-        private void CacheBusinessData(IUnitOfWork uow)
+        private void RefreshBusinessDataCache(IUnitOfWork uow)
         {
             Transactions = uow.TransactionRepository.GetAll().ToList();
             TransactionIds = Transactions.Select(x => x.ID).ToList();
@@ -145,13 +153,16 @@ namespace AXERP.API.Business.Commands
         private void Delete(IUnitOfWork uow, IEnumerable<string> ids)
         {
             _logger.LogInformation("Deleting associated {name} rows.", nameof(CustomerToDelivery));
-            uow.CustomerToDeliveryRepository.Delete(nameof(CustomerToDelivery.DeliveryID), ids);
+            var deleted = uow.CustomerToDeliveryRepository.Delete(nameof(CustomerToDelivery.DeliveryID), ids);
+            _logger.LogInformation("Deleted {name} rows: {count}", nameof(CustomerToDelivery), deleted);
 
             _logger.LogInformation("Deleting associated {name} rows.", nameof(TruckCompanyToDelivery));
-            uow.TruckCompanyToDeliveryRepository.Delete(nameof(TruckCompanyToDelivery.DeliveryID), ids);
+            deleted = uow.TruckCompanyToDeliveryRepository.Delete(nameof(TruckCompanyToDelivery.DeliveryID), ids);
+            _logger.LogInformation("Deleted {name} rows: {count}", nameof(TruckCompanyToDelivery), deleted);
 
             _logger.LogInformation("Deleting {name} rows.", nameof(Transaction));
-            uow.TransactionRepository.Delete(ids);
+            deleted = uow.TransactionRepository.Delete(ids);
+            _logger.LogInformation("Deleted {name} rows: {count}", nameof(Transaction), deleted);
 
             uow.Save("delete_done");
         }
@@ -259,9 +270,21 @@ namespace AXERP.API.Business.Commands
                 {
                     if (!isCustomerNew)
                     {
-                        var u = CustomerToDeliveries.FirstOrDefault(x => x.DeliveryID ==  sheetRow.DeliveryID);
-                        u.Comment = sheetRow.CustomerNote;
-                        ctdUpdate.Add(u);
+                        var u = CustomerToDeliveries.FirstOrDefault(x => x.DeliveryID == sheetRow.DeliveryID);
+                        if (u != null)
+                        {
+                            u.Comment = sheetRow.CustomerNote;
+                            ctdUpdate.Add(u);
+                        }
+                        else
+                        {
+                            ctdNew.Add(new CustomerToDelivery
+                            {
+                                DeliveryID = transaction.ID,
+                                CustomerID = sheetCustomer.ID,
+                                Comment = sheetRow.CustomerNote
+                            });
+                        }
                     }
                     else
                     {
@@ -279,8 +302,20 @@ namespace AXERP.API.Business.Commands
                     if (!isTruckCompanyNew)
                     {
                         var u = TruckCompanyToDeliveries.FirstOrDefault(x => x.DeliveryID == sheetRow.DeliveryID);
-                        u.Comment = sheetRow.TruckLoadingCompanyComment;
-                        ttdUpdate.Add(u);
+                        if (u != null)
+                        {
+                            u.Comment = sheetRow.TruckLoadingCompanyComment;
+                            ttdUpdate.Add(u);
+                        }
+                        else
+                        {
+                            ttdNew.Add(new TruckCompanyToDelivery
+                            {
+                                DeliveryID = transaction.ID,
+                                TruckCompanyID = sheetTruckCompany.ID,
+                                Comment = sheetRow.TruckLoadingCompanyComment
+                            });
+                        }
                     }
                     else
                     {
@@ -418,8 +453,20 @@ namespace AXERP.API.Business.Commands
                     if (!isCustomerNew)
                     {
                         var u = CustomerToDeliveries.FirstOrDefault(x => x.DeliveryID == sheetRow.DeliveryID);
-                        u.Comment = sheetRow.CustomerNote;
-                        ctdUpdate.Add(u);
+                        if (u != null)
+                        {
+                            u.Comment = sheetRow.CustomerNote;
+                            ctdUpdate.Add(u);
+                        }
+                        else
+                        {
+                            ctdNew.Add(new CustomerToDelivery
+                            {
+                                DeliveryID = transaction.ID,
+                                CustomerID = sheetCustomer.ID,
+                                Comment = sheetRow.CustomerNote
+                            });
+                        }
                     }
                     else
                     {
@@ -437,8 +484,20 @@ namespace AXERP.API.Business.Commands
                     if (!isTruckCompanyNew)
                     {
                         var u = TruckCompanyToDeliveries.FirstOrDefault(x => x.DeliveryID == sheetRow.DeliveryID);
-                        u.Comment = sheetRow.TruckLoadingCompanyComment;
-                        ttdUpdate.Add(u);
+                        if (u != null)
+                        {
+                            u.Comment = sheetRow.TruckLoadingCompanyComment;
+                            ttdUpdate.Add(u);
+                        }
+                        else
+                        {
+                            ttdNew.Add(new TruckCompanyToDelivery
+                            {
+                                DeliveryID = transaction.ID,
+                                TruckCompanyID = sheetTruckCompany.ID,
+                                Comment = sheetRow.TruckLoadingCompanyComment
+                            });
+                        }
                     }
                     else
                     {
