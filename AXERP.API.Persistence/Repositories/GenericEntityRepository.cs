@@ -20,6 +20,11 @@ namespace AXERP.API.Persistence.Repositories
 
         public int Add(List<RowType> entities, bool insertId = false)
         {
+            if (!entities.Any())
+            {
+                return 0;
+            }
+
             int result;
 
             var t = typeof(RowType);
@@ -142,7 +147,7 @@ namespace AXERP.API.Persistence.Repositories
             SqlBuilder query = new SqlBuilder();
 
             var tmp = query.AddTemplate(
-                @$"DELETE * FROM {typeof(RowType).GetTableName()} /**where**/"
+                @$"DELETE FROM {typeof(RowType).GetTableName()} /**where**/"
             );
 
             if (value != null)
@@ -173,19 +178,19 @@ namespace AXERP.API.Persistence.Repositories
             SqlBuilder query = new SqlBuilder();
 
             var tmp = query.AddTemplate(
-                @$"DELETE * FROM {typeof(RowType).GetTableName()} /**where**/"
+                @$"DELETE FROM {typeof(RowType).GetTableName()} /**where**/"
             );
 
             if (values != null && values.Any())
             {
-                query.Where($"{column} = @value", values.Select(x => new { value = x }));
+                query.Where($"{column} = @value");
             }
             else
             {
                 throw new Exception("Parameters 'values' is null or empty!");
             }
 
-            rows = _connection.Execute(tmp.RawSql, transaction: _sqlTransaction);
+            rows = _connection.Execute(tmp.RawSql, values.Select(x => new { value = x }), transaction: _sqlTransaction);
 
             return rows > 0;
         }
@@ -235,6 +240,11 @@ namespace AXERP.API.Persistence.Repositories
 
         public bool Update(IEnumerable<RowType> entities, List<string>? columnFilter = null)
         {
+            if (!entities.Any())
+            {
+                return false;
+            }
+
             int rowsEffected = 0;
 
             var t = typeof(RowType);
