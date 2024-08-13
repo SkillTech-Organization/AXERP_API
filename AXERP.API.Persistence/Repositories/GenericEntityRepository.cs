@@ -20,6 +20,11 @@ namespace AXERP.API.Persistence.Repositories
 
         public int Add(List<RowType> entities, bool insertId = false)
         {
+            if (!entities.Any())
+            {
+                return 0;
+            }
+
             int result;
 
             var t = typeof(RowType);
@@ -80,11 +85,16 @@ namespace AXERP.API.Persistence.Repositories
 
             rowsEffected = _connection.Execute(query, entity, transaction: _sqlTransaction);
 
-            return rowsEffected > 0 ? true : false;
+            return rowsEffected == 1;
         }
 
-        public bool Delete(IEnumerable<RowType> entities)
+        public int Delete(IEnumerable<RowType> entities)
         {
+            if (!entities.Any())
+            {
+                return 0;
+            }
+
             int rowsEffected = 0;
 
             var t = typeof(RowType);
@@ -95,7 +105,7 @@ namespace AXERP.API.Persistence.Repositories
 
             rowsEffected = _connection.Execute(query, entities, transaction: _sqlTransaction);
 
-            return rowsEffected > 0 ? true : false;
+            return rowsEffected;
         }
 
         public bool Delete(KeyType id)
@@ -110,7 +120,90 @@ namespace AXERP.API.Persistence.Repositories
 
             rowsEffected = _connection.Execute(query, new { id = id }, transaction: _sqlTransaction);
 
-            return rowsEffected > 0 ? true : false;
+            return rowsEffected == 1;
+        }
+
+        public int Delete(IEnumerable<KeyType> ids)
+        {
+            if (!ids.Any())
+            {
+                return 0;
+            }
+
+            int rowsEffected = 0;
+
+            var t = typeof(RowType);
+
+            string tableName = t.GetTableName();
+            string key = t.GetKeyColumnName();
+            string query = $"DELETE FROM {tableName} WHERE {key} = @id";
+
+            rowsEffected = _connection.Execute(query, ids.Select(x => new { id = x }), transaction: _sqlTransaction);
+
+            return rowsEffected;
+        }
+
+        public int Delete(string column, object? value)
+        {
+            int rows;
+
+            string tableName = typeof(RowType).GetTableName();
+
+            if (typeof(RowType).FilterValidColumn(column) == null)
+            {
+                throw new Exception($"Invalid column '{column}' for table '{tableName}'");
+            }
+
+            SqlBuilder query = new SqlBuilder();
+
+            var tmp = query.AddTemplate(
+                @$"DELETE FROM {typeof(RowType).GetTableName()} /**where**/"
+            );
+
+            if (value != null)
+            {
+                query.Where($"{column} = @{nameof(value)}", new { value });
+            }
+            else
+            {
+                query.Where($"{column} is null");
+            }
+
+            rows = _connection.Execute(tmp.RawSql, transaction: _sqlTransaction);
+
+            return rows;
+        }
+
+        public int Delete(string column, IEnumerable<object?> values)
+        {
+            if (!values.Any())
+            {
+                return 0;
+            }
+
+            int rows;
+
+            string tableName = typeof(RowType).GetTableName();
+
+            if (typeof(RowType).FilterValidColumn(column) == null)
+            {
+                throw new Exception($"Invalid column '{column}' for table '{tableName}'");
+            }
+
+            SqlBuilder query = new SqlBuilder();
+
+            var tmp = query.AddTemplate(
+                @$"DELETE FROM {typeof(RowType).GetTableName()} /**where**/"
+            );
+
+            if (values != null && values.Any())
+            {
+                query.Where($"{column} = @value");
+            }
+
+            rows = _connection.Execute(tmp.RawSql, values.Select(x => new { value = x }), transaction: _sqlTransaction);
+
+            return rows;
         }
 
         public IEnumerable<RowType> GetAll()
@@ -153,11 +246,16 @@ namespace AXERP.API.Persistence.Repositories
 
             rowsEffected = _connection.Execute(query.ToString(), entity, transaction: _sqlTransaction);
 
-            return rowsEffected > 0 ? true : false;
+            return rowsEffected == 1;
         }
 
-        public bool Update(IEnumerable<RowType> entities, List<string>? columnFilter = null)
+        public int Update(IEnumerable<RowType> entities, List<string>? columnFilter = null)
         {
+            if (!entities.Any())
+            {
+                return 0;
+            }
+
             int rowsEffected = 0;
 
             var t = typeof(RowType);
@@ -174,7 +272,7 @@ namespace AXERP.API.Persistence.Repositories
 
             rowsEffected = _connection.Execute(query.ToString(), entities, transaction: _sqlTransaction);
 
-            return rowsEffected > 0 ? true : false;
+            return rowsEffected;
         }
 
         public List<RowType> Where(string column, object? value)

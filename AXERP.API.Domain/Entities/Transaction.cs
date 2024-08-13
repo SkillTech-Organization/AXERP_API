@@ -71,5 +71,7 @@ namespace AXERP.API.Domain.Entities
         public string? Reference3 { get; set; }
 
         public int? BlFileID { get; set; }
+
+        public string AXERPHash { get; set; }
     }
 }
