@@ -189,6 +189,8 @@ namespace AXERP.API.Business.Commands
                 transaction.StatusID = sheetRow.Status;
                 transaction.SalesStatusID = sheetRow.SalesStatus;
 
+                transaction.AXERPHash = sheetRow.AXERPHash;
+
                 var newTerminal = Interfaces.FirstOrDefault(x => x.Name == sheetRow.Terminal);
                 if (newTerminal == null && !string.IsNullOrWhiteSpace(sheetRow.Terminal) && !Interfaces.Any(x => x.Name == sheetRow.Terminal))
                 {
@@ -370,6 +372,8 @@ namespace AXERP.API.Business.Commands
 
                 transaction.StatusID = sheetRow.Status;
                 transaction.SalesStatusID = sheetRow.SalesStatus;
+
+                transaction.AXERPHash = sheetRow.AXERPHash;
 
                 var newTerminal = Interfaces.FirstOrDefault(x => x.Name == sheetRow.Terminal);
                 if (newTerminal == null && !string.IsNullOrWhiteSpace(sheetRow.Terminal) && !Interfaces.Any(x => x.Name == sheetRow.Terminal))
