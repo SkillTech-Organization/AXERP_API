@@ -1,5 +1,6 @@
 ﻿using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
+using System.Data;
 
 namespace AXERP.API.Domain.Interfaces.Repositories
 {
@@ -22,5 +23,9 @@ namespace AXERP.API.Domain.Interfaces.Repositories
         int CountAll<RowType>();
 
         IEnumerable<IdType> GetAllIDs<RowType, IdType>();
+
+        DataTable CreateDataTable<T>(IEnumerable<T> list);
+
+        void BulkCopy<T>(List<T> rows, DataRowState? state = null);
     }
 }

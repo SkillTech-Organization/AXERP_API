@@ -1,10 +1,11 @@
 ﻿using AutoMapper;
-using AXERP.API.Persistence.Factories;
 using AXERP.API.Domain.Entities;
+using AXERP.API.Domain.Interfaces.UnitOfWork;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.GoogleHelper.Models;
+using AXERP.API.Persistence.Factories;
 using Microsoft.Extensions.Logging;
-using AXERP.API.Domain.Interfaces.UnitOfWork;
+using System.Data;
 
 namespace AXERP.API.Business.Commands
 {
@@ -334,19 +335,24 @@ namespace AXERP.API.Business.Commands
             }
 
             _logger.LogInformation("Updating {name} rows. Count: {count}", nameof(Transaction), transactionDtos.Count);
-            uow.TransactionRepository.Update(transactionDtos);
+            //uow.TransactionRepository.Update(transactionDtos);
+            uow.GenericRepository.BulkCopy<Transaction>(transactionDtos);
 
             _logger.LogInformation("Inserting new {name} rows. Count: {count}", nameof(CustomerToDelivery), ctdNew.Count);
-            uow.CustomerToDeliveryRepository.Add(ctdNew);
+            //uow.CustomerToDeliveryRepository.Add(ctdNew);
+            uow.GenericRepository.BulkCopy<CustomerToDelivery>(ctdNew);
 
             _logger.LogInformation("Inserting new {name} rows. Count: {count}", nameof(TruckCompanyToDelivery), ttdNew.Count);
-            uow.TruckCompanyToDeliveryRepository.Add(ttdNew);
+            //uow.TruckCompanyToDeliveryRepository.Add(ttdNew);
+            uow.GenericRepository.BulkCopy<TruckCompanyToDelivery>(ttdNew);
 
             _logger.LogInformation("Updating {name} rows. Count: {count}", nameof(CustomerToDelivery), ctdUpdate.Count);
-            uow.CustomerToDeliveryRepository.Update(ctdUpdate);
+            //uow.CustomerToDeliveryRepository.Update(ctdUpdate);
+            uow.GenericRepository.BulkCopy<CustomerToDelivery>(ctdUpdate);
 
             _logger.LogInformation("Updating {name} rows. Count: {count}", nameof(TruckCompanyToDelivery), ttdUpdate.Count);
-            uow.TruckCompanyToDeliveryRepository.Update(ttdUpdate);
+            //uow.TruckCompanyToDeliveryRepository.Update(ttdUpdate);
+            uow.GenericRepository.BulkCopy<TruckCompanyToDelivery>(ttdUpdate);
 
             uow.Save("update_done");
         }
@@ -518,19 +524,24 @@ namespace AXERP.API.Business.Commands
             }
 
             _logger.LogInformation("Inserting new {name} rows. Count: {count}", nameof(Transaction), transactionDtos.Count);
-            uow.TransactionRepository.Add(transactionDtos, true);
+            //uow.TransactionRepository.Add(transactionDtos, true);
+            uow.GenericRepository.BulkCopy<Transaction>(transactionDtos);
 
             _logger.LogInformation("Inserting new {name} rows. Count: {count}", nameof(CustomerToDelivery), ctdNew.Count);
-            uow.CustomerToDeliveryRepository.Add(ctdNew);
+            //uow.CustomerToDeliveryRepository.Add(ctdNew);
+            uow.GenericRepository.BulkCopy<CustomerToDelivery>(ctdNew);
 
             _logger.LogInformation("Inserting new {name} rows. Count: {count}", nameof(TruckCompanyToDelivery), ttdNew.Count);
-            uow.TruckCompanyToDeliveryRepository.Add(ttdNew);
+            //uow.TruckCompanyToDeliveryRepository.Add(ttdNew);
+            uow.GenericRepository.BulkCopy<TruckCompanyToDelivery>(ttdNew);
 
             _logger.LogInformation("Updating {name} rows. Count: {count}", nameof(CustomerToDelivery), ctdUpdate.Count);
-            uow.CustomerToDeliveryRepository.Update(ctdUpdate);
+            //uow.CustomerToDeliveryRepository.Update(ctdUpdate);
+            uow.GenericRepository.BulkCopy<CustomerToDelivery>(ctdUpdate);
 
             _logger.LogInformation("Updating {name} rows. Count: {count}", nameof(TruckCompanyToDelivery), ttdUpdate.Count);
-            uow.TruckCompanyToDeliveryRepository.Update(ttdUpdate);
+            //uow.TruckCompanyToDeliveryRepository.Update(ttdUpdate);
+            uow.GenericRepository.BulkCopy<TruckCompanyToDelivery>(ttdUpdate);
 
             uow.Save("create_done");
         }
