@@ -6,6 +6,8 @@ using AXERP.API.Persistence.Queries;
 using AXERP.API.Persistence.Utils;
 using Dapper;
 using Microsoft.Data.SqlClient;
+using System.Data;
+using System.Reflection;
 using System.Text.RegularExpressions;
 
 namespace AXERP.API.Persistence.Repositories
@@ -19,6 +21,51 @@ namespace AXERP.API.Persistence.Repositories
         public GenericRepository(IConnectionProvider connectionProvider)
         {
             _connectionProvider = connectionProvider;
+        }
+
+        //TODO: static?
+        public DataTable CreateDataTable<T>(IEnumerable<T> list)
+        {
+            Type type = typeof(T);
+            var properties = type.GetProperties();
+
+            DataTable dataTable = new DataTable();
+            dataTable.TableName = typeof(T).FullName;
+            foreach (PropertyInfo info in properties)
+            {
+                dataTable.Columns.Add(new DataColumn(info.Name, Nullable.GetUnderlyingType(info.PropertyType) ?? info.PropertyType));
+            }
+
+            foreach (T entity in list)
+            {
+                object[] values = new object[properties.Length];
+                for (int i = 0; i < properties.Length; i++)
+                {
+                    values[i] = properties[i].GetValue(entity);
+                }
+
+                dataTable.Rows.Add(values);
+            }
+
+            return dataTable;
+        }
+
+        public void BulkCopy<T>(List<T> rows, DataRowState? state)
+        {
+            DataTable data = CreateDataTable<T>(rows);
+
+            using (var bulkCopy = new SqlBulkCopy(_connection, SqlBulkCopyOptions.Default, _transaction))
+            {
+                bulkCopy.DestinationTableName = $"dbo.{typeof(T).GetTableName()}";
+
+                // Without explicit mapping there can be conversion errors
+                data.Columns.Cast<DataColumn>()
+                    .ToList()
+                    .ForEach(x =>
+                        bulkCopy.ColumnMappings.Add(new SqlBulkCopyColumnMapping(x.ColumnName, x.ColumnName)));
+
+                bulkCopy.WriteToServer(data, state ?? DataRowState.Added);
+            }
         }
 
         private bool CheckIfTableExists(string tableName, bool onlyLetters = true)

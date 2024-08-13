@@ -53,7 +53,8 @@ namespace AXERP.API.Functions.Transactions
 
             try
             {
-                // Get parameters
+                _logger.LogInformation("Checking parameters...");
+
                 var credentialsJson = Environment.GetEnvironmentVariable("GoogleCredentials");
 
                 if (string.IsNullOrWhiteSpace(credentialsJson))
@@ -68,13 +69,17 @@ namespace AXERP.API.Functions.Transactions
                 var range = Environment.GetEnvironmentVariable("BulkDeliveriesSheetDataGasTransactionRange");
                 var sheetCulture = Environment.GetEnvironmentVariable("SheetCulture") ?? "fr-FR";
 
-                // Sheet import
-                var sheetService = new GoogleSheetManager(credentials: credentialsJson, format: CredentialsFormats.Text);
+                _logger.LogInformation("Fetching rows from GoogleSheet...");
 
+                var sheetService = new GoogleSheetManager(credentials: credentialsJson, format: CredentialsFormats.Text);
                 var rows = await sheetService.ReadGoogleSheetRaw(sheet_id, $"{tab_name}{(range?.Length > 0 ? "!" : "")}{range}");
+
+                _logger.LogInformation("Importing GoogleSheet rows...");
+
                 var importResult = _gasTransactionSheetProcessor.ProcessRows(rows, sheetCulture);
 
-                // Process
+                _logger.LogInformation("Updating DataBase with GoogleSheet rows...");
+
                 var result = _insertTransactionsCommand.Execute(importResult);
 
                 _logger.LogInformation("GasTransactions imported. Stats: {stats}", Newtonsoft.Json.JsonConvert.SerializeObject(result));

@@ -1,9 +1,11 @@
 ﻿using AutoMapper;
-using AXERP.API.Persistence.Factories;
 using AXERP.API.Domain.Entities;
+using AXERP.API.Domain.Interfaces.UnitOfWork;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.GoogleHelper.Models;
+using AXERP.API.Persistence.Factories;
 using Microsoft.Extensions.Logging;
+using System.Data;
 
 namespace AXERP.API.Business.Commands
 {
@@ -12,6 +14,16 @@ namespace AXERP.API.Business.Commands
         private readonly ILogger<InsertTransactionsCommand> _logger;
         private readonly UnitOfWorkFactory _uowFactory;
         private readonly IMapper _mapper;
+
+        private List<Transaction> Transactions { get; set; }
+        private List<string> TransactionIds { get; set; }
+        private List<Interface> Interfaces { get; set; }
+        private List<string> Statuses { get; set; }
+        private List<Document> Documents { get; set; }
+        private List<TruckCompany> TruckCompanies { get; set; }
+        private List<Entity> Entities { get; set; }
+        private List<TruckCompanyToDelivery> TruckCompanyToDeliveries { get; set; }
+        private List<CustomerToDelivery> CustomerToDeliveries { get; set; }
 
         public InsertTransactionsCommand(
             ILogger<InsertTransactionsCommand> logger,
@@ -28,7 +40,9 @@ namespace AXERP.API.Business.Commands
             var res = new ImportGasTransactionResponse
             {
                 InvalidRows = importResult.InvalidRows,
-                NewRowsInsertedIntoDatabase = 0,
+                NewRows = 0,
+                UpdatedRows = 0,
+                DeletedRows = 0,
                 TotalDataRowsInSheet = importResult.TotalRowsInSheet,
                 ImportErrors = importResult.Errors
             };
@@ -45,143 +59,72 @@ namespace AXERP.API.Business.Commands
                 try
                 {
                     /*
-                     * FILTER NEW DATA
+                     * LOCAL "CACHE"
                      */
+                    _logger.LogInformation("Querying data for processing. Transactions, entities...");
 
-                    // New Deliveries row check
-                    var ids = uow.GenericRepository.GetAllIDs<Transaction, string>();
-                    var newSheetRows = importResult.Data.Where(x => !ids.Contains(x.DeliveryID));
+                    RefreshBusinessDataCache(uow);
 
-                    var interfaces = uow.InterfaceRepository.GetAll().ToList();
-                    var statuses = uow.TransactionStatusRepository.GetAll().Select(x => x.Name).ToList();
-                    var documents = uow.DocumentRepository.GetAll().ToList();
-                    var truckCompanies = uow.TruckCompanyRepository.GetAll().ToList();
-                    var entities = uow.EntityRepository.GetAll().ToList();
+                    /*
+                     * FILTER NEW / UPDATED / DELETED DATA
+                     */
+                    var sheetIds = importResult.Data.Select(x => x.DeliveryID);
 
-                    var ctd = new List<CustomerToDelivery>();
-                    var ttd = new List<TruckCompanyToDelivery>();
+                    _logger.LogInformation("Selecting and counting imported rows for CREATE, UPDATE and DELETE.");
 
-                    var transactions = new List<Transaction>();
+                    var newSheetRows = importResult.Data.Where(x => !TransactionIds.Contains(x.DeliveryID));
+                    var updatedSheetRows = importResult.Data.Where(x => Transactions.Any(y => x.DeliveryID == y.ID && x.AXERPHash != y.AXERPHash));
+                    var deletedSheetRowIds = TransactionIds.Where(x => !sheetIds.Contains(x));
+
+                    res.NewRows = newSheetRows.Count();
+                    res.UpdatedRows = updatedSheetRows.Count();
+                    res.DeletedRows = deletedSheetRowIds.Count();
+
+                    _logger.LogInformation(
+                        "All imported rows: {imported}, invalid rows: {invalid}",
+                        importResult.ImportedRowCount,
+                        importResult.InvalidRows
+                    );
+
+                    _logger.LogInformation(
+                        "New rows: {new}, updated rows: {updated}, deleted rows: {deleted}",
+                        res.NewRows,
+                        res.UpdatedRows,
+                        res.DeletedRows
+                    );
 
                     uow.BeginTransaction();
 
-                    foreach (var newSheetRow in newSheetRows)
-                    {
-                        var transaction = _mapper.Map<Transaction>(newSheetRow);
+                    /*
+                     * DELETE TRANSACTIONS
+                     */
+                    _logger.LogInformation("Deleting transactions...");
 
-                        transaction.ID = newSheetRow.DeliveryID;
+                    Delete(uow, deletedSheetRowIds);
 
-                        transaction.StatusID = newSheetRow.Status;
-                        transaction.SalesStatusID = newSheetRow.SalesStatus;
+                    _logger.LogInformation("Refreshing data for processing. Transactions, entities...");
+                    RefreshBusinessDataCache(uow);
 
-                        var newTerminal = interfaces.FirstOrDefault(x => x.Name == newSheetRow.Terminal);
-                        if (newTerminal == null && !string.IsNullOrWhiteSpace(newSheetRow.Terminal) && !interfaces.Any(x => x.Name == newSheetRow.Terminal))
-                        {
-                            newTerminal = uow.InterfaceRepository.Add(new Interface { Name = newSheetRow.Terminal });
-                            interfaces.Add(newTerminal);
-                        }
+                    /*
+                     * CREATE TRANSACTIONS
+                     */
+                    _logger.LogInformation("Creating transactions...");
 
-                        var newDeliveryPoint = interfaces.FirstOrDefault(x => x.Name == newSheetRow.DeliveryPoint);
-                        if (newDeliveryPoint == null && !string.IsNullOrWhiteSpace(newSheetRow.DeliveryPoint) && !interfaces.Any(x => x.Name == newSheetRow.DeliveryPoint))
-                        {
-                            newDeliveryPoint = uow.InterfaceRepository.Add(new Interface { Name = newSheetRow.DeliveryPoint });
-                            interfaces.Add(newDeliveryPoint);
-                        }
+                    CreateOrUpdate(uow, newSheetRows, true);
 
-                        var newSpecificPoint = interfaces.FirstOrDefault(x => x.Name == newSheetRow.SpecificDeliveryPoint);
-                        if (newSpecificPoint == null && !string.IsNullOrWhiteSpace(newSheetRow.SpecificDeliveryPoint) && !interfaces.Any(x => x.Name == newSheetRow.SpecificDeliveryPoint))
-                        {
-                            newSpecificPoint = uow.InterfaceRepository.Add(new Interface { Name = newSheetRow.SpecificDeliveryPoint });
-                            interfaces.Add(newSpecificPoint);
-                        }
+                    _logger.LogInformation("Refreshing data for processing. Transactions, entities...");
+                    RefreshBusinessDataCache(uow);
 
-                        var newRef3 = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference3);
-                        if (newRef3 == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference3) && !documents.Any(x => x.Name == newSheetRow.Reference3))
-                        {
-                            newRef3 = uow.DocumentRepository.Add(new Document { Name = newSheetRow.Reference3 });
-                            documents.Add(newRef3);
-                            transaction.BlFileID = newRef3.ID;
-                        }
+                    /*
+                     * UPDATE TRANSACTIONS
+                     */
+                    _logger.LogInformation("Updating transactions...");
 
-                        var newRef2 = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference2);
-                        if (newRef2 == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference2) && !documents.Any(x => x.Name == newSheetRow.Reference2))
-                        {
-                            newRef2 = uow.DocumentRepository.Add(new Document { Name = newSheetRow.Reference2 });
-                            documents.Add(newRef2);
-                            transaction.BlFileID = newRef2.ID;
-                        }
-
-                        var newRef = documents.FirstOrDefault(x => x.Name == newSheetRow.Reference);
-                        if (newRef == null && !string.IsNullOrWhiteSpace(newSheetRow.Reference) && !documents.Any(x => x.Name == newSheetRow.Reference))
-                        {
-                            newRef = uow.DocumentRepository.Add(new Document { Name = newSheetRow.Reference });
-                            documents.Add(newRef);
-                            transaction.BlFileID = newRef.ID;
-                        }
-
-                        var newTransporter = entities.FirstOrDefault(x => x.Name == newSheetRow.Transporter);
-                        if (newTransporter == null && !string.IsNullOrWhiteSpace(newSheetRow.Transporter) && !entities.Any(x => x.Name == newSheetRow.Transporter))
-                        {
-                            newTransporter = uow.EntityRepository.Add(new Entity { Name = newSheetRow.Transporter });
-                            entities.Add(newTransporter);
-                        }
-
-                        var newTruckCompany = truckCompanies.FirstOrDefault(x => x.Name == newSheetRow.TruckCompany);
-                        if (newTruckCompany == null && !string.IsNullOrWhiteSpace(newSheetRow.TruckCompany) && !truckCompanies.Any(x => x.Name == newSheetRow.TruckCompany))
-                        {
-                            newTruckCompany = uow.TruckCompanyRepository.Add(new Entity { Name = newSheetRow.TruckCompany });
-                            truckCompanies.Add(newTruckCompany);
-                        }
-
-                        var newCustomer = entities.FirstOrDefault(x => x.Name == newSheetRow.Customer);
-                        if (newCustomer == null && !string.IsNullOrWhiteSpace(newSheetRow.Customer) && !entities.Any(x => x.Name == newSheetRow.Customer))
-                        {
-                            newCustomer = uow.EntityRepository.Add(new Entity { Name = newSheetRow.Customer });
-                            entities.Add(newCustomer);
-                        }
-
-                        transaction.TerminalID = newTerminal?.ID;
-
-                        transaction.DeliveryPointID = newDeliveryPoint?.ID;
-                        transaction.SpecificDeliveryPointID = newSpecificPoint?.ID;
-
-                        transaction.TransporterID = newTransporter?.ID;
-
-                        if (newCustomer != null)
-                        {
-                            ctd.Add(new CustomerToDelivery
-                            {
-                                DeliveryID = transaction.ID,
-                                CustomerID = newCustomer.ID,
-                                Comment = newSheetRow.CustomerNote
-                            });
-                        }
-
-                        if (newTruckCompany != null)
-                        {
-                            ttd.Add(new TruckCompanyToDelivery
-                            {
-                                DeliveryID = transaction.ID,
-                                TruckCompanyID = newTruckCompany.ID,
-                                Comment = newSheetRow.TruckLoadingCompanyComment
-                            });
-                        }
-
-                        transactions.Add(transaction);
-                    }
-
-                    uow.Save("pt-before-deliveries");
-
-                    // New Deliveries
-                    dv = transactions.ToList();
-                    res.NewRowsInsertedIntoDatabase += uow.TransactionRepository.Add(transactions, true);
-
-                    uow.Save("pt-before-ctd-ttd");
-
-                    uow.CustomerToDeliveryRepository.Add(ctd);
-                    uow.TruckCompanyToDeliveryRepository.Add(ttd);
+                    CreateOrUpdate(uow, updatedSheetRows, false);
 
                     uow.CommitTransaction();
+
+                    _logger.LogInformation("Sync (DataBase part) finished without errors.");
                 }
                 catch (Exception ex)
                 {
@@ -191,6 +134,232 @@ namespace AXERP.API.Business.Commands
             }
 
             return res;
+        }
+
+        private void RefreshBusinessDataCache(IUnitOfWork uow)
+        {
+            Transactions = uow.TransactionRepository.GetAll().ToList();
+            TransactionIds = Transactions.Select(x => x.ID).ToList();
+            Interfaces = uow.InterfaceRepository.GetAll().ToList();
+            Statuses = uow.TransactionStatusRepository.GetAll().Select(x => x.Name).ToList();
+            Documents = uow.DocumentRepository.GetAll().ToList();
+            TruckCompanies = uow.TruckCompanyRepository.GetAll().ToList();
+            Entities = uow.EntityRepository.GetAll().ToList();
+            TruckCompanyToDeliveries = uow.TruckCompanyToDeliveryRepository.GetAll().ToList();
+            CustomerToDeliveries = uow.CustomerToDeliveryRepository.GetAll().ToList();
+        }
+
+        private void Delete(IUnitOfWork uow, IEnumerable<string> ids)
+        {
+            _logger.LogInformation("Deleting associated {name} rows.", nameof(CustomerToDelivery));
+            var deleted = uow.CustomerToDeliveryRepository.Delete(nameof(CustomerToDelivery.DeliveryID), ids);
+            _logger.LogInformation("Deleted {name} rows: {count}", nameof(CustomerToDelivery), deleted);
+
+            _logger.LogInformation("Deleting associated {name} rows.", nameof(TruckCompanyToDelivery));
+            deleted = uow.TruckCompanyToDeliveryRepository.Delete(nameof(TruckCompanyToDelivery.DeliveryID), ids);
+            _logger.LogInformation("Deleted {name} rows: {count}", nameof(TruckCompanyToDelivery), deleted);
+
+            _logger.LogInformation("Deleting {name} rows.", nameof(Transaction));
+            deleted = uow.TransactionRepository.Delete(ids);
+            _logger.LogInformation("Deleted {name} rows: {count}", nameof(Transaction), deleted);
+
+            uow.Save("delete_done");
+        }
+
+        private void CreateOrUpdate(IUnitOfWork uow, IEnumerable<Delivery> sheetRows, bool create)
+        {
+            if (!sheetRows.Any())
+            {
+                return;
+            }
+
+            var transactionDtos = new List<Transaction>();
+            var ctdNew = new List<CustomerToDelivery>();
+            var ttdNew = new List<TruckCompanyToDelivery>();
+            var ctdUpdate = new List<CustomerToDelivery>();
+            var ttdUpdate = new List<TruckCompanyToDelivery>();
+
+            foreach (var sheetRow in sheetRows)
+            {
+                var transaction = _mapper.Map<Transaction>(sheetRow);
+
+                transaction.ID = sheetRow.DeliveryID;
+
+                transaction.StatusID = sheetRow.Status;
+                transaction.SalesStatusID = sheetRow.SalesStatus;
+
+                transaction.AXERPHash = sheetRow.AXERPHash;
+
+                var newTerminal = Interfaces.FirstOrDefault(x => x.Name == sheetRow.Terminal);
+                if (newTerminal == null && !string.IsNullOrWhiteSpace(sheetRow.Terminal) && !Interfaces.Any(x => x.Name == sheetRow.Terminal))
+                {
+                    newTerminal = uow.InterfaceRepository.Add(new Interface { Name = sheetRow.Terminal });
+                    Interfaces.Add(newTerminal);
+                }
+
+                var newDeliveryPoint = Interfaces.FirstOrDefault(x => x.Name == sheetRow.DeliveryPoint);
+                if (newDeliveryPoint == null && !string.IsNullOrWhiteSpace(sheetRow.DeliveryPoint) && !Interfaces.Any(x => x.Name == sheetRow.DeliveryPoint))
+                {
+                    newDeliveryPoint = uow.InterfaceRepository.Add(new Interface { Name = sheetRow.DeliveryPoint });
+                    Interfaces.Add(newDeliveryPoint);
+                }
+
+                var newSpecificPoint = Interfaces.FirstOrDefault(x => x.Name == sheetRow.SpecificDeliveryPoint);
+                if (newSpecificPoint == null && !string.IsNullOrWhiteSpace(sheetRow.SpecificDeliveryPoint) && !Interfaces.Any(x => x.Name == sheetRow.SpecificDeliveryPoint))
+                {
+                    newSpecificPoint = uow.InterfaceRepository.Add(new Interface { Name = sheetRow.SpecificDeliveryPoint });
+                    Interfaces.Add(newSpecificPoint);
+                }
+
+                var newRef3 = Documents.FirstOrDefault(x => x.Name == sheetRow.Reference3);
+                if (newRef3 == null && !string.IsNullOrWhiteSpace(sheetRow.Reference3) && !Documents.Any(x => x.Name == sheetRow.Reference3))
+                {
+                    newRef3 = uow.DocumentRepository.Add(new Document { Name = sheetRow.Reference3 });
+                    Documents.Add(newRef3);
+                    transaction.BlFileID = newRef3.ID;
+                }
+
+                var newRef2 = Documents.FirstOrDefault(x => x.Name == sheetRow.Reference2);
+                if (newRef2 == null && !string.IsNullOrWhiteSpace(sheetRow.Reference2) && !Documents.Any(x => x.Name == sheetRow.Reference2))
+                {
+                    newRef2 = uow.DocumentRepository.Add(new Document { Name = sheetRow.Reference2 });
+                    Documents.Add(newRef2);
+                    transaction.BlFileID = newRef2.ID;
+                }
+
+                var newRef = Documents.FirstOrDefault(x => x.Name == sheetRow.Reference);
+                if (newRef == null && !string.IsNullOrWhiteSpace(sheetRow.Reference) && !Documents.Any(x => x.Name == sheetRow.Reference))
+                {
+                    newRef = uow.DocumentRepository.Add(new Document { Name = sheetRow.Reference });
+                    Documents.Add(newRef);
+                    transaction.BlFileID = newRef.ID;
+                }
+
+                var newTransporter = Entities.FirstOrDefault(x => x.Name == sheetRow.Transporter);
+                if (newTransporter == null && !string.IsNullOrWhiteSpace(sheetRow.Transporter) && !Entities.Any(x => x.Name == sheetRow.Transporter))
+                {
+                    newTransporter = uow.EntityRepository.Add(new Entity { Name = sheetRow.Transporter });
+                    Entities.Add(newTransporter);
+                }
+
+                var isTruckCompanyNew = false;
+                var sheetTruckCompany = TruckCompanies.FirstOrDefault(x => x.Name == sheetRow.TruckCompany);
+                if (sheetTruckCompany == null && !string.IsNullOrWhiteSpace(sheetRow.TruckCompany) && !TruckCompanies.Any(x => x.Name == sheetRow.TruckCompany))
+                {
+                    sheetTruckCompany = uow.TruckCompanyRepository.Add(new Entity { Name = sheetRow.TruckCompany });
+                    TruckCompanies.Add(sheetTruckCompany);
+                    isTruckCompanyNew = true;
+                }
+
+                var isCustomerNew = false;
+                var sheetCustomer = Entities.FirstOrDefault(x => x.Name == sheetRow.Customer);
+                if (sheetCustomer == null && !string.IsNullOrWhiteSpace(sheetRow.Customer) && !Entities.Any(x => x.Name == sheetRow.Customer))
+                {
+                    sheetCustomer = uow.EntityRepository.Add(new Entity { Name = sheetRow.Customer });
+                    Entities.Add(sheetCustomer);
+                    isCustomerNew = true;
+                }
+
+                transaction.TerminalID = newTerminal?.ID;
+
+                transaction.DeliveryPointID = newDeliveryPoint?.ID;
+                transaction.SpecificDeliveryPointID = newSpecificPoint?.ID;
+
+                transaction.TransporterID = newTransporter?.ID;
+
+                if (sheetCustomer != null)
+                {
+                    if (!isCustomerNew)
+                    {
+                        var u = CustomerToDeliveries.FirstOrDefault(x => x.DeliveryID == sheetRow.DeliveryID);
+                        if (u != null)
+                        {
+                            u.Comment = sheetRow.CustomerNote;
+                            ctdUpdate.Add(u);
+                        }
+                        else
+                        {
+                            ctdNew.Add(new CustomerToDelivery
+                            {
+                                DeliveryID = transaction.ID,
+                                CustomerID = sheetCustomer.ID,
+                                Comment = sheetRow.CustomerNote
+                            });
+                        }
+                    }
+                    else
+                    {
+                        ctdNew.Add(new CustomerToDelivery
+                        {
+                            DeliveryID = transaction.ID,
+                            CustomerID = sheetCustomer.ID,
+                            Comment = sheetRow.CustomerNote
+                        });
+                    }
+                }
+
+                if (sheetTruckCompany != null)
+                {
+                    if (!isTruckCompanyNew)
+                    {
+                        var u = TruckCompanyToDeliveries.FirstOrDefault(x => x.DeliveryID == sheetRow.DeliveryID);
+                        if (u != null)
+                        {
+                            u.Comment = sheetRow.TruckLoadingCompanyComment;
+                            ttdUpdate.Add(u);
+                        }
+                        else
+                        {
+                            ttdNew.Add(new TruckCompanyToDelivery
+                            {
+                                DeliveryID = transaction.ID,
+                                TruckCompanyID = sheetTruckCompany.ID,
+                                Comment = sheetRow.TruckLoadingCompanyComment
+                            });
+                        }
+                    }
+                    else
+                    {
+                        ttdNew.Add(new TruckCompanyToDelivery
+                        {
+                            DeliveryID = transaction.ID,
+                            TruckCompanyID = sheetTruckCompany.ID,
+                            Comment = sheetRow.TruckLoadingCompanyComment
+                        });
+                    }
+                }
+
+                transactionDtos.Add(transaction);
+            }
+
+            if (create)
+            {
+                _logger.LogInformation("Inserting new {name} rows. Count: {count}", nameof(Transaction), transactionDtos.Count);
+                uow.GenericRepository.BulkCopy<Transaction>(transactionDtos);
+            }
+            else
+            {
+                _logger.LogInformation("Updating {name} rows. Count: {count}", nameof(Transaction), transactionDtos.Count);
+                uow.TransactionRepository.Update(transactionDtos);
+            }
+
+            _logger.LogInformation("Inserting new {name} rows. Count: {count}", nameof(CustomerToDelivery), ctdNew.Count);
+            // uow.CustomerToDeliveryRepository.Add(ctdNew);
+            uow.GenericRepository.BulkCopy<CustomerToDelivery>(ctdNew);
+
+            _logger.LogInformation("Inserting new {name} rows. Count: {count}", nameof(TruckCompanyToDelivery), ttdNew.Count);
+            // uow.TruckCompanyToDeliveryRepository.Add(ttdNew);
+            uow.GenericRepository.BulkCopy<TruckCompanyToDelivery>(ttdNew);
+
+            _logger.LogInformation("Updating {name} rows. Count: {count}", nameof(CustomerToDelivery), ctdUpdate.Count);
+            uow.CustomerToDeliveryRepository.Update(ctdUpdate);
+            //uow.GenericRepository.BulkCopy<CustomerToDelivery>(ctdUpdate);
+
+            _logger.LogInformation("Updating {name} rows. Count: {count}", nameof(TruckCompanyToDelivery), ttdUpdate.Count);
+            uow.TruckCompanyToDeliveryRepository.Update(ttdUpdate);
+            //uow.GenericRepository.BulkCopy<TruckCompanyToDelivery>(ttdUpdate);
+
+            uow.Save("update_done");
         }
     }
 }

@@ -113,5 +113,8 @@ namespace AXERP.API.Domain.Entities
 
         [JsonProperty("Truck company")]
         public string TruckCompany { get; set; }
+
+        [JsonProperty("AXERP Hash")]
+        public string AXERPHash { get; set; }
     }
 }
