@@ -57,7 +57,14 @@ namespace AXERP.API.Persistence.Repositories
             using (var bulkCopy = new SqlBulkCopy(_connection, SqlBulkCopyOptions.Default, _transaction))
             {
                 bulkCopy.DestinationTableName = $"dbo.{typeof(T).GetTableName()}";
-                bulkCopy.WriteToServer(data, state ?? DataRowState.Unchanged);
+
+                // Without explicit mapping there can be conversion errors
+                data.Columns.Cast<DataColumn>()
+                    .ToList()
+                    .ForEach(x =>
+                        bulkCopy.ColumnMappings.Add(new SqlBulkCopyColumnMapping(x.ColumnName, x.ColumnName)));
+
+                bulkCopy.WriteToServer(data, state ?? DataRowState.Added);
             }
         }
 

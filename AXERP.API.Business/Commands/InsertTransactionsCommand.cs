@@ -102,6 +102,15 @@ namespace AXERP.API.Business.Commands
 
                     Delete(uow, deletedSheetRowIds);
 
+                    _logger.LogInformation("Refreshing data for processing. Transactions, entities...");
+                    RefreshBusinessDataCache(uow);
+
+                    /*
+                     * CREATE TRANSACTIONS
+                     */
+                    _logger.LogInformation("Creating transactions...");
+
+                    Create(uow, newSheetRows);
 
                     _logger.LogInformation("Refreshing data for processing. Transactions, entities...");
                     RefreshBusinessDataCache(uow);
@@ -112,17 +121,6 @@ namespace AXERP.API.Business.Commands
                     _logger.LogInformation("Updating transactions...");
 
                     Update(uow, updatedSheetRows);
-
-
-                    _logger.LogInformation("Refreshing data for processing. Transactions, entities...");
-                    RefreshBusinessDataCache(uow);
-
-                    /*
-                     * CREATE TRANSACTIONS
-                     */
-                    _logger.LogInformation("Creating transactions...");
-
-                    Create(uow, newSheetRows);
 
                     uow.CommitTransaction();
 
@@ -335,24 +333,24 @@ namespace AXERP.API.Business.Commands
             }
 
             _logger.LogInformation("Updating {name} rows. Count: {count}", nameof(Transaction), transactionDtos.Count);
-            //uow.TransactionRepository.Update(transactionDtos);
-            uow.GenericRepository.BulkCopy<Transaction>(transactionDtos);
+            uow.TransactionRepository.Update(transactionDtos);
+            // uow.GenericRepository.BulkCopy<Transaction>(transactionDtos);
 
             _logger.LogInformation("Inserting new {name} rows. Count: {count}", nameof(CustomerToDelivery), ctdNew.Count);
-            //uow.CustomerToDeliveryRepository.Add(ctdNew);
+            // uow.CustomerToDeliveryRepository.Add(ctdNew);
             uow.GenericRepository.BulkCopy<CustomerToDelivery>(ctdNew);
 
             _logger.LogInformation("Inserting new {name} rows. Count: {count}", nameof(TruckCompanyToDelivery), ttdNew.Count);
-            //uow.TruckCompanyToDeliveryRepository.Add(ttdNew);
+            // uow.TruckCompanyToDeliveryRepository.Add(ttdNew);
             uow.GenericRepository.BulkCopy<TruckCompanyToDelivery>(ttdNew);
 
             _logger.LogInformation("Updating {name} rows. Count: {count}", nameof(CustomerToDelivery), ctdUpdate.Count);
-            //uow.CustomerToDeliveryRepository.Update(ctdUpdate);
-            uow.GenericRepository.BulkCopy<CustomerToDelivery>(ctdUpdate);
+            uow.CustomerToDeliveryRepository.Update(ctdUpdate);
+            //uow.GenericRepository.BulkCopy<CustomerToDelivery>(ctdUpdate);
 
             _logger.LogInformation("Updating {name} rows. Count: {count}", nameof(TruckCompanyToDelivery), ttdUpdate.Count);
-            //uow.TruckCompanyToDeliveryRepository.Update(ttdUpdate);
-            uow.GenericRepository.BulkCopy<TruckCompanyToDelivery>(ttdUpdate);
+            uow.TruckCompanyToDeliveryRepository.Update(ttdUpdate);
+            //uow.GenericRepository.BulkCopy<TruckCompanyToDelivery>(ttdUpdate);
 
             uow.Save("update_done");
         }
@@ -536,12 +534,12 @@ namespace AXERP.API.Business.Commands
             uow.GenericRepository.BulkCopy<TruckCompanyToDelivery>(ttdNew);
 
             _logger.LogInformation("Updating {name} rows. Count: {count}", nameof(CustomerToDelivery), ctdUpdate.Count);
-            //uow.CustomerToDeliveryRepository.Update(ctdUpdate);
-            uow.GenericRepository.BulkCopy<CustomerToDelivery>(ctdUpdate);
+            uow.CustomerToDeliveryRepository.Update(ctdUpdate);
+            //uow.GenericRepository.BulkCopy<CustomerToDelivery>(ctdUpdate);
 
             _logger.LogInformation("Updating {name} rows. Count: {count}", nameof(TruckCompanyToDelivery), ttdUpdate.Count);
-            //uow.TruckCompanyToDeliveryRepository.Update(ttdUpdate);
-            uow.GenericRepository.BulkCopy<TruckCompanyToDelivery>(ttdUpdate);
+            uow.TruckCompanyToDeliveryRepository.Update(ttdUpdate);
+            //uow.GenericRepository.BulkCopy<TruckCompanyToDelivery>(ttdUpdate);
 
             uow.Save("create_done");
         }

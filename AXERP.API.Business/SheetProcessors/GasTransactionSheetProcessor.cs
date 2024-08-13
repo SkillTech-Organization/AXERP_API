@@ -1,8 +1,9 @@
-﻿using AXERP.API.Persistence.Factories;
-using AXERP.API.Domain.Entities;
+﻿using AXERP.API.Domain.Entities;
 using AXERP.API.GoogleHelper.Models;
+using AXERP.API.Persistence.Factories;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using System;
 using System.Globalization;
 using System.Reflection;
 
@@ -51,10 +52,49 @@ namespace AXERP.API.Business.SheetProcessors
             var result = new List<Delivery>();
             var errors = new List<string>();
             var invalidRows = 0;
-
-            var minSqlYear = 1753;
+            var totalRows = sheet_value_range.Count - 1;
 
             var valid_statuses = GetStatuses();
+
+            // Parallel processing
+            var dataChunks = sheet_rows.Chunk(100);
+            var partialResults = new List<GenericSheetImportResult<Delivery>>();
+
+            Parallel.ForEach(dataChunks, dataChunk =>
+            {
+                partialResults.Add(_Map(field_names, dataChunk, culture_code, valid_statuses.ToList()));
+            });
+
+            // Merge results
+            foreach (var partialResult in partialResults)
+            {
+                result.AddRange(partialResult.Data ?? new List<Delivery>());
+                invalidRows += partialResult.InvalidRows;
+                errors.AddRange(partialResult.Errors);
+            }
+
+            // Process
+            //var partialResult = _Map(field_names, sheet_rows, culture_code, valid_statuses.ToList());
+            //result.AddRange(partialResult.Data ?? new List<Delivery>());
+            //invalidRows += partialResult.InvalidRows;
+            //errors.AddRange(partialResult.Errors);
+
+            return new GenericSheetImportResult<Delivery>
+            {
+                Data = result,
+                InvalidRows = invalidRows,
+                TotalRowsInSheet = totalRows,
+                Errors = errors
+            };
+        }
+
+        private GenericSheetImportResult<Delivery> _Map(Dictionary<string, int> field_names, IList<IList<object>>? sheet_rows, string culture_code, List<string> valid_statuses)
+        {
+            var result = new List<Delivery>();
+            var errors = new List<string>();
+            var invalidRows = 0;
+
+            var minSqlYear = 1753;
 
             for (var i = 0; i < sheet_rows.Count; i++)
             {
@@ -72,6 +112,28 @@ namespace AXERP.API.Business.SheetProcessors
 
                     var gasTransaction = new Delivery();
                     var field_idx = 0;
+
+                    // MOCK, only for debug
+                    //var rngArray = new bool[] { false, false, true, false, true, false, false, false, true, false, false, false, false, false };
+                    //var rng = new Random();
+                    //if (rngArray[rng.Next(0, rngArray.Length)])
+                    //{
+                    //    continue;
+                    //}
+                    //if (rngArray[rng.Next(0, rngArray.Length)])
+                    //{
+                    //    const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+                    //    var hash = new string(Enumerable.Repeat(chars, 10)
+                    //        .Select(s => s[rng.Next(s.Length)]).ToArray());
+                    //    gasTransaction.AXERPHash = chars;
+                    //}
+                    //else if (rngArray[rng.Next(0, rngArray.Length)])
+                    //{
+                    //    const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+                    //    var hash = new string(Enumerable.Repeat(chars, 10)
+                    //        .Select(s => s[rng.Next(s.Length)]).ToArray());
+                    //    gasTransaction.DeliveryID = chars;
+                    //}
 
                     // DeliveryID
                     field_idx = field_names[nameof(gasTransaction.DeliveryID)];
@@ -541,7 +603,7 @@ namespace AXERP.API.Business.SheetProcessors
             {
                 Data = result,
                 InvalidRows = invalidRows,
-                TotalRowsInSheet = sheet_value_range.Count - 1,
+                TotalRowsInSheet = sheet_rows.Count(),
                 Errors = errors
             };
         }
