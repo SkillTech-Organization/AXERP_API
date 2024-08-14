@@ -6,6 +6,7 @@ using AXERP.API.LogHelper.Factories;
 using AXERP.API.LogHelper.Managers;
 using AXERP.API.Persistence.Factories;
 using AXERP.API.Persistence.Queries;
+using AXERP.API.Persistence.Utils;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -87,7 +88,7 @@ namespace AXERP.API.Functions.Transactions
                         QueryTemplate = queryTemplate,
                         CountTemplate = countTemplate,
                         Columns = cols,
-                        OrderBy = req.Query["OrderBy"] ?? "TimeStamp",
+                        OrderBy = req.Query["OrderBy"] ?? "When",
                         OrderDesc = bool.Parse(req.Query["OrderByDesc"] ?? "false"),
                         Page = page,
                         PageSize = pageSize,

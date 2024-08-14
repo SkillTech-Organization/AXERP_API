@@ -131,11 +131,11 @@ namespace AXERP.API.Persistence.Utils
 
                     if (!string.IsNullOrWhiteSpace(selectAlias))
                     {
-                        columns.Add($"{selectAlias}.{property.Name}");
+                        columns.Add($"{selectAlias}.[{property.Name}]");
                     }
                     else
                     {
-                        columns.Add(property.Name);
+                        columns.Add($"[{property.Name}]");
                     }
                 }
             }
@@ -198,7 +198,7 @@ namespace AXERP.API.Persistence.Utils
                         continue;
                     }
 
-                    columns.Add($"{property.Name} = @{property.Name}");
+                    columns.Add($"[{property.Name}] = @{property.Name}");
                 }
             }
 
@@ -226,11 +226,11 @@ namespace AXERP.API.Persistence.Utils
                         {
                             if (!string.IsNullOrWhiteSpace(selectAlias))
                             {
-                                columns.Add($"{selectAlias}.{property.Name} = {parameterName}");
+                                columns.Add($"{selectAlias}.[{property.Name}] = {parameterName}");
                             }
                             else
                             {
-                                columns.Add($"{property.Name} = {parameterName}");
+                                columns.Add($"[{property.Name}] = {parameterName}");
                             }
                         }
                     }
@@ -245,11 +245,11 @@ namespace AXERP.API.Persistence.Utils
                         {
                             if (!string.IsNullOrWhiteSpace(selectAlias))
                             {
-                                columns.Add($"{selectAlias}.{property.Name} = {parameterName}");
+                                columns.Add($"{selectAlias}.[{property.Name}] = {parameterName}");
                             }
                             else
                             {
-                                columns.Add($"{property.Name} = {parameterName}");
+                                columns.Add($"[{property.Name}] = {parameterName}");
                             }
                         }
                     }
@@ -257,11 +257,11 @@ namespace AXERP.API.Persistence.Utils
                     {
                         if (!string.IsNullOrWhiteSpace(selectAlias))
                         {
-                            columns.Add($"{selectAlias}.{property.Name} LIKE {parameterName}");
+                            columns.Add($"{selectAlias}.[{property.Name}] LIKE {parameterName}");
                         }
                         else
                         {
-                            columns.Add($"{property.Name} LIKE {parameterName}");
+                            columns.Add($"[{property.Name}] LIKE {parameterName}");
                         }
                     }
                 }
@@ -295,11 +295,11 @@ namespace AXERP.API.Persistence.Utils
                         {
                             if (!string.IsNullOrWhiteSpace(selectAlias))
                             {
-                                columns.Add($"{selectAlias}.{property.Name} = {baseParameterName}{parameterIdx}");
+                                columns.Add($"{selectAlias}.[{property.Name}] = {baseParameterName}{parameterIdx}");
                             }
                             else
                             {
-                                columns.Add($"{property.Name} = {baseParameterName}{parameterIdx}");
+                                columns.Add($"[{property.Name}] = {baseParameterName}{parameterIdx}");
                             }
                         }
                     }
@@ -314,11 +314,11 @@ namespace AXERP.API.Persistence.Utils
                         {
                             if (!string.IsNullOrWhiteSpace(selectAlias))
                             {
-                                columns.Add($"{selectAlias}.{property.Name} = {baseParameterName}{parameterIdx}");
+                                columns.Add($"{selectAlias}.[{property.Name}] = {baseParameterName}{parameterIdx}");
                             }
                             else
                             {
-                                columns.Add($"{property.Name} = {baseParameterName}{parameterIdx}");
+                                columns.Add($"[{property.Name}] = {baseParameterName}{parameterIdx}");
                             }
                         }
                     }
@@ -326,11 +326,11 @@ namespace AXERP.API.Persistence.Utils
                     {
                         if (!string.IsNullOrWhiteSpace(selectAlias))
                         {
-                            columns.Add($"{selectAlias}.{property.Name} LIKE {baseParameterName}{parameterIdx}");
+                            columns.Add($"{selectAlias}.[{property.Name}] LIKE {baseParameterName}{parameterIdx}");
                         }
                         else
                         {
-                            columns.Add($"{property.Name} LIKE {baseParameterName}{parameterIdx}");
+                            columns.Add($"[{property.Name}] LIKE {baseParameterName}{parameterIdx}");
                         }
                     }
 
