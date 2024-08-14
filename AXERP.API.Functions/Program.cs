@@ -2,16 +2,16 @@ using AXERP.API.AppInsightsHelper.Managers;
 using AXERP.API.Business.Commands;
 using AXERP.API.Business.SheetProcessors;
 using AXERP.API.Domain.AutoMapperProfiles;
+using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Serilog.Events;
 using Serilog;
+using Serilog.Events;
 using Serilog.Sinks.MSSqlServer;
-using Microsoft.ApplicationInsights.Extensibility;
-using Serilog.Sinks.MSSqlServer.Sinks.MSSqlServer.Options;
 
 
 // Solution for sql collection disposed exception.
@@ -22,6 +22,49 @@ var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
     .ConfigureLogging((hostingContext, logging) =>
     {
+        var colOpts = new ColumnOptions();
+
+        colOpts.Store.Remove(StandardColumn.Properties);
+        colOpts.Store.Remove(StandardColumn.MessageTemplate);
+        colOpts.Store.Remove(StandardColumn.Exception);
+
+        colOpts.Message.ColumnName = "Description";
+        colOpts.TimeStamp.ColumnName = "When";
+
+        colOpts.AdditionalColumns.Add(new SqlColumn
+        {
+            ColumnName = "ProcessId",
+            DataType = System.Data.SqlDbType.BigInt
+        });
+
+        colOpts.AdditionalColumns.Add(new SqlColumn
+        {
+            ColumnName = "Who",
+            DataType = System.Data.SqlDbType.NVarChar,
+            DataLength = 500
+        });
+
+        colOpts.AdditionalColumns.Add(new SqlColumn
+        {
+            ColumnName = "Function",
+            DataType = System.Data.SqlDbType.NVarChar,
+            DataLength = 500
+        });
+
+        colOpts.AdditionalColumns.Add(new SqlColumn
+        {
+            ColumnName = "System",
+            DataType = System.Data.SqlDbType.NVarChar,
+            DataLength = 500
+        });
+
+        colOpts.AdditionalColumns.Add(new SqlColumn
+        {
+            ColumnName = "Result",
+            DataType = System.Data.SqlDbType.NVarChar,
+            DataLength = 100
+        });
+
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
             .MinimumLevel.Override("Worker", LogEventLevel.Warning)
@@ -41,7 +84,7 @@ var host = new HostBuilder()
                 AutoCreateSqlTable = true,
                 TableName = "LogEvents",
                 UseSqlBulkCopy = true
-            })
+            }, columnOptions: colOpts)
             .Filter.ByIncludingOnly(x => x.Properties["SourceContext"].ToString().StartsWith("AXERP.API"))
             .CreateLogger();
 
@@ -58,6 +101,7 @@ var host = new HostBuilder()
         services.AddTransient<UpdateReferencesByBlobFilesCommand>();
         services.AddTransient<DeleteTransactionsCommand>();
         services.AddTransient<AppInsightsManager>();
+        services.AddTransient<AxerpLoggerFactory>();
     })
     // Source: https://learn.microsoft.com/en-us/azure/azure-functions/dotnet-isolated-process-guide?tabs=windows#application-insights
     // Quote: "However, by default, the Application Insights SDK adds a logging filter that instructs the logger to capture only warnings and more severe logs. If you want to disable this behavior, remove the filter rule as part of service configuration"
