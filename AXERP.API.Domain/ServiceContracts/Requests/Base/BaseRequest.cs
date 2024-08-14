@@ -3,9 +3,9 @@
 namespace AXERP.API.Domain.ServiceContracts.Requests
 {
     [DataContract]
-    public class DeleteTransactionRequest : BaseRequest
+    public class BaseRequest
     {
         [DataMember]
-        public List<string> TransactionIds { get; set; }
+        public virtual string UserName { get; set; } = "Unknown";
     }
 }

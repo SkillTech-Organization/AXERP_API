@@ -3,15 +3,16 @@ using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.Interfaces.UnitOfWork;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.GoogleHelper.Models;
+using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
-using Microsoft.Extensions.Logging;
+using System.ComponentModel;
 using System.Data;
 
 namespace AXERP.API.Business.Commands
 {
-    public class InsertTransactionsCommand
+    [Description("SQL Server")]
+    public class InsertTransactionsCommand : BaseCommand<InsertTransactionsCommand>
     {
-        private readonly ILogger<InsertTransactionsCommand> _logger;
         private readonly UnitOfWorkFactory _uowFactory;
         private readonly IMapper _mapper;
 
@@ -26,11 +27,10 @@ namespace AXERP.API.Business.Commands
         private List<CustomerToDelivery> CustomerToDeliveries { get; set; }
 
         public InsertTransactionsCommand(
-            ILogger<InsertTransactionsCommand> logger,
+            AxerpLoggerFactory axerpLoggerFactory,
             UnitOfWorkFactory uowFactory,
-            IMapper mapper)
+            IMapper mapper) : base(axerpLoggerFactory)
         {
-            _logger = logger;
             _uowFactory = uowFactory;
             _mapper = mapper;
         }

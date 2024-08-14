@@ -1,27 +1,27 @@
 using AutoMapper;
 using AXERP.API.Business.Commands;
-using AXERP.API.Persistence.Factories;
+using AXERP.API.Business.SheetProcessors;
 using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
-using AXERP.API.Business.SheetProcessors;
 using AXERP.API.GoogleHelper.Managers;
+using AXERP.API.LogHelper.Factories;
+using AXERP.API.LogHelper.Managers;
+using AXERP.API.Persistence.Factories;
+using AXERP.API.Persistence.Queries;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
-using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using System.Net;
-using Newtonsoft.Json;
-using AXERP.API.Persistence.Queries;
 using FromBodyAttribute = Microsoft.Azure.Functions.Worker.Http.FromBodyAttribute;
 
 namespace AXERP.API.Functions.Transactions
 {
     public class GasTransactionFunctions
     {
-        private readonly ILogger<GasTransactionFunctions> _logger;
+        private readonly AxerpLogger<GasTransactionFunctions> _logger;
         private readonly GasTransactionSheetProcessor _gasTransactionSheetProcessor;
         private readonly UnitOfWorkFactory _unitOfWorkFactory;
         private readonly InsertTransactionsCommand _insertTransactionsCommand;
@@ -29,14 +29,14 @@ namespace AXERP.API.Functions.Transactions
         private readonly IMapper _mapper;
 
         public GasTransactionFunctions(
-            ILogger<GasTransactionFunctions> logger,
+            AxerpLoggerFactory loggerFactory,
             GasTransactionSheetProcessor gasTransactionSheetProcessor,
             UnitOfWorkFactory unitOfWorkFactory,
             InsertTransactionsCommand insertTransactionsCommand,
             DeleteTransactionsCommand deleteTransactionsCommand,
             IMapper mapper)
         {
-            _logger = logger;
+            _logger = loggerFactory.Create<GasTransactionFunctions>();
             _gasTransactionSheetProcessor = gasTransactionSheetProcessor;
             _unitOfWorkFactory = unitOfWorkFactory;
             _mapper = mapper;
@@ -46,9 +46,12 @@ namespace AXERP.API.Functions.Transactions
 
         [Function(nameof(ImportGasTransactions))]
         [OpenApiOperation(operationId: nameof(ImportGasTransactions), tags: new[] { "gas-transactions" })]
+        [OpenApiRequestBody("application/json", typeof(BaseRequest), Required = true)]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
-        public async Task<IActionResult> ImportGasTransactions([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
+        public async Task<IActionResult> ImportGasTransactions([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req, [FromBody] BaseRequest data)
         {
+            _logger.Set(user: data.UserName, system: "Transactions");
+
             _logger.LogInformation("Importing GasTransactions...");
 
             try
@@ -76,10 +79,12 @@ namespace AXERP.API.Functions.Transactions
 
                 _logger.LogInformation("Importing GoogleSheet rows...");
 
+                _gasTransactionSheetProcessor.SetupLogger(data.UserName, _logger.ProcessId);
                 var importResult = _gasTransactionSheetProcessor.ProcessRows(rows, sheetCulture);
 
                 _logger.LogInformation("Updating DataBase with GoogleSheet rows...");
 
+                _insertTransactionsCommand.SetupLogger(data.UserName, _logger.ProcessId);
                 var result = _insertTransactionsCommand.Execute(importResult);
 
                 _logger.LogInformation("GasTransactions imported. Stats: {stats}", Newtonsoft.Json.JsonConvert.SerializeObject(result));

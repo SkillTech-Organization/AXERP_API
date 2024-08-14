@@ -13,7 +13,7 @@ namespace AXERP.API.LogHelper.Managers
         private string _system;
         private string _function;
 
-        private long _id;
+        public long ProcessId { get; private set; }
 
         private Stopwatch _stopwatch;
 
@@ -32,17 +32,22 @@ namespace AXERP.API.LogHelper.Managers
             _logger = logger;
         }
 
-        public void Set(string user, string system)
+        public void Set(string user, string system, long? id = null)
         {
             _user = user;
             _system = system;
-            _id = DateTime.UnixEpoch.Ticks;
+            SetNewId(id);
             _stopwatch = new Stopwatch();
         }
 
-        public void GenerateNewId()
+        public void SetNewId(long? id)
         {
-            _id = DateTime.UnixEpoch.Ticks;
+            ProcessId = id ?? DateTime.UnixEpoch.Ticks;
+        }
+
+        public long GetNewId()
+        {
+            return DateTime.UnixEpoch.Ticks;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -68,18 +73,18 @@ namespace AXERP.API.LogHelper.Managers
         public void BeginMeasure()
         {
             _stopwatch.Start();
-            LogInformation(LogResults.Ok, "Begining execution time measurement.");
+            LogInformation("Begining execution time measurement.");
         }
 
         public void EndMeasure()
         {
             _stopwatch.Stop();
-            LogInformation(LogResults.Ok, "Finished measuring execution time. Result: {0}", _stopwatch.Elapsed);
+            LogInformation("Finished measuring execution time. Result: {0}", _stopwatch.Elapsed);
             _stopwatch.Reset();
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public void LogInformation(int id, LogResults logResult, string message, params object?[] args)
+        public void LogInformation(int id, string message, params object?[] args)
         {
             string _renderedMessage = RenderMessage(message, args);
 
@@ -87,12 +92,12 @@ namespace AXERP.API.LogHelper.Managers
 
             _logger.LogInformation(
                 MESSAGE_TEMPLATE,
-                id, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[logResult]
+                id, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Ok]
             );
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public void LogInformation(LogResults logResult, string message, params object?[] args)
+        public void LogInformation(string message, params object?[] args)
         {
             string _renderedMessage = RenderMessage(message, args);
 
@@ -100,7 +105,7 @@ namespace AXERP.API.LogHelper.Managers
 
             _logger.LogInformation(
                 MESSAGE_TEMPLATE,
-                _id, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[logResult]
+                ProcessId, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Ok]
             );
         }
 
@@ -126,7 +131,7 @@ namespace AXERP.API.LogHelper.Managers
 
             _logger.LogDebug(
                 MESSAGE_TEMPLATE,
-                _id, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Debug]
+                ProcessId, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Debug]
             );
         }
 
@@ -152,7 +157,7 @@ namespace AXERP.API.LogHelper.Managers
 
             _logger.LogWarning(
                 MESSAGE_TEMPLATE,
-                _id, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Warning]
+                ProcessId, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Warning]
             );
         }
 
@@ -161,6 +166,19 @@ namespace AXERP.API.LogHelper.Managers
         {
             string _renderedMessage = RenderMessage(message, args);
             _renderedMessage += $" - {ex.Message}";
+
+            var _f = new StackFrame(1, false).GetMethod().Name;
+
+            _logger.LogError(
+                MESSAGE_TEMPLATE,
+                id, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Error]
+            );
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public void LogError(int id, string message, params object?[] args)
+        {
+            string _renderedMessage = RenderMessage(message, args);
 
             var _f = new StackFrame(1, false).GetMethod().Name;
 
@@ -193,7 +211,20 @@ namespace AXERP.API.LogHelper.Managers
 
             _logger.LogError(
                 MESSAGE_TEMPLATE,
-                _id, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Error]
+                ProcessId, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Error]
+            );
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public void LogError(string message, params object?[] args)
+        {
+            string _renderedMessage = RenderMessage(message, args);
+
+            var _f = new StackFrame(1, false).GetMethod().Name;
+
+            _logger.LogError(
+                MESSAGE_TEMPLATE,
+                ProcessId, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Error]
             );
         }
 
@@ -206,7 +237,7 @@ namespace AXERP.API.LogHelper.Managers
 
             _logger.LogError(
                 MESSAGE_TEMPLATE,
-                _id, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Error]
+                ProcessId, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Error]
             );
         }
     }
