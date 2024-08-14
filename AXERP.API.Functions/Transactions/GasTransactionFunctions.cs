@@ -50,12 +50,11 @@ namespace AXERP.API.Functions.Transactions
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
         public async Task<IActionResult> ImportGasTransactions([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req, [FromBody] BaseRequest data)
         {
-            _logger.Set(user: data.UserName, system: "Transactions");
-
-            _logger.LogInformation("Importing GasTransactions...");
-
             try
             {
+                _logger.Set(user: data.UserName, system: "AXERP.API");
+
+                _logger.LogInformation("Importing GasTransactions...");
                 _logger.LogInformation("Checking parameters...");
 
                 var credentialsJson = Environment.GetEnvironmentVariable("GoogleCredentials");
@@ -77,6 +76,7 @@ namespace AXERP.API.Functions.Transactions
                 var sheetService = new GoogleSheetManager(credentials: credentialsJson, format: CredentialsFormats.Text);
                 var rows = await sheetService.ReadGoogleSheetRaw(sheet_id, $"{tab_name}{(range?.Length > 0 ? "!" : "")}{range}");
 
+                _logger.LogInformation("Google Sheet unprocessed rowcount (including header): {0}", rows.Count);
                 _logger.LogInformation("Importing GoogleSheet rows...");
 
                 _gasTransactionSheetProcessor.SetupLogger(data.UserName, _logger.ProcessId);
@@ -115,11 +115,14 @@ namespace AXERP.API.Functions.Transactions
         {
             try
             {
+                _logger.Set(user: data.UserName, system: "AXERP.API");
+
                 if (data == null)
                 {
                     throw new Exception("Request is null");
                 }
 
+                _deleteTransactionsCommand.SetupLogger(data.UserName, _logger.ProcessId);
                 var response = _deleteTransactionsCommand.Execute(data);
                 return new OkObjectResult(response);
             }
@@ -144,14 +147,21 @@ namespace AXERP.API.Functions.Transactions
         public int CountGasTransactions(
                 [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
+            _logger.Set(user: "Unknown", system: "AXERP.API, SQL Server");
             using (var uow = _unitOfWorkFactory.Create())
             {
-                return uow.GenericRepository.CountAll<Delivery>();
+                _logger.LogInformation("Counting Gas Transactions...");
+
+                var result = uow.GenericRepository.CountAll<Delivery>();
+                _logger.LogInformation("Gas Transaction count: {0}", result);
+
+                return result;
             }
         }
 
         [Function(nameof(QueryGasTransactions))]
         [OpenApiOperation(operationId: nameof(QueryGasTransactions), tags: new[] { "gas-transactions" })]
+        //[OpenApiParameter(name: "UserName", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "User calling the function")]
         [OpenApiParameter(name: "Search", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Search in all columns, type Column = Search for specific search, eg. DeliveryID = 5")]
         [OpenApiParameter(name: "SearchOnlyInSelectedColumns", In = ParameterLocation.Query, Required = false, Type = typeof(bool), Description = "Search only in columns provided in the Columns parameter - ignored if Search is written for specific column")]
         [OpenApiParameter(name: "Columns", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "List of columns, separated by ',' character, all columns will be used by default")]
@@ -163,6 +173,11 @@ namespace AXERP.API.Functions.Transactions
         public IActionResult QueryGasTransactions(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
+            _logger.Set(user: "Unknown", system: "AXERP.API, SQL Server");
+
+            _logger.LogInformation("Querying GasTransactions...");
+            _logger.LogInformation("Checking parameters...");
+
             var queryTemplate = Environment.GetEnvironmentVariable(
                 nameof(TransactionQueries.Sql_Query_Paged_GasTransactions_Dynamic_Columns)) ?? TransactionQueries.Sql_Query_Paged_GasTransactions_Dynamic_Columns;
             var countTemplate = Environment.GetEnvironmentVariable(
@@ -186,7 +201,7 @@ namespace AXERP.API.Functions.Transactions
             {
                 using (var uow = _unitOfWorkFactory.Create())
                 {
-                    var result = uow.GenericRepository.PagedQuery<Delivery>(new PagedQueryRequest
+                    var request = new PagedQueryRequest
                     {
                         QueryTemplate = queryTemplate,
                         CountTemplate = countTemplate,
@@ -197,7 +212,13 @@ namespace AXERP.API.Functions.Transactions
                         PageSize = pageSize,
                         Search = req.Query["Search"],
                         SearchOnlyInSelectedColumns = bool.Parse(req.Query["SearchOnlyInSelectedColumns"] ?? "false")
-                    });
+                    };
+
+                    _logger.LogInformation("Executing query with request: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(request));
+
+                    var result = uow.GenericRepository.PagedQuery<Delivery>(request);
+
+                    _logger.LogInformation("Query finished. Total rows in DB: {0}, queried rows: {1}", result.TotalCount, result.DataCount);
 
                     return new OkObjectResult(result);
                 }

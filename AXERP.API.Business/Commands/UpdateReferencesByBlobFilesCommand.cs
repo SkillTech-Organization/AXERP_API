@@ -1,23 +1,24 @@
 ﻿using AXERP.API.BlobHelper.Managers;
 using AXERP.API.BlobHelper.ServiceContracts.Responses;
-using AXERP.API.Persistence.Factories;
-using Microsoft.Extensions.Logging;
-using Transaction = AXERP.API.Domain.Entities.Transaction;
-using AXERP.API.Domain.ServiceContracts.Responses;
+using AXERP.API.Business.Base;
 using AXERP.API.Domain.ServiceContracts.Requests;
+using AXERP.API.Domain.ServiceContracts.Responses;
+using AXERP.API.LogHelper.Attributes;
+using AXERP.API.LogHelper.Factories;
+using AXERP.API.Persistence.Factories;
+using Transaction = AXERP.API.Domain.Entities.Transaction;
 
 namespace AXERP.API.Business.Commands
 {
-    public class UpdateReferencesByBlobFilesCommand
+    [ForSystem("SQL Server, Blob Storage")]
+    public class UpdateReferencesByBlobFilesCommand : BaseAuditedClass<UpdateReferencesByBlobFilesCommand>
     {
-        private readonly ILogger<UpdateReferencesByBlobFilesCommand> _logger;
         private readonly UnitOfWorkFactory _uowFactory;
 
         public UpdateReferencesByBlobFilesCommand(
-            ILogger<UpdateReferencesByBlobFilesCommand> logger,
-            UnitOfWorkFactory uowFactory)
+            AxerpLoggerFactory axerpLoggerFactory,
+            UnitOfWorkFactory uowFactory) : base(axerpLoggerFactory)
         {
-            _logger = logger;
             _uowFactory = uowFactory;
         }
 
@@ -47,7 +48,7 @@ namespace AXERP.API.Business.Commands
                 return response;
             }
 
-            _logger.LogInformation("Processing blob files. Amount of processable files found: {count}", data.Data.Count);
+            _logger.LogInformation("Processing blob files. Amount of processable files found: {0}", data.Data.Count);
 
             try
             {
@@ -79,7 +80,7 @@ namespace AXERP.API.Business.Commands
                                 throw new Exception("Query transactions without BL File failed!");
                             }
 
-                            _logger.LogInformation("Transactions without BL File: {count}", transactrions.Count());
+                            _logger.LogInformation("Transactions without BL File: {0}", transactrions.Count());
 
                             try
                             {
@@ -122,7 +123,7 @@ namespace AXERP.API.Business.Commands
                                                 x.Reference2 == referenceName ||
                                                 x.Reference3 == referenceName);
 
-                                _logger.LogInformation("Matching transactions: {count}", matchingTransactions.Count());
+                                _logger.LogInformation("Matching transactions: {0}", matchingTransactions.Count());
 
                                 foreach (var transaction in matchingTransactions)
                                 {
@@ -139,7 +140,7 @@ namespace AXERP.API.Business.Commands
                             catch (Exception ex)
                             {
                                 var name = item.BlobItem.Blob.Name;
-                                _logger.LogError(ex, "Error while processing blob file: {name}", name);
+                                _logger.LogError(ex, "Error while processing blob file: {0}", name);
                                 response.Errors.Add($"Error while processing blob file: {name}, error: " + ex.Message);
 
                                 continue;

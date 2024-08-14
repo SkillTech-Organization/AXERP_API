@@ -1,11 +1,11 @@
 ﻿namespace AXERP.API.LogHelper.Attributes
 {
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, Inherited = false, AllowMultiple = false)]
-    public sealed class SystemAttribute : Attribute
+    public sealed class ForSystemAttribute : Attribute
     {
         public readonly string SystemName;
 
-        public SystemAttribute(string systemName)
+        public ForSystemAttribute(string systemName)
         {
             this.SystemName = systemName;
         }

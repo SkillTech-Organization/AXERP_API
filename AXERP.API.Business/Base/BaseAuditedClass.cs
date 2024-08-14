@@ -16,7 +16,7 @@ namespace AXERP.API.Business.Base
         }
 
         // TODO: get this from inside AxerpLogger
-        protected string System => typeof(T).GetCustomAttribute<SystemAttribute>()?.SystemName ?? typeof(T).Name;
+        protected string ForSystem => typeof(T).GetCustomAttribute<ForSystemAttribute>()?.SystemName ?? typeof(T).Name;
 
         public string UserName { get; set; } = "Unknown";
 
@@ -29,7 +29,7 @@ namespace AXERP.API.Business.Base
         {
             UserName = userName ?? UserName;
             ProcessId = processId ?? ProcessId;
-            _logger.Set(user: UserName, system: System);
+            _logger.Set(user: UserName, system: ForSystem);
         }
     }
 }

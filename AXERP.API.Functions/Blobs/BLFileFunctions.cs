@@ -1,22 +1,24 @@
-using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.Business.Commands;
+using AXERP.API.Domain.ServiceContracts.Responses;
+using AXERP.API.LogHelper.Factories;
+using AXERP.API.LogHelper.Managers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
-using Microsoft.Extensions.Logging;
 using System.Net;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace AXERP.API.Functions.Blobs
 {
     public class BLFileFunctions
     {
-        private readonly ILogger<BLFileFunctions> _logger;
+        private readonly AxerpLogger<BLFileFunctions> _logger;
         private readonly UpdateReferencesByBlobFilesCommand _updateReferencesByBlobFilesCommand;
 
-        public BLFileFunctions(ILogger<BLFileFunctions> logger, UpdateReferencesByBlobFilesCommand updateReferencesByBlobFilesCommand)
+        public BLFileFunctions(AxerpLoggerFactory loggerFactory, UpdateReferencesByBlobFilesCommand updateReferencesByBlobFilesCommand)
         {
-            _logger = logger;
+            _logger = loggerFactory.Create<BLFileFunctions>();
             _updateReferencesByBlobFilesCommand = updateReferencesByBlobFilesCommand;
         }
 
@@ -27,12 +29,15 @@ namespace AXERP.API.Functions.Blobs
         {
             try
             {
+                _logger.Set(user: "Unknown", system: "AXERP.API");
+
                 var blobConnectionString = Environment.GetEnvironmentVariable("BlobStorageConnectionString");
                 var blobStorageName = Environment.GetEnvironmentVariable("BlobStorageName");
                 var blobImportFolder = Environment.GetEnvironmentVariable("BlobStorageImportFolder");
                 var blobProcessedFolder = Environment.GetEnvironmentVariable("BlobStorageProcessedFolder");
                 var regex = Environment.GetEnvironmentVariable("BlobStorePdfFileRegexPattern");
 
+                _updateReferencesByBlobFilesCommand.SetupLogger("Unknown", _logger.ProcessId);
                 var result = await _updateReferencesByBlobFilesCommand.Execute(new Domain.ServiceContracts.Requests.ProcessBlobFilesRequest
                 {
                     BlobStorageConnectionString = blobConnectionString,

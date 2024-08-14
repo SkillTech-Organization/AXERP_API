@@ -1,4 +1,5 @@
 ﻿using AXERP.API.BlobHelper.ServiceContracts.Responses;
+using AXERP.API.LogHelper;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.Extensions.Logging;
@@ -8,7 +9,7 @@ namespace AXERP.API.BlobHelper.Managers
 {
     public class BlobManager
     {
-        private readonly ILogger _logger;
+        private readonly IAxerpLogger _logger;
 
         private readonly string ConnectionString = string.Empty;
         private readonly string CurrentStorage = string.Empty;
@@ -16,7 +17,7 @@ namespace AXERP.API.BlobHelper.Managers
         private readonly BlobContainerClient Container;
 
         public BlobManager(
-            ILogger logger,
+            IAxerpLogger logger,
             string connectionString, string storageName)
         {
             ConnectionString = connectionString;

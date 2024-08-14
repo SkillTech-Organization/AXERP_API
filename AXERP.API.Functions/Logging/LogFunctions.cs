@@ -1,17 +1,15 @@
 using AutoMapper;
-using AXERP.API.AppInsightsHelper.Managers;
-using AXERP.API.AppInsightsHelper.Models;
 using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
+using AXERP.API.LogHelper.Factories;
+using AXERP.API.LogHelper.Managers;
 using AXERP.API.Persistence.Factories;
 using AXERP.API.Persistence.Queries;
-using AXERP.API.Persistence.Utils;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
-using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using System.Net;
 
@@ -19,22 +17,22 @@ namespace AXERP.API.Functions.Transactions
 {
     public class LogFunctions
     {
-        private readonly ILogger<LogFunctions> _logger;
+        private readonly AxerpLogger<LogFunctions> _logger;
         private readonly IMapper _mapper;
         private readonly UnitOfWorkFactory _unitOfWorkFactory;
 
         public LogFunctions(
-            ILogger<LogFunctions> logger,
+            AxerpLoggerFactory loggerFactory,
             UnitOfWorkFactory unitOfWorkFactory,
             IMapper mapper)
         {
-            _logger = logger;
+            _logger = loggerFactory.Create<LogFunctions>();
             _mapper = mapper;
             _unitOfWorkFactory = unitOfWorkFactory;
         }
 
-        [Function(nameof(QueryAppInsights))]
-        [OpenApiOperation(operationId: nameof(QueryAppInsights), tags: new[] { "logs" })]
+        [Function(nameof(QueryLogEvents))]
+        [OpenApiOperation(operationId: nameof(QueryLogEvents), tags: new[] { "logs" })]
         [OpenApiParameter(name: "Search", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Search in message")]
         [OpenApiParameter(name: "OrderBy", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Order by column, default is TimeStamp")]
         [OpenApiParameter(name: "OrderByDesc", In = ParameterLocation.Query, Required = false, Type = typeof(bool), Description = "Descending order, false by default")]
@@ -43,11 +41,16 @@ namespace AXERP.API.Functions.Transactions
         [OpenApiParameter(name: "PageSize", In = ParameterLocation.Query, Required = false, Type = typeof(int), Description = "Returned row count, default is 5")]
         [OpenApiParameter(name: "Page", In = ParameterLocation.Query, Required = false, Type = typeof(int), Description = "Page index, starting from 1 (0 will be interpreted as 1), default is 1")]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
-        public async Task<IActionResult> QueryAppInsights(
+        public async Task<IActionResult> QueryLogEvents(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
             try
             {
+                _logger.Set(user: "Unknown", system: "AXERP.API");
+
+                _logger.LogInformation("Querying LogEvents...");
+                _logger.LogInformation("Checking parameters...");
+
                 var queryTemplate = Environment.GetEnvironmentVariable("Sql_Query_Paged_LogEvents_Dynamic_Columns");
                 //var queryTemplate = Environment.GetEnvironmentVariable(
                 //    nameof(TransactionQueries.Sql_Query_Paged_GasTransactions_Dynamic_Columns)) ?? TransactionQueries.Sql_Query_Paged_GasTransactions_Dynamic_Columns;
@@ -79,7 +82,7 @@ namespace AXERP.API.Functions.Transactions
 
                 using (var uow = _unitOfWorkFactory.Create())
                 {
-                    var result = uow.GenericRepository.PagedQuery<LogEvent>(new PagedQueryRequest
+                    var request = new PagedQueryRequest
                     {
                         QueryTemplate = queryTemplate,
                         CountTemplate = countTemplate,
@@ -90,7 +93,13 @@ namespace AXERP.API.Functions.Transactions
                         PageSize = pageSize,
                         Search = req.Query["Search"],
                         SearchOnlyInSelectedColumns = bool.Parse(req.Query["SearchOnlyInSelectedColumns"] ?? "false")
-                    });
+                    };
+
+                    _logger.LogInformation("Executing query with request: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(request));
+
+                    var result = uow.GenericRepository.PagedQuery<LogEvent>(request);
+
+                    _logger.LogInformation("Query finished. Total rows in DB: {0}, queried rows: {1}", result.TotalCount, result.DataCount);
 
                     return new OkObjectResult(result);
                 }
@@ -131,6 +140,6 @@ namespace AXERP.API.Functions.Transactions
                 return res;
             }
         }
-        
+
     }
 }

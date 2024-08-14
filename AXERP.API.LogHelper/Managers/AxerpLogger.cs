@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace AXERP.API.LogHelper.Managers
 {
-    public class AxerpLogger<T>
+    public class AxerpLogger<T> : IAxerpLogger
     {
         private ILogger<T> _logger;
 

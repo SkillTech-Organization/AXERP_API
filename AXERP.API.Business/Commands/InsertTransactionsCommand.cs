@@ -11,7 +11,7 @@ using System.Data;
 
 namespace AXERP.API.Business.Commands
 {
-    [System("SQL Server")]
+    [ForSystem("SQL Server")]
     public class InsertTransactionsCommand : BaseAuditedClass<InsertTransactionsCommand>
     {
         private readonly UnitOfWorkFactory _uowFactory;
