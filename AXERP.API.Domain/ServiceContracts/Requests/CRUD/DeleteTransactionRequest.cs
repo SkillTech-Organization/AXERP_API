@@ -3,7 +3,7 @@
 namespace AXERP.API.Domain.ServiceContracts.Requests
 {
     [DataContract]
-    public class DeleteTransactionRequest : BaseRequest
+    public class DeleteTransactionRequest
     {
         [DataMember]
         public List<string> TransactionIds { get; set; }

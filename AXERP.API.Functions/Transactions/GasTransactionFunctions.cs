@@ -28,6 +28,8 @@ namespace AXERP.API.Functions.Transactions
         private readonly DeleteTransactionsCommand _deleteTransactionsCommand;
         private readonly IMapper _mapper;
 
+        private string userName = "Unknown";
+
         public GasTransactionFunctions(
             AxerpLoggerFactory loggerFactory,
             GasTransactionSheetProcessor gasTransactionSheetProcessor,
@@ -46,13 +48,12 @@ namespace AXERP.API.Functions.Transactions
 
         [Function(nameof(ImportGasTransactions))]
         [OpenApiOperation(operationId: nameof(ImportGasTransactions), tags: new[] { "gas-transactions" })]
-        [OpenApiRequestBody("application/json", typeof(BaseRequest), Required = true)]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
-        public async Task<IActionResult> ImportGasTransactions([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req, [FromBody] BaseRequest data)
+        public async Task<IActionResult> ImportGasTransactions([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
         {
             try
             {
-                _logger.Set(user: data.UserName, system: "AXERP.API");
+                _logger.Set(user: userName, system: "AXERP.API");
 
                 _logger.LogInformation("Importing GasTransactions...");
                 _logger.LogInformation("Checking parameters...");
@@ -79,12 +80,12 @@ namespace AXERP.API.Functions.Transactions
                 _logger.LogInformation("Google Sheet unprocessed rowcount (including header): {0}", rows.Count);
                 _logger.LogInformation("Importing GoogleSheet rows...");
 
-                _gasTransactionSheetProcessor.SetupLogger(data.UserName, _logger.ProcessId);
+                _gasTransactionSheetProcessor.SetupLogger(userName, _logger.ProcessId);
                 var importResult = _gasTransactionSheetProcessor.ProcessRows(rows, sheetCulture);
 
                 _logger.LogInformation("Updating DataBase with GoogleSheet rows...");
 
-                _insertTransactionsCommand.SetupLogger(data.UserName, _logger.ProcessId);
+                _insertTransactionsCommand.SetupLogger(userName, _logger.ProcessId);
                 var result = _insertTransactionsCommand.Execute(importResult);
 
                 _logger.LogInformation("GasTransactions imported. Stats: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
@@ -115,14 +116,14 @@ namespace AXERP.API.Functions.Transactions
         {
             try
             {
-                _logger.Set(user: data.UserName, system: "AXERP.API");
+                _logger.Set(user: userName, system: "AXERP.API");
 
                 if (data == null)
                 {
                     throw new Exception("Request is null");
                 }
 
-                _deleteTransactionsCommand.SetupLogger(data.UserName, _logger.ProcessId);
+                _deleteTransactionsCommand.SetupLogger(userName, _logger.ProcessId);
                 var response = _deleteTransactionsCommand.Execute(data);
                 return new OkObjectResult(response);
             }
@@ -147,7 +148,7 @@ namespace AXERP.API.Functions.Transactions
         public int CountGasTransactions(
                 [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
-            _logger.Set(user: "Unknown", system: "AXERP.API, SQL Server");
+            _logger.Set(user: userName, system: "AXERP.API, SQL Server");
             using (var uow = _unitOfWorkFactory.Create())
             {
                 _logger.LogInformation("Counting Gas Transactions...");
@@ -173,7 +174,7 @@ namespace AXERP.API.Functions.Transactions
         public IActionResult QueryGasTransactions(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
-            _logger.Set(user: "Unknown", system: "AXERP.API, SQL Server");
+            _logger.Set(user: userName, system: "AXERP.API, SQL Server");
 
             _logger.LogInformation("Querying GasTransactions...");
             _logger.LogInformation("Checking parameters...");

@@ -1,6 +1,6 @@
 ﻿namespace AXERP.API.Domain.ServiceContracts.Requests
 {
-    public class PagedQueryRequest : BaseRequest
+    public class PagedQueryRequest
     {
         public virtual string QueryTemplate { get; set; }
 

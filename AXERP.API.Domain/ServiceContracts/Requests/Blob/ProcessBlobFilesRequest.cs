@@ -1,6 +1,6 @@
 ﻿namespace AXERP.API.Domain.ServiceContracts.Requests
 {
-    public class ProcessBlobFilesRequest : BaseRequest
+    public class ProcessBlobFilesRequest
     {
         public string BlobStorageConnectionString { get; set; }
 

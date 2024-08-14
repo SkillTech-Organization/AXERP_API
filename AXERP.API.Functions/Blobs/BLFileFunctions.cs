@@ -16,6 +16,8 @@ namespace AXERP.API.Functions.Blobs
         private readonly AxerpLogger<BLFileFunctions> _logger;
         private readonly UpdateReferencesByBlobFilesCommand _updateReferencesByBlobFilesCommand;
 
+        private string userName = "Unknown";
+
         public BLFileFunctions(AxerpLoggerFactory loggerFactory, UpdateReferencesByBlobFilesCommand updateReferencesByBlobFilesCommand)
         {
             _logger = loggerFactory.Create<BLFileFunctions>();
@@ -29,7 +31,7 @@ namespace AXERP.API.Functions.Blobs
         {
             try
             {
-                _logger.Set(user: "Unknown", system: "AXERP.API");
+                _logger.Set(user: userName, system: "AXERP.API");
 
                 var blobConnectionString = Environment.GetEnvironmentVariable("BlobStorageConnectionString");
                 var blobStorageName = Environment.GetEnvironmentVariable("BlobStorageName");

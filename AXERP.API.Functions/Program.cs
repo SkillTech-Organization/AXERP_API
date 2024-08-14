@@ -24,12 +24,12 @@ var host = new HostBuilder()
     {
         var colOpts = new ColumnOptions();
 
+        colOpts.Store.Remove(StandardColumn.Message);
         colOpts.Store.Remove(StandardColumn.Properties);
         colOpts.Store.Remove(StandardColumn.MessageTemplate);
         colOpts.Store.Remove(StandardColumn.Exception);
         colOpts.Store.Remove(StandardColumn.Level);
 
-        colOpts.Message.ColumnName = "Description";
         colOpts.TimeStamp.ColumnName = "When";
 
         colOpts.AdditionalColumns = new List<SqlColumn>
@@ -59,6 +59,13 @@ var host = new HostBuilder()
                 ColumnName = "System",
                 DataType = System.Data.SqlDbType.NVarChar,
                 DataLength = 500
+            },
+
+            new SqlColumn
+            {
+                ColumnName = "Description",
+                DataType = System.Data.SqlDbType.NVarChar,
+                DataLength = -1 // maximum allowed
             },
 
             new SqlColumn

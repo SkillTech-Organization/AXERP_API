@@ -22,6 +22,8 @@ namespace AXERP.API.Functions.Transactions
         private readonly IMapper _mapper;
         private readonly UnitOfWorkFactory _unitOfWorkFactory;
 
+        private string userName = "Unknown";
+
         public LogFunctions(
             AxerpLoggerFactory loggerFactory,
             UnitOfWorkFactory unitOfWorkFactory,
@@ -47,7 +49,7 @@ namespace AXERP.API.Functions.Transactions
         {
             try
             {
-                _logger.Set(user: "Unknown", system: "AXERP.API");
+                _logger.Set(user: userName, system: "AXERP.API");
 
                 _logger.LogInformation("Querying LogEvents...");
                 _logger.LogInformation("Checking parameters...");
@@ -58,7 +60,8 @@ namespace AXERP.API.Functions.Transactions
                 var countTemplate = Environment.GetEnvironmentVariable(
                     nameof(TransactionQueries.Sql_Query_Count_GasTransactions)) ?? TransactionQueries.Sql_Query_Count_GasTransactions;
 
-                var cols = req.Query["Columns"]?.ToString()?.Split(",", StringSplitOptions.TrimEntries)?.ToList() ?? new List<string>();
+                //var cols = req.Query["Columns"]?.ToString()?.Split(",", StringSplitOptions.TrimEntries)?.ToList() ?? new List<string>();
+                var cols = "ProcessId,System,Function,Who,When,Description".Split(",", StringSplitOptions.TrimEntries)?.ToList();
 
                 var page = int.Parse(req.Query["Page"] ?? "1");
                 if (page <= 0)
