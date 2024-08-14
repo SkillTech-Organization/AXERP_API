@@ -12,7 +12,6 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.MSSqlServer;
-using System.Diagnostics;
 
 
 // Solution for sql collection disposed exception.
@@ -28,6 +27,7 @@ var host = new HostBuilder()
         colOpts.Store.Remove(StandardColumn.Properties);
         colOpts.Store.Remove(StandardColumn.MessageTemplate);
         colOpts.Store.Remove(StandardColumn.Exception);
+        colOpts.Store.Remove(StandardColumn.Level);
 
         colOpts.Message.ColumnName = "Description";
         colOpts.TimeStamp.ColumnName = "When";
@@ -78,26 +78,21 @@ var host = new HostBuilder()
             .MinimumLevel.Override("Azure.Storage", LogEventLevel.Error)
             .MinimumLevel.Override("Azure.Core", LogEventLevel.Error)
             .MinimumLevel.Override("Azure.Identity", LogEventLevel.Error)
-            //.Enrich.WithProperty("Application", "AXERP.API")
             .Enrich.FromLogContext()
             .WriteTo.Console(LogEventLevel.Debug)
             .WriteTo.ApplicationInsights(TelemetryConfiguration.Active, TelemetryConverter.Traces)
             .WriteTo.MSSqlServer(Environment.GetEnvironmentVariable("SqlConnectionString"), new MSSqlServerSinkOptions
             {
-                AutoCreateSqlDatabase = true,
+                AutoCreateSqlDatabase = false,
                 AutoCreateSqlTable = true,
                 TableName = "LogEvents",
                 UseSqlBulkCopy = true
             }, columnOptions: colOpts)
-            .Filter.ByIncludingOnly(x => x.Properties["SourceContext"].ToString().StartsWith("AXERP.API"))
+            //.Filter.ByIncludingOnly(x => x.Properties["SourceContext"].ToString().StartsWith("AXERP.API"))
+            .Filter.ByIncludingOnly(x => x.MessageTemplate.Text.Contains("ProcessId"))
             .CreateLogger();
 
         logging.AddSerilog(Log.Logger, true);
-        //Serilog.Debugging.SelfLog.Enable(msg =>
-        //{
-        //    Console.WriteLine(msg);
-        //    Debugger.Break();
-        //});
     })
     .ConfigureServices(services =>
     {
