@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.MSSqlServer;
+using System.Diagnostics;
 
 
 // Solution for sql collection disposed exception.
@@ -31,39 +32,42 @@ var host = new HostBuilder()
         colOpts.Message.ColumnName = "Description";
         colOpts.TimeStamp.ColumnName = "When";
 
-        colOpts.AdditionalColumns.Add(new SqlColumn
+        colOpts.AdditionalColumns = new List<SqlColumn>
         {
-            ColumnName = "ProcessId",
-            DataType = System.Data.SqlDbType.BigInt
-        });
+            new SqlColumn
+            {
+                ColumnName = "ProcessId",
+                DataType = System.Data.SqlDbType.BigInt
+            },
 
-        colOpts.AdditionalColumns.Add(new SqlColumn
-        {
-            ColumnName = "Who",
-            DataType = System.Data.SqlDbType.NVarChar,
-            DataLength = 500
-        });
+            new SqlColumn
+            {
+                ColumnName = "Who",
+                DataType = System.Data.SqlDbType.NVarChar,
+                DataLength = 500
+            },
 
-        colOpts.AdditionalColumns.Add(new SqlColumn
-        {
-            ColumnName = "Function",
-            DataType = System.Data.SqlDbType.NVarChar,
-            DataLength = 500
-        });
+            new SqlColumn
+            {
+                ColumnName = "Function",
+                DataType = System.Data.SqlDbType.NVarChar,
+                DataLength = 500
+            },
 
-        colOpts.AdditionalColumns.Add(new SqlColumn
-        {
-            ColumnName = "System",
-            DataType = System.Data.SqlDbType.NVarChar,
-            DataLength = 500
-        });
+            new SqlColumn
+            {
+                ColumnName = "System",
+                DataType = System.Data.SqlDbType.NVarChar,
+                DataLength = 500
+            },
 
-        colOpts.AdditionalColumns.Add(new SqlColumn
-        {
-            ColumnName = "Result",
-            DataType = System.Data.SqlDbType.NVarChar,
-            DataLength = 100
-        });
+            new SqlColumn
+            {
+                ColumnName = "Result",
+                DataType = System.Data.SqlDbType.NVarChar,
+                DataLength = 100
+            }
+        };
 
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
@@ -74,7 +78,7 @@ var host = new HostBuilder()
             .MinimumLevel.Override("Azure.Storage", LogEventLevel.Error)
             .MinimumLevel.Override("Azure.Core", LogEventLevel.Error)
             .MinimumLevel.Override("Azure.Identity", LogEventLevel.Error)
-            .Enrich.WithProperty("Application", "AXERP.API")
+            //.Enrich.WithProperty("Application", "AXERP.API")
             .Enrich.FromLogContext()
             .WriteTo.Console(LogEventLevel.Debug)
             .WriteTo.ApplicationInsights(TelemetryConfiguration.Active, TelemetryConverter.Traces)
@@ -89,6 +93,11 @@ var host = new HostBuilder()
             .CreateLogger();
 
         logging.AddSerilog(Log.Logger, true);
+        //Serilog.Debugging.SelfLog.Enable(msg =>
+        //{
+        //    Console.WriteLine(msg);
+        //    Debugger.Break();
+        //});
     })
     .ConfigureServices(services =>
     {

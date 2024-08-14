@@ -1,5 +1,6 @@
 ﻿using AXERP.API.LogHelper.Enums;
 using Microsoft.Extensions.Logging;
+using Serilog;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -25,7 +26,9 @@ namespace AXERP.API.LogHelper.Managers
             { LogResults.Debug, "Debug" },
         };
 
-        private const string MESSAGE_TEMPLATE = "{ProcessId}{Function}{System}{When}{Who}{Description}{Result}";
+        private const string MESSAGE_TEMPLATE =
+            //"{ProcessId}{Function}{System}{When}{Who}{Description}{Result}";
+            "ProcessId: {ProcessId} | Function: {Function} | System: {System} | When: {When} | Who: {Who} | Description: {Description} | Result: {Result}";
 
         public AxerpLogger(ILogger<T> logger)
         {

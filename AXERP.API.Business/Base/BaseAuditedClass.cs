@@ -1,11 +1,11 @@
-﻿using AXERP.API.LogHelper.Factories;
+﻿using AXERP.API.LogHelper.Attributes;
+using AXERP.API.LogHelper.Factories;
 using AXERP.API.LogHelper.Managers;
-using System.ComponentModel;
 using System.Reflection;
 
-namespace AXERP.API.Business.Commands
+namespace AXERP.API.Business.Base
 {
-    public class BaseCommand<T> where T : class
+    public class BaseAuditedClass<T> where T : class
     {
         protected readonly AxerpLogger<T> _logger;
 
@@ -15,11 +15,12 @@ namespace AXERP.API.Business.Commands
             set { _logger.SetNewId(value); }
         }
 
-        protected string System => typeof(T).GetCustomAttribute<DescriptionAttribute>()!.Description;
+        // TODO: get this from inside AxerpLogger
+        protected string System => typeof(T).GetCustomAttribute<SystemAttribute>()?.SystemName ?? typeof(T).Name;
 
         public string UserName { get; set; } = "Unknown";
 
-        public BaseCommand(AxerpLoggerFactory axerpLoggerFactory)
+        public BaseAuditedClass(AxerpLoggerFactory axerpLoggerFactory)
         {
             _logger = axerpLoggerFactory.Create<T>();
         }
