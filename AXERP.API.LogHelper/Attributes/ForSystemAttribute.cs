@@ -1,20 +1,15 @@
 ﻿namespace AXERP.API.LogHelper.Attributes
 {
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, Inherited = false, AllowMultiple = false)]
+    [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
     public sealed class ForSystemAttribute : Attribute
     {
         public readonly string SystemName;
+        public readonly string DefaultFunctionName;
 
-        public ForSystemAttribute(string systemName)
+        public ForSystemAttribute(string systemName, string defaultFunctionName)
         {
             this.SystemName = systemName;
+            this.DefaultFunctionName = defaultFunctionName;
         }
-
-        public string PositionalString
-        {
-            get { return SystemName; }
-        }
-
-        public string ParentSystemName { get; set; }
     }
 }

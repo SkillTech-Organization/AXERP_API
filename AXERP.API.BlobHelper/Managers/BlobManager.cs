@@ -1,29 +1,29 @@
 ﻿using AXERP.API.BlobHelper.ServiceContracts.Responses;
-using AXERP.API.LogHelper;
+using AXERP.API.LogHelper.Attributes;
+using AXERP.API.LogHelper.Base;
+using AXERP.API.LogHelper.Factories;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
+using AXERP.API.Domain;
 
 namespace AXERP.API.BlobHelper.Managers
 {
-    public class BlobManager
+    [ForSystem("Blob Storage", LogConstants.FUNCTION_BL_PROCESSING)]
+    public class BlobManager : BaseAuditedClass<BlobManager>
     {
-        private readonly IAxerpLogger _logger;
-
         private readonly string ConnectionString = string.Empty;
         private readonly string CurrentStorage = string.Empty;
 
         private readonly BlobContainerClient Container;
 
         public BlobManager(
-            IAxerpLogger logger,
-            string connectionString, string storageName)
+            AxerpLoggerFactory axerpLoggerFactory,
+            string connectionString, string storageName) : base(axerpLoggerFactory)
         {
             ConnectionString = connectionString;
             CurrentStorage = storageName;
             Container = new BlobContainerClient(ConnectionString, CurrentStorage);
-            _logger = logger;
         }
 
         public async Task<GetBlobFilesResponse> GetFiles(string? folderName = null, string? regexPattern = null)

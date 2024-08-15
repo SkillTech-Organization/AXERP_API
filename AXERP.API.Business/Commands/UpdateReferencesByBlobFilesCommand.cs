@@ -1,16 +1,17 @@
 ﻿using AXERP.API.BlobHelper.Managers;
 using AXERP.API.BlobHelper.ServiceContracts.Responses;
-using AXERP.API.Business.Base;
+using AXERP.API.LogHelper.Base;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
 using Transaction = AXERP.API.Domain.Entities.Transaction;
+using AXERP.API.Domain;
 
 namespace AXERP.API.Business.Commands
 {
-    [ForSystem("SQL Server, Blob Storage")]
+    [ForSystem("SQL Server, Blob Storage", LogConstants.FUNCTION_BL_PROCESSING)]
     public class UpdateReferencesByBlobFilesCommand : BaseAuditedClass<UpdateReferencesByBlobFilesCommand>
     {
         private readonly UnitOfWorkFactory _uowFactory;
@@ -24,7 +25,7 @@ namespace AXERP.API.Business.Commands
 
         public async Task<ProcessBlobFilesResponse> Execute(ProcessBlobFilesRequest request)
         {
-            var containerHelper = new BlobManager(_logger, request.BlobStorageConnectionString, request.BlobStorageName);
+            var containerHelper = new BlobManager(_axerpLoggerFactory, request.BlobStorageConnectionString, request.BlobStorageName);
 
             var getBlobFilesResponse = await containerHelper.GetFiles(request.BlobStorageImportFolder, request.BlobStorePdfFileRegexPattern);
 

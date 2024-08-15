@@ -1,7 +1,8 @@
-﻿using AXERP.API.LogHelper.Enums;
+﻿using AXERP.API.LogHelper.Attributes;
+using AXERP.API.LogHelper.Enums;
 using Microsoft.Extensions.Logging;
-using Serilog;
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace AXERP.API.LogHelper.Managers
@@ -27,7 +28,6 @@ namespace AXERP.API.LogHelper.Managers
         };
 
         private const string MESSAGE_TEMPLATE =
-            //"{ProcessId}{Function}{System}{When}{Who}{Description}{Result}";
             "ProcessId: {ProcessId} | Function: {Function} | System: {System} | When: {When} | Who: {Who} | Description: {Description} | Result: {Result}";
 
         public AxerpLogger(ILogger<T> logger)
@@ -35,10 +35,11 @@ namespace AXERP.API.LogHelper.Managers
             _logger = logger;
         }
 
-        public void Set(string user, string system, long? id = null)
+        public void SetData(string user, string system, string? function = null, long? id = null)
         {
             _user = user;
             _system = system;
+            _function = function;
             SetNewId(id);
             _stopwatch = new Stopwatch();
         }
@@ -91,7 +92,8 @@ namespace AXERP.API.LogHelper.Managers
         {
             string _renderedMessage = RenderMessage(message, args);
 
-            var _f = new StackFrame(1, false).GetMethod().Name;
+            var callerMethod = new StackFrame(1, false).GetMethod()!;
+            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogInformation(
                 MESSAGE_TEMPLATE,
@@ -104,7 +106,8 @@ namespace AXERP.API.LogHelper.Managers
         {
             string _renderedMessage = RenderMessage(message, args);
 
-            var _f = new StackFrame(1, false).GetMethod().Name;
+            var callerMethod = new StackFrame(1, false).GetMethod()!;
+            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogInformation(
                 MESSAGE_TEMPLATE,
@@ -117,7 +120,8 @@ namespace AXERP.API.LogHelper.Managers
         {
             string _renderedMessage = RenderMessage(message, args);
 
-            var _f = new StackFrame(1, false).GetMethod().Name;
+            var callerMethod = new StackFrame(1, false).GetMethod()!;
+            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogDebug(
                 MESSAGE_TEMPLATE,
@@ -130,7 +134,8 @@ namespace AXERP.API.LogHelper.Managers
         {
             string _renderedMessage = RenderMessage(message, args);
 
-            var _f = new StackFrame(1, false).GetMethod().Name;
+            var callerMethod = new StackFrame(1, false).GetMethod()!;
+            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogDebug(
                 MESSAGE_TEMPLATE,
@@ -143,7 +148,8 @@ namespace AXERP.API.LogHelper.Managers
         {
             string _renderedMessage = RenderMessage(message, args);
 
-            var _f = new StackFrame(1, false).GetMethod().Name;
+            var callerMethod = new StackFrame(1, false).GetMethod()!;
+            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogWarning(
                 MESSAGE_TEMPLATE,
@@ -156,7 +162,8 @@ namespace AXERP.API.LogHelper.Managers
         {
             string _renderedMessage = RenderMessage(message, args);
 
-            var _f = new StackFrame(1, false).GetMethod().Name;
+            var callerMethod = new StackFrame(1, false).GetMethod()!;
+            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogWarning(
                 MESSAGE_TEMPLATE,
@@ -170,7 +177,8 @@ namespace AXERP.API.LogHelper.Managers
             string _renderedMessage = RenderMessage(message, args);
             _renderedMessage += $" - {ex.Message}";
 
-            var _f = new StackFrame(1, false).GetMethod().Name;
+            var callerMethod = new StackFrame(1, false).GetMethod()!;
+            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogError(
                 MESSAGE_TEMPLATE,
@@ -183,7 +191,8 @@ namespace AXERP.API.LogHelper.Managers
         {
             string _renderedMessage = RenderMessage(message, args);
 
-            var _f = new StackFrame(1, false).GetMethod().Name;
+            var callerMethod = new StackFrame(1, false).GetMethod()!;
+            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogError(
                 MESSAGE_TEMPLATE,
@@ -196,7 +205,8 @@ namespace AXERP.API.LogHelper.Managers
         {
             var _renderedMessage = ex.ToString();
 
-            var _f = new StackFrame(1, false).GetMethod().Name;
+            var callerMethod = new StackFrame(1, false).GetMethod()!;
+            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogError(
                 MESSAGE_TEMPLATE,
@@ -210,7 +220,8 @@ namespace AXERP.API.LogHelper.Managers
             string _renderedMessage = RenderMessage(message, args);
             _renderedMessage += $" - {ex.Message}";
 
-            var _f = new StackFrame(1, false).GetMethod().Name;
+            var callerMethod = new StackFrame(1, false).GetMethod()!;
+            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogError(
                 MESSAGE_TEMPLATE,
@@ -223,7 +234,8 @@ namespace AXERP.API.LogHelper.Managers
         {
             string _renderedMessage = RenderMessage(message, args);
 
-            var _f = new StackFrame(1, false).GetMethod().Name;
+            var callerMethod = new StackFrame(1, false).GetMethod()!;
+            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogError(
                 MESSAGE_TEMPLATE,
@@ -236,7 +248,8 @@ namespace AXERP.API.LogHelper.Managers
         {
             var _renderedMessage = ex.ToString();
 
-            var _f = new StackFrame(1, false).GetMethod().Name;
+            var callerMethod = new StackFrame(1, false).GetMethod()!;
+            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogError(
                 MESSAGE_TEMPLATE,

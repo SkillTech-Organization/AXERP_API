@@ -1,13 +1,14 @@
-﻿using AXERP.API.Business.Base;
+﻿using AXERP.API.LogHelper.Base;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
+using AXERP.API.Domain;
 
 namespace AXERP.API.Business.Commands
 {
-    [ForSystem("SQL Server")]
+    [ForSystem("SQL Server", LogConstants.FUNCTION_GOOGLE_SYNC)]
     public class DeleteTransactionsCommand : BaseAuditedClass<DeleteTransactionsCommand>
     {
         private readonly UnitOfWorkFactory _uowFactory;

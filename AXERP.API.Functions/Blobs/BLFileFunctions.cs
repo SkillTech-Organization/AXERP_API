@@ -1,4 +1,5 @@
 using AXERP.API.Business.Commands;
+using AXERP.API.Domain;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.LogHelper.Managers;
@@ -31,7 +32,7 @@ namespace AXERP.API.Functions.Blobs
         {
             try
             {
-                _logger.Set(user: userName, system: "AXERP.API");
+                _logger.SetData(user: userName, system: "Blob Storage", function: LogConstants.FUNCTION_BL_PROCESSING);
 
                 var blobConnectionString = Environment.GetEnvironmentVariable("BlobStorageConnectionString");
                 var blobStorageName = Environment.GetEnvironmentVariable("BlobStorageName");
@@ -39,7 +40,7 @@ namespace AXERP.API.Functions.Blobs
                 var blobProcessedFolder = Environment.GetEnvironmentVariable("BlobStorageProcessedFolder");
                 var regex = Environment.GetEnvironmentVariable("BlobStorePdfFileRegexPattern");
 
-                _updateReferencesByBlobFilesCommand.SetupLogger("Unknown", _logger.ProcessId);
+                _updateReferencesByBlobFilesCommand.SetLoggerProcessData("Unknown", _logger.ProcessId);
                 var result = await _updateReferencesByBlobFilesCommand.Execute(new Domain.ServiceContracts.Requests.ProcessBlobFilesRequest
                 {
                     BlobStorageConnectionString = blobConnectionString,

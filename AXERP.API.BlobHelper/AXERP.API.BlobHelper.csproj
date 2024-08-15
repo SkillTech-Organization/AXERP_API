@@ -13,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\AXERP.API.Domain\AXERP.API.Domain.csproj" />
     <ProjectReference Include="..\AXERP.API.LogHelper\AXERP.API.LogHelper.csproj" />
   </ItemGroup>
 

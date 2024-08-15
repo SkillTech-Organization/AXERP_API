@@ -1,4 +1,5 @@
 using AutoMapper;
+using AXERP.API.Domain;
 using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
@@ -49,7 +50,7 @@ namespace AXERP.API.Functions.Transactions
         {
             try
             {
-                _logger.Set(user: userName, system: "AXERP.API");
+                _logger.SetData(user: userName, system: "SQL Server", function: LogConstants.FUNCTION_LOGGING);
 
                 _logger.LogInformation("Querying LogEvents...");
                 _logger.LogInformation("Checking parameters...");
@@ -107,28 +108,6 @@ namespace AXERP.API.Functions.Transactions
 
                     return new OkObjectResult(result);
                 }
-
-                //var result = await _appInsightsManager.QueryLogs(new PagedAppInsightsQueryRequest
-                //{
-                //    OrderBy = req.Query["OrderBy"] ?? "TimeStamp",
-                //    OrderDesc = bool.Parse(req.Query["OrderByDesc"] ?? "false"),
-                //    Page = page,
-                //    PageSize = pageSize,
-                //    From = fromDate,
-                //    To = toDate
-                //}, workSpaceID);
-
-                //var response = new GenericPagedQueryResponse<AppInsightsLogEntry>
-                //{
-                //    TotalCount = result.Item1,
-                //    Data = result.Item2,
-                //    HttpStatusCode = HttpStatusCode.OK,
-                //    PageIndex = page,
-                //    PageSize = pageSize,
-                //    Columns = typeof(AppInsightsLogEntry).GetColumnDatas(),
-                //};
-
-                //return new OkObjectResult(result);
             }
             catch (Exception ex)
             {
