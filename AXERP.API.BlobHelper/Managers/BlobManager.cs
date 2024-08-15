@@ -26,6 +26,42 @@ namespace AXERP.API.BlobHelper.Managers
             Container = new BlobContainerClient(ConnectionString, CurrentStorage);
         }
 
+        public async Task<List<BlobFile>> ListFiles()
+        {
+            var result = new List<BlobFile>();
+
+            _logger.LogInformation("Getting files from blob storage");
+
+            await foreach (var blob in Container.GetBlobsByHierarchyAsync())
+            {
+                if (blob.IsBlob)
+                {
+
+                    _logger.LogInformation("Blob: {0}", blob.Blob.Name);
+
+                    var path = blob.Blob.Name;
+
+                    var fileName = string.Empty;
+                    var folderName = string.Empty;
+
+                    if (path.Contains("/"))
+                    {
+                        var path_parts = path.Split("/", 2);
+                        fileName = path_parts[0];
+                        folderName = path_parts[1];
+                    }
+
+                    result.Add(new BlobFile
+                    {
+                        FileName = fileName,
+                        Folder = folderName
+                    });
+                }
+            }
+
+            return result;
+        }
+
         public async Task<GetBlobFilesResponse> GetFiles(string? folderName = null, string? regexPattern = null)
         {
             var response = new GetBlobFilesResponse
