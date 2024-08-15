@@ -4,7 +4,6 @@ using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.Functions.Base;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Factories;
-using AXERP.API.LogHelper.Managers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
@@ -39,7 +38,7 @@ namespace AXERP.API.Functions.Blobs
                 var blobProcessedFolder = Environment.GetEnvironmentVariable("BlobStorageProcessedFolder");
                 var regex = Environment.GetEnvironmentVariable("BlobStorePdfFileRegexPattern");
 
-                _updateReferencesByBlobFilesCommand.SetLoggerProcessData("Unknown", _logger.ProcessId);
+                _updateReferencesByBlobFilesCommand.SetLoggerProcessData(UserName, id: _logger.ProcessId);
                 var result = await _updateReferencesByBlobFilesCommand.Execute(new Domain.ServiceContracts.Requests.ProcessBlobFilesRequest
                 {
                     BlobStorageConnectionString = blobConnectionString,

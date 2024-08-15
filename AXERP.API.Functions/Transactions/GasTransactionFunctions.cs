@@ -52,7 +52,7 @@ namespace AXERP.API.Functions.Transactions
         {
             try
             {
-                SetLoggerProcessData(base.UserName);
+                SetLoggerProcessData(UserName);
 
                 _logger.LogInformation("Importing GasTransactions...");
                 _logger.LogInformation("Checking parameters...");
@@ -79,12 +79,12 @@ namespace AXERP.API.Functions.Transactions
                 _logger.LogInformation("Google Sheet unprocessed rowcount (including header): {0}", rows.Count);
                 _logger.LogInformation("Importing GoogleSheet rows...");
 
-                _gasTransactionSheetProcessor.SetLoggerProcessData(UserName, _logger.ProcessId);
+                _gasTransactionSheetProcessor.SetLoggerProcessData(UserName, id: _logger.ProcessId);
                 var importResult = _gasTransactionSheetProcessor.ProcessRows(rows, sheetCulture);
 
                 _logger.LogInformation("Updating DataBase with GoogleSheet rows...");
 
-                _insertTransactionsCommand.SetLoggerProcessData(UserName, _logger.ProcessId);
+                _insertTransactionsCommand.SetLoggerProcessData(UserName, id: _logger.ProcessId);
                 var result = _insertTransactionsCommand.Execute(importResult);
 
                 _logger.LogInformation("GasTransactions imported. Stats: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
@@ -122,7 +122,7 @@ namespace AXERP.API.Functions.Transactions
                     throw new Exception("Request is null");
                 }
 
-                _deleteTransactionsCommand.SetLoggerProcessData(UserName, _logger.ProcessId);
+                _deleteTransactionsCommand.SetLoggerProcessData(UserName, id: _logger.ProcessId);
                 var response = _deleteTransactionsCommand.Execute(data);
                 return new OkObjectResult(response);
             }

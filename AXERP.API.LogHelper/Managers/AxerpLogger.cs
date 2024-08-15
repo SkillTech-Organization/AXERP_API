@@ -7,13 +7,16 @@ using System.Runtime.CompilerServices;
 
 namespace AXERP.API.LogHelper.Managers
 {
-    public class AxerpLogger<T> : IAxerpLogger
+    public class AxerpLogger<T> : IAxerpLogger where T : class
     {
         private ILogger<T> _logger;
 
         private string _user;
         private string _system;
         private string _function;
+
+        public readonly string ForSystem;
+        public readonly string ForFunction;
 
         public long ProcessId { get; private set; }
 
@@ -33,13 +36,16 @@ namespace AXERP.API.LogHelper.Managers
         public AxerpLogger(ILogger<T> logger)
         {
             _logger = logger;
+
+            ForSystem = typeof(T).GetCustomAttribute<ForSystemAttribute>()?.SystemName ?? typeof(T).Name;
+            ForFunction = typeof(T).GetCustomAttribute<ForSystemAttribute>()?.DefaultFunctionName ?? "Unknown Function";
         }
 
-        public void SetData(string user, string system, string? function = null, long? id = null)
+        public void SetLoggerProcessData(string? user = null, string? system = null, string? function = null, long? id = null)
         {
-            _user = user;
-            _system = system;
-            _function = function;
+            _user = user ?? "Unknown";
+            _system = system ?? ForSystem;
+            _function = function ?? ForFunction;
             SetNewId(id);
             _stopwatch = new Stopwatch();
         }
