@@ -1,6 +1,8 @@
 using AXERP.API.Business.Commands;
 using AXERP.API.Domain;
 using AXERP.API.Domain.ServiceContracts.Responses;
+using AXERP.API.Functions.Base;
+using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.LogHelper.Managers;
 using Microsoft.AspNetCore.Http;
@@ -12,16 +14,13 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace AXERP.API.Functions.Blobs
 {
-    public class BLFileFunctions
+    [ForSystem("Blob Storage", LogConstants.FUNCTION_BL_PROCESSING)]
+    public class BLFileFunctions : BaseFunctions<BLFileFunctions>
     {
-        private readonly AxerpLogger<BLFileFunctions> _logger;
         private readonly UpdateReferencesByBlobFilesCommand _updateReferencesByBlobFilesCommand;
 
-        private string userName = "Unknown";
-
-        public BLFileFunctions(AxerpLoggerFactory loggerFactory, UpdateReferencesByBlobFilesCommand updateReferencesByBlobFilesCommand)
+        public BLFileFunctions(AxerpLoggerFactory loggerFactory, UpdateReferencesByBlobFilesCommand updateReferencesByBlobFilesCommand) : base(loggerFactory)
         {
-            _logger = loggerFactory.Create<BLFileFunctions>();
             _updateReferencesByBlobFilesCommand = updateReferencesByBlobFilesCommand;
         }
 
@@ -32,7 +31,7 @@ namespace AXERP.API.Functions.Blobs
         {
             try
             {
-                _logger.SetData(user: userName, system: "Blob Storage", function: LogConstants.FUNCTION_BL_PROCESSING);
+                SetLoggerProcessData(UserName);
 
                 var blobConnectionString = Environment.GetEnvironmentVariable("BlobStorageConnectionString");
                 var blobStorageName = Environment.GetEnvironmentVariable("BlobStorageName");

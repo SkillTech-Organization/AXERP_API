@@ -32,7 +32,7 @@ namespace AXERP.API.LogHelper.Base
         {
             UserName = userName ?? UserName;
             ProcessId = processId ?? ProcessId;
-            _logger.SetData(user: UserName, system: ForSystem);
+            _logger.SetData(user: UserName, system: ForSystem, function: ForFunction);
         }
     }
 }

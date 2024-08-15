@@ -5,9 +5,10 @@ using AXERP.API.Domain;
 using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
+using AXERP.API.Functions.Base;
 using AXERP.API.GoogleHelper.Managers;
+using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Factories;
-using AXERP.API.LogHelper.Managers;
 using AXERP.API.Persistence.Factories;
 using AXERP.API.Persistence.Queries;
 using Microsoft.AspNetCore.Mvc;
@@ -20,16 +21,14 @@ using FromBodyAttribute = Microsoft.Azure.Functions.Worker.Http.FromBodyAttribut
 
 namespace AXERP.API.Functions.Transactions
 {
-    public class GasTransactionFunctions
+    [ForSystem("Google Sheet, SQL Server", LogConstants.FUNCTION_GOOGLE_SYNC)]
+    public class GasTransactionFunctions : BaseFunctions<GasTransactionFunctions>
     {
-        private readonly AxerpLogger<GasTransactionFunctions> _logger;
         private readonly GasTransactionSheetProcessor _gasTransactionSheetProcessor;
         private readonly UnitOfWorkFactory _unitOfWorkFactory;
         private readonly InsertTransactionsCommand _insertTransactionsCommand;
         private readonly DeleteTransactionsCommand _deleteTransactionsCommand;
         private readonly IMapper _mapper;
-
-        private string userName = "Unknown";
 
         public GasTransactionFunctions(
             AxerpLoggerFactory loggerFactory,
@@ -37,9 +36,8 @@ namespace AXERP.API.Functions.Transactions
             UnitOfWorkFactory unitOfWorkFactory,
             InsertTransactionsCommand insertTransactionsCommand,
             DeleteTransactionsCommand deleteTransactionsCommand,
-            IMapper mapper)
+            IMapper mapper) : base(loggerFactory)
         {
-            _logger = loggerFactory.Create<GasTransactionFunctions>();
             _gasTransactionSheetProcessor = gasTransactionSheetProcessor;
             _unitOfWorkFactory = unitOfWorkFactory;
             _mapper = mapper;
@@ -54,7 +52,7 @@ namespace AXERP.API.Functions.Transactions
         {
             try
             {
-                _logger.SetData(user: userName, system: "Google Sheet, SQL Server", function: LogConstants.FUNCTION_GOOGLE_SYNC);
+                SetLoggerProcessData(base.UserName);
 
                 _logger.LogInformation("Importing GasTransactions...");
                 _logger.LogInformation("Checking parameters...");
@@ -81,12 +79,12 @@ namespace AXERP.API.Functions.Transactions
                 _logger.LogInformation("Google Sheet unprocessed rowcount (including header): {0}", rows.Count);
                 _logger.LogInformation("Importing GoogleSheet rows...");
 
-                _gasTransactionSheetProcessor.SetLoggerProcessData(userName, _logger.ProcessId);
+                _gasTransactionSheetProcessor.SetLoggerProcessData(UserName, _logger.ProcessId);
                 var importResult = _gasTransactionSheetProcessor.ProcessRows(rows, sheetCulture);
 
                 _logger.LogInformation("Updating DataBase with GoogleSheet rows...");
 
-                _insertTransactionsCommand.SetLoggerProcessData(userName, _logger.ProcessId);
+                _insertTransactionsCommand.SetLoggerProcessData(UserName, _logger.ProcessId);
                 var result = _insertTransactionsCommand.Execute(importResult);
 
                 _logger.LogInformation("GasTransactions imported. Stats: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
@@ -117,14 +115,14 @@ namespace AXERP.API.Functions.Transactions
         {
             try
             {
-                _logger.SetData(user: userName, system: "Google Sheet, SQL Server", function: LogConstants.FUNCTION_GOOGLE_SYNC);
+                SetLoggerProcessData(base.UserName);
 
                 if (data == null)
                 {
                     throw new Exception("Request is null");
                 }
 
-                _deleteTransactionsCommand.SetLoggerProcessData(userName, _logger.ProcessId);
+                _deleteTransactionsCommand.SetLoggerProcessData(UserName, _logger.ProcessId);
                 var response = _deleteTransactionsCommand.Execute(data);
                 return new OkObjectResult(response);
             }
@@ -149,7 +147,7 @@ namespace AXERP.API.Functions.Transactions
         public int CountGasTransactions(
                 [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
-            _logger.SetData(user: userName, system: "Google Sheet, SQL Server", function: LogConstants.FUNCTION_GOOGLE_SYNC);
+            SetLoggerProcessData(base.UserName);
 
             using (var uow = _unitOfWorkFactory.Create())
             {
@@ -176,7 +174,7 @@ namespace AXERP.API.Functions.Transactions
         public IActionResult QueryGasTransactions(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
-            _logger.SetData(user: userName, system: "Google Sheet, SQL Server", function: LogConstants.FUNCTION_GOOGLE_SYNC);
+            SetLoggerProcessData(base.UserName);
 
             _logger.LogInformation("Querying GasTransactions...");
             _logger.LogInformation("Checking parameters...");

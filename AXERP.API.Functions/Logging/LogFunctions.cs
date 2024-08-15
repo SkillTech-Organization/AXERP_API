@@ -3,11 +3,11 @@ using AXERP.API.Domain;
 using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
+using AXERP.API.Functions.Base;
+using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Factories;
-using AXERP.API.LogHelper.Managers;
 using AXERP.API.Persistence.Factories;
 using AXERP.API.Persistence.Queries;
-using AXERP.API.Persistence.Utils;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -17,20 +17,17 @@ using System.Net;
 
 namespace AXERP.API.Functions.Transactions
 {
-    public class LogFunctions
+    [ForSystem("SQL Server", LogConstants.FUNCTION_LOGGING)]
+    public class LogFunctions : BaseFunctions<LogFunctions>
     {
-        private readonly AxerpLogger<LogFunctions> _logger;
         private readonly IMapper _mapper;
         private readonly UnitOfWorkFactory _unitOfWorkFactory;
-
-        private string userName = "Unknown";
 
         public LogFunctions(
             AxerpLoggerFactory loggerFactory,
             UnitOfWorkFactory unitOfWorkFactory,
-            IMapper mapper)
+            IMapper mapper) : base(loggerFactory)
         {
-            _logger = loggerFactory.Create<LogFunctions>();
             _mapper = mapper;
             _unitOfWorkFactory = unitOfWorkFactory;
         }
@@ -50,7 +47,7 @@ namespace AXERP.API.Functions.Transactions
         {
             try
             {
-                _logger.SetData(user: userName, system: "SQL Server", function: LogConstants.FUNCTION_LOGGING);
+                SetLoggerProcessData(UserName);
 
                 _logger.LogInformation("Querying LogEvents...");
                 _logger.LogInformation("Checking parameters...");
