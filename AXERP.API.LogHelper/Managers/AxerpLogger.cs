@@ -49,7 +49,7 @@ namespace AXERP.API.LogHelper.Managers
 
         public void SetNewId(long? id)
         {
-            ProcessId = id ?? DateTime.UnixEpoch.Ticks;
+            ProcessId = id ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         }
 
         public long GetNewId()
