@@ -15,8 +15,8 @@ namespace AXERP.API.LogHelper.Managers
         private string _system;
         private string _function;
 
-        public readonly string ForSystem;
-        public readonly string ForFunction;
+        public string ForSystem => typeof(T).GetCustomAttribute<ForSystemAttribute>()?.SystemName ?? typeof(T).Name;
+        public string ForFunction => typeof(T).GetCustomAttribute<ForSystemAttribute>()?.DefaultFunctionName ?? "Unknown Function";
 
         public long ProcessId { get; private set; }
 
@@ -36,9 +36,6 @@ namespace AXERP.API.LogHelper.Managers
         public AxerpLogger(ILogger<T> logger)
         {
             _logger = logger;
-
-            ForSystem = typeof(T).GetCustomAttribute<ForSystemAttribute>()?.SystemName ?? typeof(T).Name;
-            ForFunction = typeof(T).GetCustomAttribute<ForSystemAttribute>()?.DefaultFunctionName ?? "Unknown Function";
         }
 
         public void SetLoggerProcessData(string? user = null, string? system = null, string? function = null, long? id = null)
