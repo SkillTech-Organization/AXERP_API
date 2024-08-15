@@ -179,11 +179,6 @@ namespace AXERP.API.Functions.Transactions
             _logger.LogInformation("Querying GasTransactions...");
             _logger.LogInformation("Checking parameters...");
 
-            var queryTemplate = Environment.GetEnvironmentVariable(
-                nameof(TransactionQueries.Sql_Query_Paged_GasTransactions_Dynamic_Columns)) ?? TransactionQueries.Sql_Query_Paged_GasTransactions_Dynamic_Columns;
-            var countTemplate = Environment.GetEnvironmentVariable(
-                nameof(TransactionQueries.Sql_Query_Count_GasTransactions)) ?? TransactionQueries.Sql_Query_Count_GasTransactions;
-
             var cols = req.Query["Columns"]?.ToString()?.Split(",", StringSplitOptions.TrimEntries)?.ToList() ?? new List<string>();
 
             var page = int.Parse(req.Query["Page"] ?? "1");
@@ -204,8 +199,6 @@ namespace AXERP.API.Functions.Transactions
                 {
                     var request = new PagedQueryRequest
                     {
-                        QueryTemplate = queryTemplate,
-                        CountTemplate = countTemplate,
                         Columns = cols,
                         OrderBy = req.Query["OrderBy"] ?? "DeliveryID",
                         OrderDesc = bool.Parse(req.Query["OrderByDesc"] ?? "false"),

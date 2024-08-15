@@ -2,10 +2,6 @@
 {
     public class PagedQueryRequest
     {
-        public virtual string QueryTemplate { get; set; }
-
-        public virtual string CountTemplate { get; set; }
-
         public virtual string Search { get; set; }
 
         public virtual int Page { get; set; }

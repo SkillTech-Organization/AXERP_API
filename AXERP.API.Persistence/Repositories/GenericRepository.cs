@@ -145,10 +145,20 @@ namespace AXERP.API.Persistence.Repositories
 
             var builder = new SqlBuilder();
 
+            var queryTemplate = $@"
+                select /**select**/ 
+                from
+                    (
+                        select _table.*, ROW_NUMBER() OVER (/**orderby**/)
+                        AS RowNumber from {typeof(RowType).GetTableName() ?? typeof(RowType).Name} _table /**where**/
+                    )
+                    as X where RowNumber between @start and @finish
+            ";
+
             // Building template
             var selectTemplate = builder.AddTemplate(
                 // Query
-                request.QueryTemplate,
+                queryTemplate,
 
                 // Parameters
                 new DynamicParameters(new Dictionary<string, object>
