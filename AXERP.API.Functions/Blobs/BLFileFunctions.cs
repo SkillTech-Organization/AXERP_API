@@ -23,16 +23,19 @@ namespace AXERP.API.Functions.Blobs
         private readonly UpdateReferencesByBlobFilesCommand _updateReferencesByBlobFilesCommand;
         private readonly ListBlobFilesQuery _listBlobFilesQuery;
         private readonly DeleteBlobFilesCommand _deleteBlobFilesCommand;
+        private readonly UploadBlobFilesCommand _uploadBlobFilesCommand;
 
         public BLFileFunctions(
             AxerpLoggerFactory loggerFactory,
             ListBlobFilesQuery listBlobFilesQuery,
             DeleteBlobFilesCommand deleteBlobFilesCommand,
+            UploadBlobFilesCommand uploadBlobFilesCommand,
             UpdateReferencesByBlobFilesCommand updateReferencesByBlobFilesCommand) : base(loggerFactory)
         {
             _updateReferencesByBlobFilesCommand = updateReferencesByBlobFilesCommand;
             _listBlobFilesQuery = listBlobFilesQuery;
             _deleteBlobFilesCommand = deleteBlobFilesCommand;
+            _uploadBlobFilesCommand = uploadBlobFilesCommand;
         }
 
         [Function(nameof(ListBlobFiles))]
@@ -76,9 +79,9 @@ namespace AXERP.API.Functions.Blobs
 
         [Function(nameof(DeleteBlobFiles))]
         [OpenApiOperation(operationId: nameof(DeleteBlobFiles), tags: new[] { "blob" })]
-        [OpenApiRequestBody("application/json", typeof(DeleteBlobfilesRequest), Required = true)]
-        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(BaseDataResponse<BlobFile>), Description = "The OK response")]
-        public async Task<IActionResult> DeleteBlobFiles([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req, [FromBody] DeleteBlobfilesRequest request)
+        [OpenApiRequestBody("application/json", typeof(DeleteBlobFilesRequest), Required = true)]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(DeleteBlobfilesResponse), Description = "The OK response")]
+        public async Task<IActionResult> DeleteBlobFiles([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req, [FromBody] DeleteBlobFilesRequest request)
         {
             try
             {
@@ -86,6 +89,46 @@ namespace AXERP.API.Functions.Blobs
 
                 _updateReferencesByBlobFilesCommand.SetLoggerProcessData(UserName, id: _logger.ProcessId);
                 var result = await _deleteBlobFilesCommand.Execute(request);
+
+                if (result.IsSuccess)
+                {
+                    return new OkObjectResult(result);
+                }
+                else
+                {
+                    return new ObjectResult(result)
+                    {
+                        StatusCode = (int?)result.HttpStatusCode
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while processing blob files");
+                var res = new ObjectResult(new BaseResponse
+                {
+                    HttpStatusCode = HttpStatusCode.InternalServerError,
+                    RequestError = ex.Message
+                })
+                {
+                    StatusCode = 500
+                };
+                return res;
+            }
+        }
+
+        [Function(nameof(UploadBlobFiles))]
+        [OpenApiOperation(operationId: nameof(UploadBlobFiles), tags: new[] { "blob" })]
+        [OpenApiRequestBody("application/json", typeof(UploadBlobFilesRequest), Required = true)]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(UploadBlobfilesResponse), Description = "The OK response")]
+        public async Task<IActionResult> UploadBlobFiles([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req, [FromBody] UploadBlobFilesRequest request)
+        {
+            try
+            {
+                SetLoggerProcessData(UserName);
+
+                _updateReferencesByBlobFilesCommand.SetLoggerProcessData(UserName, id: _logger.ProcessId);
+                var result = await _uploadBlobFilesCommand.Execute(request);
 
                 if (result.IsSuccess)
                 {

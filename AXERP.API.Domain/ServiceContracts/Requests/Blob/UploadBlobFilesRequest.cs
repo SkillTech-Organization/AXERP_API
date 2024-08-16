@@ -5,7 +5,7 @@ using System.Runtime.Serialization;
 namespace AXERP.API.BlobHelper.ServiceContracts.Requests
 {
     [DataContract]
-    public class DeleteBlobFilesRequest : BaseItemsRequest<BlobFile>
+    public class UploadBlobFilesRequest : BaseItemsRequest<BlobUploadFile>
     {
     }
 }

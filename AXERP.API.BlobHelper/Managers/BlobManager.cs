@@ -5,6 +5,7 @@ using AXERP.API.Domain.Models;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Base;
 using AXERP.API.LogHelper.Factories;
+using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using System.Text.RegularExpressions;
@@ -26,6 +27,24 @@ namespace AXERP.API.BlobHelper.Managers
             ConnectionString = connectionString;
             CurrentStorage = storageName;
             Container = new BlobContainerClient(ConnectionString, CurrentStorage);
+        }
+
+        private bool CheckError(Response? response, out string errorMessage)
+        {
+            errorMessage = "Unknown Azure Blob Error";
+            if (response == null)
+            {
+                return true;
+            }
+            else if (response.IsError)
+            {
+                if (!string.IsNullOrWhiteSpace(response.ReasonPhrase))
+                {
+                    errorMessage = response.ReasonPhrase;
+                }
+                return true;
+            }
+            return false;
         }
 
         public async Task<List<BlobFile>> ListFiles(string? folderNameFilter = null)
@@ -83,13 +102,11 @@ namespace AXERP.API.BlobHelper.Managers
                 Errors = new List<string>()
             };
 
-            _logger.LogInformation("Deleting files from blob storage. Names: {0}", string.Join(", ", files.Select(x => x.FileName)));
+            _logger.LogInformation("Deleting files from blob storage. Paths: {0}", string.Join(", ", files.Select(x => x.Path)));
 
             foreach (var file in files)
             {
-                var fileName = file.FileName;
-                var folderName = !string.IsNullOrWhiteSpace(file.Folder) ? $"{file.Folder}/" : "";
-                var path = $"{folderName}{fileName}";
+                var path = file.Path;
 
                 _logger.LogInformation("Requesting: {0}", path);
 
@@ -99,17 +116,55 @@ namespace AXERP.API.BlobHelper.Managers
 
                 var deleteResponse = await sourceBlob.DeleteAsync();
 
-                if (deleteResponse.IsError)
+                if (CheckError(deleteResponse, out string msg))
                 {
                     response.NotDeleted.Add(file);
-                    response.Errors.Add(deleteResponse.ToString());
-                    _logger.LogError("Could not delete: {0}. Error: {1}", path, deleteResponse.ToString());
+                    var errorMsg = $"Could not delete: {path}. Error: {msg}";
+                    response.Errors.Add(errorMsg);
+                    _logger.LogError(errorMsg);
                     continue;
                 }
 
                 response.Deleted.Add(file);
 
                 _logger.LogInformation("Blob successfully deleted!");
+            }
+
+            return response;
+        }
+
+        public async Task<UploadBlobfilesResponse> UploadFiles(List<BlobUploadFile> files)
+        {
+            var response = new UploadBlobfilesResponse
+            {
+                Uploaded = new List<BlobFile>(),
+                NotUploaded = new List<BlobFile>(),
+                Errors = new List<string>()
+            };
+
+            _logger.LogInformation("Uploading files to blob storage. Paths: {0}", string.Join(", ", files.Select(x => x.Path)));
+
+            foreach (var file in files)
+            {
+                var path = file.Path;
+
+                _logger.LogInformation("Deleting: {0}", path);
+
+                var uploadResponse = await Container.UploadBlobAsync(path,file.Content);
+
+                var _response = uploadResponse?.GetRawResponse();
+                if (CheckError(_response, out string msg))
+                {
+                    response.NotUploaded.Add(file);
+                    var errorMsg = $"Could not upload: {path}. Error: {msg}";
+                    response.Errors.Add(errorMsg);
+                    _logger.LogError(errorMsg);
+                    continue;
+                }
+
+                response.Uploaded.Add(file);
+
+                _logger.LogInformation("Blob successfully uploaded!");
             }
 
             return response;
@@ -195,9 +250,9 @@ namespace AXERP.API.BlobHelper.Managers
 
             var deleteResponse = await sourceBlob.DeleteAsync();
 
-            if (deleteResponse.IsError)
+            if (CheckError(deleteResponse, out string errorMessage))
             {
-                throw new Exception(deleteResponse.ReasonPhrase);
+                throw new Exception(errorMessage);
             }
 
             _logger.LogInformation("Blob successfully moved to other folder!");

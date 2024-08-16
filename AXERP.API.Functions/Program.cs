@@ -115,6 +115,8 @@ var host = new HostBuilder()
         services.AddTransient<AppInsightsManager>();
         services.AddTransient<AxerpLoggerFactory>();
         services.AddTransient<ListBlobFilesQuery>();
+        services.AddTransient<DeleteBlobFilesCommand>();
+        services.AddTransient<UploadBlobFilesCommand>();
         services.AddTransient<BlobManagerFactory>();
     })
     // Source: https://learn.microsoft.com/en-us/azure/azure-functions/dotnet-isolated-process-guide?tabs=windows#application-insights
