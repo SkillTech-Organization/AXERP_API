@@ -57,18 +57,11 @@ namespace AXERP.API.Functions.Transactions
                 _logger.LogInformation("Importing GasTransactions...");
                 _logger.LogInformation("Checking parameters...");
 
-                var credentialsJson = Environment.GetEnvironmentVariable("GoogleCredentials");
+                var credentialsJson = EnvironmentHelper.TryGetParameter("GoogleCredentials");
 
-                if (string.IsNullOrWhiteSpace(credentialsJson))
-                {
-                    var msg = "GoogleCredentials environment variable is missing.";
-                    _logger.LogError(msg);
-                    return new BadRequestObjectResult(msg);
-                }
-
-                var sheet_id = Environment.GetEnvironmentVariable("BulkDeliveriesSheetDataSheetId");
-                var tab_name = Environment.GetEnvironmentVariable("BulkDeliveriesSheetDataGasTransactionsTab");
-                var range = Environment.GetEnvironmentVariable("BulkDeliveriesSheetDataGasTransactionRange");
+                var sheet_id = EnvironmentHelper.TryGetParameter("BulkDeliveriesSheetDataSheetId");
+                var tab_name = EnvironmentHelper.TryGetParameter("BulkDeliveriesSheetDataGasTransactionsTab");
+                var range = EnvironmentHelper.TryGetParameter("BulkDeliveriesSheetDataGasTransactionRange");
                 var sheetCulture = Environment.GetEnvironmentVariable("SheetCulture") ?? "fr-FR";
 
                 _logger.LogInformation("Fetching rows from GoogleSheet...");

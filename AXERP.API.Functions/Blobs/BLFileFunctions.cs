@@ -1,7 +1,8 @@
-using AXERP.API.BlobHelper.ServiceContracts.Responses;
+using AXERP.API.BlobHelper.ServiceContracts.Requests;
 using AXERP.API.Business.Commands;
 using AXERP.API.Business.Queries;
 using AXERP.API.Domain;
+using AXERP.API.Domain.Models;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.Domain.ServiceContracts.Responses.General;
 using AXERP.API.Functions.Base;
@@ -21,34 +22,70 @@ namespace AXERP.API.Functions.Blobs
     {
         private readonly UpdateReferencesByBlobFilesCommand _updateReferencesByBlobFilesCommand;
         private readonly ListBlobFilesQuery _listBlobFilesQuery;
+        private readonly DeleteBlobFilesCommand _deleteBlobFilesCommand;
 
         public BLFileFunctions(
             AxerpLoggerFactory loggerFactory,
             ListBlobFilesQuery listBlobFilesQuery,
+            DeleteBlobFilesCommand deleteBlobFilesCommand,
             UpdateReferencesByBlobFilesCommand updateReferencesByBlobFilesCommand) : base(loggerFactory)
         {
             _updateReferencesByBlobFilesCommand = updateReferencesByBlobFilesCommand;
             _listBlobFilesQuery = listBlobFilesQuery;
+            _deleteBlobFilesCommand = deleteBlobFilesCommand;
         }
 
         [Function(nameof(ListBlobFiles))]
         [OpenApiOperation(operationId: nameof(ListBlobFiles), tags: new[] { "blob" })]
-        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(DataResponse<BlobFile>), Description = "The OK response")]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(BaseDataResponse<BlobFile>), Description = "The OK response")]
         public async Task<IActionResult> ListBlobFiles([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req)
         {
             try
             {
                 SetLoggerProcessData(UserName);
 
-                var blobConnectionString = Environment.GetEnvironmentVariable("BlobStorageConnectionString");
-                var blobStorageName = Environment.GetEnvironmentVariable("BlobStorageName");
+                _updateReferencesByBlobFilesCommand.SetLoggerProcessData(UserName, id: _logger.ProcessId);
+                var result = await _listBlobFilesQuery.Execute();
+
+                if (result.IsSuccess)
+                {
+                    return new OkObjectResult(result);
+                }
+                else
+                {
+                    return new ObjectResult(result)
+                    {
+                        StatusCode = (int?)result.HttpStatusCode
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while processing blob files");
+                var res = new ObjectResult(new BaseResponse
+                {
+                    HttpStatusCode = HttpStatusCode.InternalServerError,
+                    RequestError = ex.Message
+                })
+                {
+                    StatusCode = 500
+                };
+                return res;
+            }
+        }
+
+        [Function(nameof(DeleteBlobFiles))]
+        [OpenApiOperation(operationId: nameof(DeleteBlobFiles), tags: new[] { "blob" })]
+        [OpenApiRequestBody("application/json", typeof(DeleteBlobfilesRequest), Required = true)]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(BaseDataResponse<BlobFile>), Description = "The OK response")]
+        public async Task<IActionResult> DeleteBlobFiles([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req, [FromBody] DeleteBlobfilesRequest request)
+        {
+            try
+            {
+                SetLoggerProcessData(UserName);
 
                 _updateReferencesByBlobFilesCommand.SetLoggerProcessData(UserName, id: _logger.ProcessId);
-                var result = await _listBlobFilesQuery.Execute(new Domain.ServiceContracts.Requests.ListBlobFilesQueryRequest
-                {
-                    BlobStorageConnectionString = blobConnectionString,
-                    BlobStorageName = blobStorageName,
-                });
+                var result = await _deleteBlobFilesCommand.Execute(request);
 
                 if (result.IsSuccess)
                 {
@@ -86,18 +123,19 @@ namespace AXERP.API.Functions.Blobs
             {
                 SetLoggerProcessData(UserName);
 
-                var blobConnectionString = Environment.GetEnvironmentVariable("BlobStorageConnectionString");
-                var blobStorageName = Environment.GetEnvironmentVariable("BlobStorageName");
-                var blobImportFolder = Environment.GetEnvironmentVariable("BlobStorageImportFolder");
-                var blobProcessedFolder = Environment.GetEnvironmentVariable("BlobStorageProcessedFolder");
-                var regex = Environment.GetEnvironmentVariable("BlobStorePdfFileRegexPattern");
+                var blobImportFolder = EnvironmentHelper.TryGetParameter("BlobStorageImportFolder");
+                var blobProcessedFolder = EnvironmentHelper.TryGetParameter("BlobStorageProcessedFolder");
+                var regex = EnvironmentHelper.TryGetParameter("BlobStorePdfFileRegexPattern");
+
+                if (string.IsNullOrWhiteSpace(blobImportFolder))
+                {
+                    throw new Exception("Missing parameter: BlobStorageImportFolder");
+                }
 
                 _updateReferencesByBlobFilesCommand.SetLoggerProcessData(UserName, id: _logger.ProcessId);
                 var result = await _updateReferencesByBlobFilesCommand.Execute(new Domain.ServiceContracts.Requests.ProcessBlobFilesRequest
                 {
-                    BlobStorageConnectionString = blobConnectionString,
                     BlobStorageImportFolder = blobImportFolder,
-                    BlobStorageName = blobStorageName,
                     BlobStorageProcessedFolder = blobProcessedFolder,
                     BlobStorePdfFileRegexPattern = regex
                 });

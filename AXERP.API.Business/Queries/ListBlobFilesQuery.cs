@@ -1,6 +1,5 @@
-﻿using AXERP.API.BlobHelper.Managers;
-using AXERP.API.BlobHelper.ServiceContracts.Responses;
-using AXERP.API.Domain;
+﻿using AXERP.API.Domain;
+using AXERP.API.Domain.Models;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses.General;
 using AXERP.API.LogHelper.Attributes;
@@ -12,18 +11,21 @@ namespace AXERP.API.Business.Queries
     [ForSystem("Blob Storage", LogConstants.FUNCTION_BL_PROCESSING)]
     public class ListBlobFilesQuery : BaseAuditedClass<ListBlobFilesQuery>
     {
+        protected readonly BlobManagerFactory _blobManagerFactory;
+
         public ListBlobFilesQuery(
-            AxerpLoggerFactory axerpLoggerFactory) : base(axerpLoggerFactory)
+            AxerpLoggerFactory axerpLoggerFactory, BlobManagerFactory blobManagerFactory) : base(axerpLoggerFactory)
         {
+            _blobManagerFactory = blobManagerFactory;
         }
 
-        public async Task<DataResponse<BlobFile>> Execute(ListBlobFilesQueryRequest request)
+        public async Task<BaseDataResponse<BlobFile>> Execute(ListBlobFilesQueryRequest? request = null)
         {
-            var containerHelper = new BlobManager(_axerpLoggerFactory, request.BlobStorageConnectionString, request.BlobStorageName);
+            var containerHelper = _blobManagerFactory.Create();
 
-            var files = await containerHelper.ListFiles();
+            var files = await containerHelper.ListFiles(request?.FolderName);
 
-            return new DataResponse<BlobFile>
+            return new BaseDataResponse<BlobFile>
             {
                 Data = files
             };

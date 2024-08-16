@@ -115,6 +115,7 @@ var host = new HostBuilder()
         services.AddTransient<AppInsightsManager>();
         services.AddTransient<AxerpLoggerFactory>();
         services.AddTransient<ListBlobFilesQuery>();
+        services.AddTransient<BlobManagerFactory>();
     })
     // Source: https://learn.microsoft.com/en-us/azure/azure-functions/dotnet-isolated-process-guide?tabs=windows#application-insights
     // Quote: "However, by default, the Application Insights SDK adds a logging filter that instructs the logger to capture only warnings and more severe logs. If you want to disable this behavior, remove the filter rule as part of service configuration"

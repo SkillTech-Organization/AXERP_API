@@ -6,9 +6,6 @@ namespace AXERP.API.Domain.ServiceContracts.Requests
     public class ListBlobFilesQueryRequest
     {
         [DataMember]
-        public string BlobStorageConnectionString { get; set; }
-
-        [DataMember]
-        public string BlobStorageName { get; set; }
+        public string FolderName { get; set; }
     }
 }

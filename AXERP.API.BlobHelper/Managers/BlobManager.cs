@@ -1,11 +1,13 @@
-﻿using AXERP.API.BlobHelper.ServiceContracts.Responses;
+﻿using AXERP.API.BlobHelper.ServiceContracts.Requests;
+using AXERP.API.BlobHelper.ServiceContracts.Responses;
+using AXERP.API.Domain;
+using AXERP.API.Domain.Models;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Base;
 using AXERP.API.LogHelper.Factories;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using System.Text.RegularExpressions;
-using AXERP.API.Domain;
 
 namespace AXERP.API.BlobHelper.Managers
 {
@@ -26,11 +28,16 @@ namespace AXERP.API.BlobHelper.Managers
             Container = new BlobContainerClient(ConnectionString, CurrentStorage);
         }
 
-        public async Task<List<BlobFile>> ListFiles()
+        public async Task<List<BlobFile>> ListFiles(string? folderNameFilter = null)
         {
             var result = new List<BlobFile>();
 
             _logger.LogInformation("Getting files from blob storage");
+
+            if (!string.IsNullOrWhiteSpace(folderNameFilter))
+            {
+                _logger.LogInformation("Filter by folder name: {0}", folderNameFilter);
+            }
 
             await foreach (var blob in Container.GetBlobsByHierarchyAsync())
             {
@@ -51,6 +58,11 @@ namespace AXERP.API.BlobHelper.Managers
                         folderName = path_parts[1];
                     }
 
+                    if (!string.IsNullOrWhiteSpace(folderNameFilter) && folderName != folderNameFilter)
+                    {
+                        continue;
+                    }
+
                     result.Add(new BlobFile
                     {
                         FileName = fileName,
@@ -60,6 +72,47 @@ namespace AXERP.API.BlobHelper.Managers
             }
 
             return result;
+        }
+
+        public async Task<DeleteBlobfilesResponse> DeleteFiles(List<BlobFile> files)
+        {
+            var response = new DeleteBlobfilesResponse
+            {
+                Deleted = new List<BlobFile>(),
+                NotDeleted = new List<BlobFile>(),
+                Errors = new List<string>()
+            };
+
+            _logger.LogInformation("Deleting files from blob storage. Names: {0}", string.Join(", ", files.Select(x => x.FileName)));
+
+            foreach (var file in files)
+            {
+                var fileName = file.FileName;
+                var folderName = !string.IsNullOrWhiteSpace(file.Folder) ? $"{file.Folder}/" : "";
+                var path = $"{folderName}{fileName}";
+
+                _logger.LogInformation("Requesting: {0}", path);
+
+                var sourceBlob = Container.GetBlobClient(path);
+
+                _logger.LogInformation("Deleting: {0}", path);
+
+                var deleteResponse = await sourceBlob.DeleteAsync();
+
+                if (deleteResponse.IsError)
+                {
+                    response.NotDeleted.Add(file);
+                    response.Errors.Add(deleteResponse.ToString());
+                    _logger.LogError("Could not delete: {0}. Error: {1}", path, deleteResponse.ToString());
+                    continue;
+                }
+
+                response.Deleted.Add(file);
+
+                _logger.LogInformation("Blob successfully deleted!");
+            }
+
+            return response;
         }
 
         public async Task<GetBlobFilesResponse> GetFiles(string? folderName = null, string? regexPattern = null)

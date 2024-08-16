@@ -1,13 +1,13 @@
 ﻿using AXERP.API.BlobHelper.Managers;
 using AXERP.API.BlobHelper.ServiceContracts.Responses;
-using AXERP.API.LogHelper.Base;
+using AXERP.API.Domain;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.LogHelper.Attributes;
+using AXERP.API.LogHelper.Base;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
 using Transaction = AXERP.API.Domain.Entities.Transaction;
-using AXERP.API.Domain;
 
 namespace AXERP.API.Business.Commands
 {
@@ -15,17 +15,20 @@ namespace AXERP.API.Business.Commands
     public class UpdateReferencesByBlobFilesCommand : BaseAuditedClass<UpdateReferencesByBlobFilesCommand>
     {
         private readonly UnitOfWorkFactory _uowFactory;
+        protected readonly BlobManagerFactory _blobManagerFactory;
 
         public UpdateReferencesByBlobFilesCommand(
             AxerpLoggerFactory axerpLoggerFactory,
-            UnitOfWorkFactory uowFactory) : base(axerpLoggerFactory)
+            UnitOfWorkFactory uowFactory,
+            BlobManagerFactory blobManagerFactory) : base(axerpLoggerFactory)
         {
             _uowFactory = uowFactory;
+            _blobManagerFactory = blobManagerFactory;
         }
 
         public async Task<ProcessBlobFilesResponse> Execute(ProcessBlobFilesRequest request)
         {
-            var containerHelper = new BlobManager(_axerpLoggerFactory, request.BlobStorageConnectionString, request.BlobStorageName);
+            var containerHelper = _blobManagerFactory.Create();
 
             var getBlobFilesResponse = await containerHelper.GetFiles(request.BlobStorageImportFolder, request.BlobStorePdfFileRegexPattern);
 
@@ -53,7 +56,7 @@ namespace AXERP.API.Business.Commands
 
             try
             {
-                string regexKey = Environment.GetEnvironmentVariable("RegexReferenceKey");
+                string regexKey = EnvironmentHelper.TryGetParameter("RegexReferenceKey");
                 if (string.IsNullOrWhiteSpace(regexKey))
                 {
                     throw new Exception("Missing environment variable: RegexReferenceKey");

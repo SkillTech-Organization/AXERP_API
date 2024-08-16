@@ -1,6 +1,6 @@
 ﻿using System.Runtime.Serialization;
 
-namespace AXERP.API.BlobHelper.ServiceContracts.Responses
+namespace AXERP.API.Domain.Models
 {
     [DataContract]
     public class BlobFile
