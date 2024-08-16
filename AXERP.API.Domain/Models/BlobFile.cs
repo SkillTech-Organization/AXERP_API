@@ -11,6 +11,7 @@ namespace AXERP.API.Domain.Models
         [DataMember]
         public string Folder { get; set; }
 
+        [IgnoreDataMember]
         public string Path
         {
             get

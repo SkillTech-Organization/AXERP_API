@@ -64,7 +64,7 @@ namespace AXERP.API.Functions.Blobs
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error while processing blob files");
+                _logger.LogError(ex, "Error while listing blob files");
                 var res = new ObjectResult(new BaseResponse
                 {
                     HttpStatusCode = HttpStatusCode.InternalServerError,
@@ -104,7 +104,7 @@ namespace AXERP.API.Functions.Blobs
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error while processing blob files");
+                _logger.LogError(ex, "Error while deleting blob files");
                 var res = new ObjectResult(new BaseResponse
                 {
                     HttpStatusCode = HttpStatusCode.InternalServerError,
@@ -144,7 +144,7 @@ namespace AXERP.API.Functions.Blobs
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error while processing blob files");
+                _logger.LogError(ex, "Error while uploading blob files");
                 var res = new ObjectResult(new BaseResponse
                 {
                     HttpStatusCode = HttpStatusCode.InternalServerError,

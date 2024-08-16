@@ -73,8 +73,8 @@ namespace AXERP.API.BlobHelper.Managers
                     if (path.Contains("/"))
                     {
                         var path_parts = path.Split("/", 2);
-                        fileName = path_parts[0];
-                        folderName = path_parts[1];
+                        fileName = path_parts[1];
+                        folderName = path_parts[0];
                     }
 
                     if (!string.IsNullOrWhiteSpace(folderNameFilter) && folderName != folderNameFilter)

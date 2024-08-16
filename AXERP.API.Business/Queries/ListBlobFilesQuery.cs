@@ -1,10 +1,11 @@
 ﻿using AXERP.API.Domain;
 using AXERP.API.Domain.Models;
 using AXERP.API.Domain.ServiceContracts.Requests;
-using AXERP.API.Domain.ServiceContracts.Responses.General;
+using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Base;
 using AXERP.API.LogHelper.Factories;
+using AXERP.API.Persistence.Utils;
 
 namespace AXERP.API.Business.Queries
 {
@@ -19,16 +20,22 @@ namespace AXERP.API.Business.Queries
             _blobManagerFactory = blobManagerFactory;
         }
 
-        public async Task<BaseDataResponse<BlobFile>> Execute(ListBlobFilesQueryRequest? request = null)
+        public async Task<GenericPagedQueryResponse<BlobFile>> Execute(ListBlobFilesQueryRequest? request = null)
         {
             var containerHelper = _blobManagerFactory.Create();
 
             var files = await containerHelper.ListFiles(request?.FolderName);
 
-            return new BaseDataResponse<BlobFile>
+            var response = new GenericPagedQueryResponse<BlobFile>
             {
-                Data = files
+                Data = files,
+                Columns = typeof(BlobFile).GetColumnDatas(new List<string> { nameof(BlobFile.FileName), nameof(BlobFile.Folder) }),
+                PageIndex = 1,
+                PageSize = files.Count(),
+                TotalCount = files.Count()
             };
+
+            return response;
         }
     }
 }
