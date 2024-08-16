@@ -7,14 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.21.1" />
-    <PackageReference Include="Azure.Storage.Blobs.Batch" Version="12.18.1" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
+    <PackageReference Include="Azure.Identity" Version="1.10.3" />
+    <PackageReference Include="Azure.Monitor.Query" Version="1.4.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\AXERP.API.Domain\AXERP.API.Domain.csproj" />
-    <ProjectReference Include="..\AXERP.API.LogHelper\AXERP.API.LogHelper.csproj" />
   </ItemGroup>
 
 </Project>

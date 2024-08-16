@@ -122,11 +122,16 @@ namespace AXERP.API.Persistence.Repositories
 
             totalCount = CountAll<RowType>();
 
+            if (!typeof(RowType).GetColumnNames(null).Contains(request.OrderBy))
+            {
+                throw new Exception($"Invalid column for order by: {request.OrderBy}");
+            }
+
             var _columnsFromRequest = request.Columns?.Any() ?? false ? typeof(RowType).FilterValidColumns(request.Columns, true) : typeof(RowType).GetColumnNames(null);
 
             // Select column list
             // Make sure to "copy" with ToList so setting searchColumns won't modify by reference
-            var columnsForSelect = _columnsFromRequest.Select(x => "X." + x).ToList() ?? new List<string>();
+            var columnsForSelect = _columnsFromRequest.Select(x => $"X.[{x}]").ToList() ?? new List<string>();
             var searchColumns = columnsForSelect.ToList();
 
             // Specific columns for search string
@@ -140,10 +145,20 @@ namespace AXERP.API.Persistence.Repositories
 
             var builder = new SqlBuilder();
 
+            var queryTemplate = $@"
+                select /**select**/ 
+                from
+                    (
+                        select _table.*, ROW_NUMBER() OVER (/**orderby**/)
+                        AS RowNumber from {typeof(RowType).GetTableName() ?? typeof(RowType).Name} _table /**where**/
+                    )
+                    as X where RowNumber between @start and @finish
+            ";
+
             // Building template
             var selectTemplate = builder.AddTemplate(
                 // Query
-                request.QueryTemplate,
+                queryTemplate,
 
                 // Parameters
                 new DynamicParameters(new Dictionary<string, object>
@@ -191,11 +206,11 @@ namespace AXERP.API.Persistence.Repositories
 
             if (typeof(RowType).CheckSqlModifier(request.OrderBy, Domain.Attributes.SqlModifiers.StringNumeral))
             {
-                builder.OrderBy(string.Format("len(_table.{0}) {1}, _table.{0} {1}", request.OrderBy, request.OrderDesc ? "desc" : "asc"));
+                builder.OrderBy(string.Format("len(_table.[{0}]) {1}, _table.[{0}] {1}", request.OrderBy, request.OrderDesc ? "desc" : "asc"));
             }
             else
             {
-                builder.OrderBy(string.Format("_table.{0} {1}", request.OrderBy, request.OrderDesc ? "desc" : "asc"));
+                builder.OrderBy(string.Format("_table.[{0}] {1}", request.OrderBy, request.OrderDesc ? "desc" : "asc"));
             }
 
             result = _connection.Query(selectTemplate.RawSql, selectTemplate.Parameters).ToList(); // <RowType>

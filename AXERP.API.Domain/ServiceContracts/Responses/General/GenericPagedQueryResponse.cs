@@ -1,4 +1,5 @@
 ﻿using AXERP.API.Domain.Models;
+using AXERP.API.Domain.ServiceContracts.Responses;
 
 namespace AXERP.API.Domain.ServiceContracts.Responses
 {

@@ -1,29 +1,34 @@
 ﻿using AXERP.API.BlobHelper.Managers;
 using AXERP.API.BlobHelper.ServiceContracts.Responses;
-using AXERP.API.Persistence.Factories;
+using AXERP.API.Domain;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
-using Microsoft.Extensions.Logging;
+using AXERP.API.LogHelper.Attributes;
+using AXERP.API.LogHelper.Base;
+using AXERP.API.LogHelper.Factories;
+using AXERP.API.Persistence.Factories;
 using Transaction = AXERP.API.Domain.Entities.Transaction;
 
 namespace AXERP.API.Business.Commands
 {
-    public class UpdateReferencesByBlobFilesCommand
+    [ForSystem("SQL Server, Blob Storage", LogConstants.FUNCTION_BL_PROCESSING)]
+    public class UpdateReferencesByBlobFilesCommand : BaseAuditedClass<UpdateReferencesByBlobFilesCommand>
     {
-        private readonly ILogger<UpdateReferencesByBlobFilesCommand> _logger;
         private readonly UnitOfWorkFactory _uowFactory;
+        protected readonly BlobManagerFactory _blobManagerFactory;
 
         public UpdateReferencesByBlobFilesCommand(
-            ILogger<UpdateReferencesByBlobFilesCommand> logger,
-            UnitOfWorkFactory uowFactory)
+            AxerpLoggerFactory axerpLoggerFactory,
+            UnitOfWorkFactory uowFactory,
+            BlobManagerFactory blobManagerFactory) : base(axerpLoggerFactory)
         {
-            _logger = logger;
             _uowFactory = uowFactory;
+            _blobManagerFactory = blobManagerFactory;
         }
 
         public async Task<ProcessBlobFilesResponse> Execute(ProcessBlobFilesRequest request)
         {
-            var containerHelper = new BlobManager(_logger, request.BlobStorageConnectionString, request.BlobStorageName);
+            var containerHelper = _blobManagerFactory.Create();
 
             var getBlobFilesResponse = await containerHelper.GetFiles(request.BlobStorageImportFolder, request.BlobStorePdfFileRegexPattern);
 
@@ -47,11 +52,11 @@ namespace AXERP.API.Business.Commands
                 return response;
             }
 
-            _logger.LogInformation("Processing blob files. Amount of processable files found: {count}", data.Data.Count);
+            _logger.LogInformation("Processing blob files. Amount of processable files found: {0}", data.Data.Count);
 
             try
             {
-                string regexKey = Environment.GetEnvironmentVariable("RegexReferenceKey");
+                string regexKey = EnvironmentHelper.TryGetParameter("RegexReferenceKey");
                 if (string.IsNullOrWhiteSpace(regexKey))
                 {
                     throw new Exception("Missing environment variable: RegexReferenceKey");
@@ -79,7 +84,7 @@ namespace AXERP.API.Business.Commands
                                 throw new Exception("Query transactions without BL File failed!");
                             }
 
-                            _logger.LogInformation("Transactions without BL File: {count}", transactrions.Count());
+                            _logger.LogInformation("Transactions without BL File: {0}", transactrions.Count());
 
                             try
                             {
@@ -122,7 +127,7 @@ namespace AXERP.API.Business.Commands
                                                 x.Reference2 == referenceName ||
                                                 x.Reference3 == referenceName);
 
-                                _logger.LogInformation("Matching transactions: {count}", matchingTransactions.Count());
+                                _logger.LogInformation("Matching transactions: {0}", matchingTransactions.Count());
 
                                 foreach (var transaction in matchingTransactions)
                                 {
@@ -139,7 +144,7 @@ namespace AXERP.API.Business.Commands
                             catch (Exception ex)
                             {
                                 var name = item.BlobItem.Blob.Name;
-                                _logger.LogError(ex, "Error while processing blob file: {name}", name);
+                                _logger.LogError(ex, "Error while processing blob file: {0}", name);
                                 response.Errors.Add($"Error while processing blob file: {name}, error: " + ex.Message);
 
                                 continue;

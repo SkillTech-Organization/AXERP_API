@@ -1,17 +1,20 @@
 ﻿using AutoMapper;
+using AXERP.API.LogHelper.Base;
 using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.Interfaces.UnitOfWork;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.GoogleHelper.Models;
+using AXERP.API.LogHelper.Attributes;
+using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
-using Microsoft.Extensions.Logging;
 using System.Data;
+using AXERP.API.Domain;
 
 namespace AXERP.API.Business.Commands
 {
-    public class InsertTransactionsCommand
+    [ForSystem("SQL Server", LogConstants.FUNCTION_GOOGLE_SYNC)]
+    public class InsertTransactionsCommand : BaseAuditedClass<InsertTransactionsCommand>
     {
-        private readonly ILogger<InsertTransactionsCommand> _logger;
         private readonly UnitOfWorkFactory _uowFactory;
         private readonly IMapper _mapper;
 
@@ -26,11 +29,10 @@ namespace AXERP.API.Business.Commands
         private List<CustomerToDelivery> CustomerToDeliveries { get; set; }
 
         public InsertTransactionsCommand(
-            ILogger<InsertTransactionsCommand> logger,
+            AxerpLoggerFactory axerpLoggerFactory,
             UnitOfWorkFactory uowFactory,
-            IMapper mapper)
+            IMapper mapper) : base(axerpLoggerFactory)
         {
-            _logger = logger;
             _uowFactory = uowFactory;
             _mapper = mapper;
         }
@@ -58,6 +60,8 @@ namespace AXERP.API.Business.Commands
 
                 try
                 {
+                    uow.BeginTransaction();
+
                     /*
                      * LOCAL "CACHE"
                      */
@@ -81,19 +85,17 @@ namespace AXERP.API.Business.Commands
                     res.DeletedRows = deletedSheetRowIds.Count();
 
                     _logger.LogInformation(
-                        "All imported rows: {imported}, invalid rows: {invalid}",
+                        "All imported rows: {0}, invalid rows: {1}",
                         importResult.ImportedRowCount,
                         importResult.InvalidRows
                     );
 
                     _logger.LogInformation(
-                        "New rows: {new}, updated rows: {updated}, deleted rows: {deleted}",
+                        "New rows: {0}, updated rows: {1}, deleted rows: {2}",
                         res.NewRows,
                         res.UpdatedRows,
                         res.DeletedRows
                     );
-
-                    uow.BeginTransaction();
 
                     /*
                      * DELETE TRANSACTIONS
@@ -151,17 +153,17 @@ namespace AXERP.API.Business.Commands
 
         private void Delete(IUnitOfWork uow, IEnumerable<string> ids)
         {
-            _logger.LogInformation("Deleting associated {name} rows.", nameof(CustomerToDelivery));
+            _logger.LogInformation("Deleting associated {0} rows.", nameof(CustomerToDelivery));
             var deleted = uow.CustomerToDeliveryRepository.Delete(nameof(CustomerToDelivery.DeliveryID), ids);
-            _logger.LogInformation("Deleted {name} rows: {count}", nameof(CustomerToDelivery), deleted);
+            _logger.LogInformation("Deleted {0} rows: {1}", nameof(CustomerToDelivery), deleted);
 
-            _logger.LogInformation("Deleting associated {name} rows.", nameof(TruckCompanyToDelivery));
+            _logger.LogInformation("Deleting associated {0} rows.", nameof(TruckCompanyToDelivery));
             deleted = uow.TruckCompanyToDeliveryRepository.Delete(nameof(TruckCompanyToDelivery.DeliveryID), ids);
-            _logger.LogInformation("Deleted {name} rows: {count}", nameof(TruckCompanyToDelivery), deleted);
+            _logger.LogInformation("Deleted {0} rows: {1}", nameof(TruckCompanyToDelivery), deleted);
 
-            _logger.LogInformation("Deleting {name} rows.", nameof(Transaction));
+            _logger.LogInformation("Deleting {0} rows.", nameof(Transaction));
             deleted = uow.TransactionRepository.Delete(ids);
-            _logger.LogInformation("Deleted {name} rows: {count}", nameof(Transaction), deleted);
+            _logger.LogInformation("Deleted {0} rows: {1}", nameof(Transaction), deleted);
 
             uow.Save("delete_done");
         }
@@ -334,28 +336,28 @@ namespace AXERP.API.Business.Commands
 
             if (create)
             {
-                _logger.LogInformation("Inserting new {name} rows. Count: {count}", nameof(Transaction), transactionDtos.Count);
+                _logger.LogInformation("Inserting new {0} rows. Count: {1}", nameof(Transaction), transactionDtos.Count);
                 uow.GenericRepository.BulkCopy<Transaction>(transactionDtos);
             }
             else
             {
-                _logger.LogInformation("Updating {name} rows. Count: {count}", nameof(Transaction), transactionDtos.Count);
+                _logger.LogInformation("Updating {0} rows. Count: {1}", nameof(Transaction), transactionDtos.Count);
                 uow.TransactionRepository.Update(transactionDtos);
             }
 
-            _logger.LogInformation("Inserting new {name} rows. Count: {count}", nameof(CustomerToDelivery), ctdNew.Count);
+            _logger.LogInformation("Inserting new {0} rows. Count: {1}", nameof(CustomerToDelivery), ctdNew.Count);
             // uow.CustomerToDeliveryRepository.Add(ctdNew);
             uow.GenericRepository.BulkCopy<CustomerToDelivery>(ctdNew);
 
-            _logger.LogInformation("Inserting new {name} rows. Count: {count}", nameof(TruckCompanyToDelivery), ttdNew.Count);
+            _logger.LogInformation("Inserting new {0} rows. Count: {1}", nameof(TruckCompanyToDelivery), ttdNew.Count);
             // uow.TruckCompanyToDeliveryRepository.Add(ttdNew);
             uow.GenericRepository.BulkCopy<TruckCompanyToDelivery>(ttdNew);
 
-            _logger.LogInformation("Updating {name} rows. Count: {count}", nameof(CustomerToDelivery), ctdUpdate.Count);
+            _logger.LogInformation("Updating {0} rows. Count: {1}", nameof(CustomerToDelivery), ctdUpdate.Count);
             uow.CustomerToDeliveryRepository.Update(ctdUpdate);
             //uow.GenericRepository.BulkCopy<CustomerToDelivery>(ctdUpdate);
 
-            _logger.LogInformation("Updating {name} rows. Count: {count}", nameof(TruckCompanyToDelivery), ttdUpdate.Count);
+            _logger.LogInformation("Updating {0} rows. Count: {1}", nameof(TruckCompanyToDelivery), ttdUpdate.Count);
             uow.TruckCompanyToDeliveryRepository.Update(ttdUpdate);
             //uow.GenericRepository.BulkCopy<TruckCompanyToDelivery>(ttdUpdate);
 

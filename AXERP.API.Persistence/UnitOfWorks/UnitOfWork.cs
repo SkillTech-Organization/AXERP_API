@@ -3,6 +3,7 @@ using AXERP.API.Domain.Interfaces.UnitOfWork;
 using AXERP.API.Domain.Entities;
 using AXERP.API.Persistence.Repositories;
 using Microsoft.Data.SqlClient;
+using AXERP.API.Domain;
 
 namespace AXERP.API.Persistence.UnitOfWorks
 {
@@ -14,7 +15,7 @@ namespace AXERP.API.Persistence.UnitOfWorks
 
         public UnitOfWork(string connectionStringKey)
         {
-            Connection = new SqlConnection(Environment.GetEnvironmentVariable(connectionStringKey));
+            Connection = new SqlConnection(EnvironmentHelper.TryGetParameter(connectionStringKey));
             Connection.Open();
         }
 

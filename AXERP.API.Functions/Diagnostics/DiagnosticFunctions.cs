@@ -1,29 +1,36 @@
+using AXERP.API.Domain;
+using AXERP.API.Domain.ServiceContracts.Responses.Diagnostics;
+using AXERP.API.Functions.Base;
+using AXERP.API.LogHelper.Attributes;
+using AXERP.API.LogHelper.Factories;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
-using Microsoft.Extensions.Logging;
 using System.Net;
 
 namespace AXERP.API.Functions.Diagnostics
 {
-    public class DiagnosticFunctions
+    [ForSystem("AXERP.API", LogConstants.FUNCTION_DIAGNOSTICS)]
+    public class DiagnosticFunctions : BaseFunctions<DiagnosticFunctions>
     {
-        private readonly ILogger<DiagnosticFunctions> _logger;
-
-        public DiagnosticFunctions(ILogger<DiagnosticFunctions> logger)
+        public DiagnosticFunctions(AxerpLoggerFactory loggerFactory) : base(loggerFactory)
         {
-            _logger = logger;
         }
 
         [Function(nameof(GetVersionInfo))]
         [OpenApiOperation(operationId: nameof(GetVersionInfo), tags: new[] { "diagnostics" })]
-        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(GetVersionInfoResponse), Description = "The OK response")]
         public IActionResult GetVersionInfo([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req)
         {
+            SetLoggerProcessData(UserName);
+
             _logger.LogInformation("Calling {name}", nameof(GetVersionInfo));
 
-            return new OkObjectResult(new { NETRunTimeVersion = Environment.Version, AppVersion = GetType().Assembly.GetName().Version });
+            var res = new GetVersionInfoResponse { NETRunTimeVersion = Environment.Version, AppVersion = GetType().Assembly.GetName().Version };
+            _logger.LogInformation("NETRunTimeVersion: {0}, AppVersion: {1}", res.NETRunTimeVersion, res.AppVersion);
+
+            return new OkObjectResult(res);
         }
     }
 }

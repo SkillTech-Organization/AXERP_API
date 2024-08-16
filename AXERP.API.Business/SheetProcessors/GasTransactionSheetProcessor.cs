@@ -1,22 +1,21 @@
 ﻿using AXERP.API.Domain.Entities;
 using AXERP.API.GoogleHelper.Models;
+using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using System;
+using System.ComponentModel;
 using System.Globalization;
 using System.Reflection;
 
 namespace AXERP.API.Business.SheetProcessors
 {
-    public class GasTransactionSheetProcessor : BaseSheetProcessors<Delivery>
+    [Description("GoogleSheet Processing")]
+    public class GasTransactionSheetProcessor : BaseSheetProcessors<Delivery, GasTransactionSheetProcessor>
     {
-        private readonly ILogger<GasTransactionSheetProcessor> _logger;
         private readonly UnitOfWorkFactory _uowFactory;
 
-        public GasTransactionSheetProcessor(ILogger<GasTransactionSheetProcessor> logger, UnitOfWorkFactory uowFactory)
+        public GasTransactionSheetProcessor(AxerpLoggerFactory loggerFactory, UnitOfWorkFactory uowFactory) : base(loggerFactory)
         {
-            _logger = logger;
             _uowFactory = uowFactory;
         }
 
