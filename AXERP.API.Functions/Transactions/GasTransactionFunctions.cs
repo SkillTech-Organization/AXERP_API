@@ -61,7 +61,7 @@ namespace AXERP.API.Functions.Transactions
 
                 var sheet_id = EnvironmentHelper.TryGetParameter("BulkDeliveriesSheetDataSheetId");
                 var tab_name = EnvironmentHelper.TryGetParameter("BulkDeliveriesSheetDataGasTransactionsTab");
-                var range = EnvironmentHelper.TryGetParameter("BulkDeliveriesSheetDataGasTransactionRange");
+                var range = EnvironmentHelper.TryGetOptionalParameter("BulkDeliveriesSheetDataGasTransactionRange");
                 var sheetCulture = Environment.GetEnvironmentVariable("SheetCulture") ?? "fr-FR";
 
                 _logger.LogInformation("Fetching rows from GoogleSheet...");
