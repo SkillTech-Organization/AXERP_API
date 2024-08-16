@@ -47,7 +47,7 @@ namespace AXERP.API.Functions.Blobs
             {
                 SetLoggerProcessData(UserName);
 
-                _updateReferencesByBlobFilesCommand.SetLoggerProcessData(UserName, id: _logger.ProcessId);
+                _listBlobFilesQuery.SetLoggerProcessData(UserName, id: _logger.ProcessId);
                 var result = await _listBlobFilesQuery.Execute();
 
                 if (result.IsSuccess)
@@ -87,7 +87,7 @@ namespace AXERP.API.Functions.Blobs
             {
                 SetLoggerProcessData(UserName);
 
-                _updateReferencesByBlobFilesCommand.SetLoggerProcessData(UserName, id: _logger.ProcessId);
+                _deleteBlobFilesCommand.SetLoggerProcessData(UserName, id: _logger.ProcessId);
                 var result = await _deleteBlobFilesCommand.Execute(request);
 
                 if (result.IsSuccess)
@@ -127,7 +127,7 @@ namespace AXERP.API.Functions.Blobs
             {
                 SetLoggerProcessData(UserName);
 
-                _updateReferencesByBlobFilesCommand.SetLoggerProcessData(UserName, id: _logger.ProcessId);
+                _uploadBlobFilesCommand.SetLoggerProcessData(UserName, id: _logger.ProcessId);
                 var result = await _uploadBlobFilesCommand.Execute(request);
 
                 if (result.IsSuccess)
