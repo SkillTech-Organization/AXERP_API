@@ -8,6 +8,7 @@ using AXERP.API.Domain.ServiceContracts.Responses.General;
 using AXERP.API.Functions.Base;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Factories;
+using HttpMultipartParser;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
@@ -25,6 +26,8 @@ namespace AXERP.API.Functions.Blobs
         private readonly DeleteBlobFilesCommand _deleteBlobFilesCommand;
         private readonly UploadBlobFilesCommand _uploadBlobFilesCommand;
         private readonly UploadBlobFileCommand _uploadBlobFileCommand;
+
+        public const string PATH_PARAM_UPLOAD = "path";
 
         public BLFileFunctions(
             AxerpLoggerFactory loggerFactory,
@@ -84,11 +87,16 @@ namespace AXERP.API.Functions.Blobs
         [OpenApiOperation(operationId: nameof(DeleteBlobFiles), tags: new[] { "blob" })]
         [OpenApiRequestBody("application/json", typeof(DeleteBlobFilesRequest), Required = true)]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(DeleteBlobfilesResponse), Description = "The OK response")]
-        public async Task<IActionResult> DeleteBlobFiles([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req, [FromBody] DeleteBlobFilesRequest request)
+        public async Task<IActionResult> DeleteBlobFiles([HttpTrigger(AuthorizationLevel.Anonymous, "delete")] HttpRequest req, [FromBody] DeleteBlobFilesRequest request)
         {
             try
             {
                 SetLoggerProcessData(UserName);
+
+                if (req == null || request == null)
+                {
+                    throw new Exception("Request is null!");
+                }
 
                 _deleteBlobFilesCommand.SetLoggerProcessData(UserName, id: _logger.ProcessId);
                 var result = await _deleteBlobFilesCommand.Execute(request);
@@ -122,20 +130,49 @@ namespace AXERP.API.Functions.Blobs
 
         [Function(nameof(UploadBlobFile))]
         [OpenApiOperation(operationId: nameof(UploadBlobFile), tags: new[] { "blob" })]
-        //[OpenApiRequestBody("application/json", typeof(UploadBlobFilesRequest), Required = true)]
+        //[OpenApiRequestBody("multipart/form-data", typeof(string), Required = true)]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(BaseResponse), Description = "The OK response")]
-        public async Task<IActionResult> UploadBlobFile([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequest req, [FromForm] IFormFile file)
+        public async Task<IActionResult> UploadBlobFile(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "UploadBlobFile")]
+            Microsoft.Azure.Functions.Worker.Http.HttpRequestData req) // , FunctionContext executionContext, [FromForm] IFormFile file // HttpRequest req, [FromForm] IFormFile file
         {
             try
             {
                 SetLoggerProcessData(UserName);
 
-                if (file == null)
+                if (req == null)
                 {
-                    throw new Exception("File is null!");
+                    throw new Exception("Request is null!");
                 }
 
-                BlobUploadFile bl = FormFileToBlobUploadFile(file);
+                // get form-body        
+                var parsedFormBody = MultipartFormDataParser.ParseAsync(req.Body);
+                
+                if (parsedFormBody.Result.Files.Count == 0)
+                {
+                    throw new Exception("File is missing from the request!");
+                }
+
+                var file = parsedFormBody.Result.Files[0];
+                
+                var name = file.FileName;
+
+                if (parsedFormBody.Result.Parameters.Count > 1)
+                {
+                    throw new Exception($"Too many parameters! Only a '{PATH_PARAM_UPLOAD}' parameter can be provided alongside the file!");
+                }
+
+                if (parsedFormBody.Result.Parameters.Count == 1 && parsedFormBody.Result.Parameters[0].Name != PATH_PARAM_UPLOAD)
+                {
+                    throw new Exception($"Invalid parameter! Only a '{PATH_PARAM_UPLOAD}' parameter can be provided alongside the file!");
+                }
+
+                if (parsedFormBody.Result.Parameters.Count == 1 && parsedFormBody.Result.Parameters[0].Name == PATH_PARAM_UPLOAD)
+                {
+                    name = parsedFormBody.Result.Parameters.Single().Data;
+                }
+
+                BlobUploadFile bl = FormFileToBlobUploadFile(file, name);
 
                 _uploadBlobFilesCommand.SetLoggerProcessData(UserName, id: _logger.ProcessId);
                 var result = await _uploadBlobFileCommand.Execute(new UploadBlobFileRequest
@@ -223,7 +260,7 @@ namespace AXERP.API.Functions.Blobs
             }
         }
 
-        public static BlobUploadFile FormFileToBlobUploadFile(IFormFile file)
+        public static BlobUploadFile FormFileToBlobUploadFile(IFormFile file, string? nameOverride = null)
         {
             BlobUploadFile bl;
             byte[] fileBytes;
@@ -235,15 +272,52 @@ namespace AXERP.API.Functions.Blobs
                 var fileName = string.Empty;
                 var folderName = string.Empty;
 
-                if (file.FileName.Contains("/"))
+                var rawFileName = nameOverride ?? file.FileName;
+
+                if (rawFileName.Contains("/"))
                 {
-                    var parts = file.FileName.Split("/", 2);
-                    fileName = parts[0];
-                    folderName = parts[1];
+                    var parts = rawFileName.Split("/", 2);
+                    fileName = parts[1];
+                    folderName = parts[0];
                 }
                 else
                 {
-                    fileName = file.FileName;
+                    fileName = rawFileName;
+                }
+
+                bl = new BlobUploadFile
+                {
+                    FileName = fileName,
+                    Folder = folderName,
+                    Content = fileBytes
+                };
+            }
+            return bl;
+        }
+
+        public static BlobUploadFile FormFileToBlobUploadFile(FilePart file, string? nameOverride = null)
+        {
+            BlobUploadFile bl;
+            byte[] fileBytes;
+            using (var ms = new MemoryStream())
+            {
+                file.Data.CopyTo(ms);
+                fileBytes = ms.ToArray();
+
+                var fileName = string.Empty;
+                var folderName = string.Empty;
+
+                var rawFileName = nameOverride ?? file.FileName;
+
+                if (rawFileName.Contains("/"))
+                {
+                    var parts = rawFileName.Split("/", 2);
+                    fileName = parts[1];
+                    folderName = parts[0];
+                }
+                else
+                {
+                    fileName = rawFileName;
                 }
 
                 bl = new BlobUploadFile
