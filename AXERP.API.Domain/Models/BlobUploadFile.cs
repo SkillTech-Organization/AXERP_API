@@ -6,6 +6,6 @@ namespace AXERP.API.Domain.Models
     public class BlobUploadFile : BlobFile
     {
         [DataMember]
-        public Stream Content { get; set; }
+        public byte[] Content { get; set; }
     }
 }

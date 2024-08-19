@@ -24,18 +24,21 @@ namespace AXERP.API.Functions.Blobs
         private readonly ListBlobFilesQuery _listBlobFilesQuery;
         private readonly DeleteBlobFilesCommand _deleteBlobFilesCommand;
         private readonly UploadBlobFilesCommand _uploadBlobFilesCommand;
+        private readonly UploadBlobFileCommand _uploadBlobFileCommand;
 
         public BLFileFunctions(
             AxerpLoggerFactory loggerFactory,
             ListBlobFilesQuery listBlobFilesQuery,
             DeleteBlobFilesCommand deleteBlobFilesCommand,
             UploadBlobFilesCommand uploadBlobFilesCommand,
+            UploadBlobFileCommand uploadBlobFileCommand,
             UpdateReferencesByBlobFilesCommand updateReferencesByBlobFilesCommand) : base(loggerFactory)
         {
             _updateReferencesByBlobFilesCommand = updateReferencesByBlobFilesCommand;
             _listBlobFilesQuery = listBlobFilesQuery;
             _deleteBlobFilesCommand = deleteBlobFilesCommand;
             _uploadBlobFilesCommand = uploadBlobFilesCommand;
+            _uploadBlobFileCommand = uploadBlobFileCommand;
         }
 
         [Function(nameof(ListBlobFiles))]
@@ -117,18 +120,28 @@ namespace AXERP.API.Functions.Blobs
             }
         }
 
-        [Function(nameof(UploadBlobFiles))]
-        [OpenApiOperation(operationId: nameof(UploadBlobFiles), tags: new[] { "blob" })]
-        [OpenApiRequestBody("application/json", typeof(UploadBlobFilesRequest), Required = true)]
-        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(UploadBlobfilesResponse), Description = "The OK response")]
-        public async Task<IActionResult> UploadBlobFiles([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req, [FromBody] UploadBlobFilesRequest request)
+        [Function(nameof(UploadBlobFile))]
+        [OpenApiOperation(operationId: nameof(UploadBlobFile), tags: new[] { "blob" })]
+        //[OpenApiRequestBody("application/json", typeof(UploadBlobFilesRequest), Required = true)]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(BaseResponse), Description = "The OK response")]
+        public async Task<IActionResult> UploadBlobFile([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequest req, [FromForm] IFormFile file)
         {
             try
             {
                 SetLoggerProcessData(UserName);
 
+                if (file == null)
+                {
+                    throw new Exception("File is null!");
+                }
+
+                BlobUploadFile bl = FormFileToBlobUploadFile(file);
+
                 _uploadBlobFilesCommand.SetLoggerProcessData(UserName, id: _logger.ProcessId);
-                var result = await _uploadBlobFilesCommand.Execute(request);
+                var result = await _uploadBlobFileCommand.Execute(new UploadBlobFileRequest
+                {
+                    BlobUploadFile = bl
+                });
 
                 if (result.IsSuccess)
                 {
@@ -144,7 +157,7 @@ namespace AXERP.API.Functions.Blobs
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error while uploading blob files");
+                _logger.LogError(ex, "Error while uploading blob file");
                 var res = new ObjectResult(new BaseResponse
                 {
                     HttpStatusCode = HttpStatusCode.InternalServerError,
@@ -208,6 +221,39 @@ namespace AXERP.API.Functions.Blobs
                 };
                 return res;
             }
+        }
+
+        public static BlobUploadFile FormFileToBlobUploadFile(IFormFile file)
+        {
+            BlobUploadFile bl;
+            byte[] fileBytes;
+            using (var ms = new MemoryStream())
+            {
+                file.CopyTo(ms);
+                fileBytes = ms.ToArray();
+
+                var fileName = string.Empty;
+                var folderName = string.Empty;
+
+                if (file.FileName.Contains("/"))
+                {
+                    var parts = file.FileName.Split("/", 2);
+                    fileName = parts[0];
+                    folderName = parts[1];
+                }
+                else
+                {
+                    fileName = file.FileName;
+                }
+
+                bl = new BlobUploadFile
+                {
+                    FileName = fileName,
+                    Folder = folderName,
+                    Content = fileBytes
+                };
+            }
+            return bl;
         }
     }
 }
