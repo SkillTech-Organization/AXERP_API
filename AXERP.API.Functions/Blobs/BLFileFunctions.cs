@@ -9,12 +9,13 @@ using AXERP.API.Functions.Base;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Factories;
 using HttpMultipartParser;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
 using System.Net;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using FromBodyAttribute = Microsoft.Azure.Functions.Worker.Http.FromBodyAttribute;
 
 namespace AXERP.API.Functions.Blobs
 {
@@ -47,7 +48,7 @@ namespace AXERP.API.Functions.Blobs
         [Function(nameof(ListBlobFiles))]
         [OpenApiOperation(operationId: nameof(ListBlobFiles), tags: new[] { "blob" })]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(BaseDataResponse<BlobFile>), Description = "The OK response")]
-        public async Task<IActionResult> ListBlobFiles([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req)
+        public async Task<IActionResult> ListBlobFiles([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
             try
             {
@@ -87,7 +88,7 @@ namespace AXERP.API.Functions.Blobs
         [OpenApiOperation(operationId: nameof(DeleteBlobFiles), tags: new[] { "blob" })]
         [OpenApiRequestBody("application/json", typeof(DeleteBlobFilesRequest), Required = true)]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(DeleteBlobfilesResponse), Description = "The OK response")]
-        public async Task<IActionResult> DeleteBlobFiles([HttpTrigger(AuthorizationLevel.Anonymous, "delete")] HttpRequest req, [FromBody] DeleteBlobFilesRequest request)
+        public async Task<IActionResult> DeleteBlobFiles([HttpTrigger(AuthorizationLevel.Anonymous, "delete")] HttpRequestData req, [FromBody] DeleteBlobFilesRequest request)
         {
             try
             {
@@ -130,11 +131,9 @@ namespace AXERP.API.Functions.Blobs
 
         [Function(nameof(UploadBlobFile))]
         [OpenApiOperation(operationId: nameof(UploadBlobFile), tags: new[] { "blob" })]
-        //[OpenApiRequestBody("multipart/form-data", typeof(string), Required = true)]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(BaseResponse), Description = "The OK response")]
         public async Task<IActionResult> UploadBlobFile(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "UploadBlobFile")]
-            Microsoft.Azure.Functions.Worker.Http.HttpRequestData req) // , FunctionContext executionContext, [FromForm] IFormFile file // HttpRequest req, [FromForm] IFormFile file
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "UploadBlobFile")] HttpRequestData req)
         {
             try
             {
@@ -210,7 +209,7 @@ namespace AXERP.API.Functions.Blobs
         [Function(nameof(ProcessBlobFiles))]
         [OpenApiOperation(operationId: nameof(ProcessBlobFiles), tags: new[] { "blob" })]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
-        public async Task<IActionResult> ProcessBlobFiles([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req)
+        public async Task<IActionResult> ProcessBlobFiles([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
             try
             {
@@ -258,41 +257,6 @@ namespace AXERP.API.Functions.Blobs
                 };
                 return res;
             }
-        }
-
-        public static BlobUploadFile FormFileToBlobUploadFile(IFormFile file, string? nameOverride = null)
-        {
-            BlobUploadFile bl;
-            byte[] fileBytes;
-            using (var ms = new MemoryStream())
-            {
-                file.CopyTo(ms);
-                fileBytes = ms.ToArray();
-
-                var fileName = string.Empty;
-                var folderName = string.Empty;
-
-                var rawFileName = nameOverride ?? file.FileName;
-
-                if (rawFileName.Contains("/"))
-                {
-                    var parts = rawFileName.Split("/", 2);
-                    fileName = parts[1];
-                    folderName = parts[0];
-                }
-                else
-                {
-                    fileName = rawFileName;
-                }
-
-                bl = new BlobUploadFile
-                {
-                    FileName = fileName,
-                    Folder = folderName,
-                    Content = fileBytes
-                };
-            }
-            return bl;
         }
 
         public static BlobUploadFile FormFileToBlobUploadFile(FilePart file, string? nameOverride = null)
