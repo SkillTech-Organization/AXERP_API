@@ -80,8 +80,6 @@ namespace AXERP.API.Functions.Transactions
                 _insertTransactionsCommand.SetLoggerProcessData(UserName, id: _logger.ProcessId);
                 var result = _insertTransactionsCommand.Execute(importResult);
 
-                _logger.LogInformation("GasTransactions imported. Stats: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
-
                 return new OkObjectResult(result);
             }
             catch (Exception ex)

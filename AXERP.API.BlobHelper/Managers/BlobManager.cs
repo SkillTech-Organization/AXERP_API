@@ -2,6 +2,7 @@
 using AXERP.API.BlobHelper.ServiceContracts.Responses;
 using AXERP.API.Domain;
 using AXERP.API.Domain.Models;
+using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Base;
 using AXERP.API.LogHelper.Factories;
@@ -133,6 +134,34 @@ namespace AXERP.API.BlobHelper.Managers
             return response;
         }
 
+        public async Task<BaseResponse> UploadFile(BlobUploadFile file)
+        {
+            var response = new BaseResponse();
+
+            _logger.LogInformation("Uploading file to blob storage. Path: {0}", string.Join(", ", file.Path));
+
+            var path = file.Path;
+
+            _logger.LogInformation("Uploading: {0}", path);
+
+            using(var mem = new MemoryStream(file.Content))
+            {
+                var uploadResponse = await Container.UploadBlobAsync(path, mem);
+
+                var _response = uploadResponse?.GetRawResponse();
+                if (CheckError(_response, out string msg))
+                {
+                    var errorMsg = $"Could not upload: {path}. Error: {msg}";
+                    response.RequestError = errorMsg;
+                    _logger.LogError(errorMsg);
+                }
+            }
+
+            _logger.LogInformation("Blob successfully uploaded!");
+
+            return response;
+        }
+
         public async Task<UploadBlobfilesResponse> UploadFiles(List<BlobUploadFile> files)
         {
             var response = new UploadBlobfilesResponse
@@ -148,23 +177,26 @@ namespace AXERP.API.BlobHelper.Managers
             {
                 var path = file.Path;
 
-                _logger.LogInformation("Deleting: {0}", path);
+                _logger.LogInformation("Uploading: {0}", path);
 
-                var uploadResponse = await Container.UploadBlobAsync(path,file.Content);
-
-                var _response = uploadResponse?.GetRawResponse();
-                if (CheckError(_response, out string msg))
+                using (var mem = new MemoryStream(file.Content))
                 {
-                    response.NotUploaded.Add(file);
-                    var errorMsg = $"Could not upload: {path}. Error: {msg}";
-                    response.Errors.Add(errorMsg);
-                    _logger.LogError(errorMsg);
-                    continue;
+                    var uploadResponse = await Container.UploadBlobAsync(path, mem);
+
+                    var _response = uploadResponse?.GetRawResponse();
+                    if (CheckError(_response, out string msg))
+                    {
+                        response.NotUploaded.Add(file);
+                        var errorMsg = $"Could not upload: {path}. Error: {msg}";
+                        response.Errors.Add(errorMsg);
+                        _logger.LogError(errorMsg);
+                        continue;
+                    }
+
+                    response.Uploaded.Add(file);
+
+                    _logger.LogInformation("Blob successfully uploaded!");
                 }
-
-                response.Uploaded.Add(file);
-
-                _logger.LogInformation("Blob successfully uploaded!");
             }
 
             return response;

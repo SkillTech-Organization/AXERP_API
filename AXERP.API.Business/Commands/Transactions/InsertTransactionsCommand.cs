@@ -37,6 +37,26 @@ namespace AXERP.API.Business.Commands
             _mapper = mapper;
         }
 
+        public void LogStatistics(ImportGasTransactionResponse result)
+        {
+            if (result.InvalidRows == 0 && result.ImportedRows == result.NewRows)
+            {
+                _logger.LogInformation("Success! Import statistics: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
+            }
+            else if (result.InvalidRows == 0 && result.ImportedRows >= result.NewRows)
+            {
+                _logger.LogWarning("Warning! Import succeeded but some rows were already in the database. Import statistics: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
+            }
+            else if (result.InvalidRows > 0)
+            {
+                _logger.LogError("Error! Import statistics: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
+            }
+            else
+            {
+                _logger.LogError("Error! Invalid import statistics: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
+            }
+        }
+
         public ImportGasTransactionResponse Execute(GenericSheetImportResult<Delivery> importResult)
         {
             var res = new ImportGasTransactionResponse
@@ -134,6 +154,8 @@ namespace AXERP.API.Business.Commands
                     throw;
                 }
             }
+
+            LogStatistics(res);
 
             return res;
         }
