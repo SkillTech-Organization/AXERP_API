@@ -211,7 +211,7 @@ namespace AXERP.API.BlobHelper.Managers
 
             var result = new List<GetBlobFilesItem>();
 
-            _logger.LogInformation("Getting files from folder '{folder}' with regex: {regex}", folderName, regexPattern ?? "NO REGEX FILTER USED");
+            _logger.LogInformation("Getting files from folder '{0}' with regex: {1}", folderName, regexPattern ?? "NO REGEX FILTER USED");
 
             await foreach (var blob in Container.GetBlobsByHierarchyAsync(prefix: folderName))
             {
