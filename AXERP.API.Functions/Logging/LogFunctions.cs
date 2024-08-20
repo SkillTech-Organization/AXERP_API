@@ -52,8 +52,7 @@ namespace AXERP.API.Functions.Transactions
                 _logger.LogInformation("Querying LogEvents...");
                 _logger.LogInformation("Checking parameters...");
 
-                //var cols = req.Query["Columns"]?.ToString()?.Split(",", StringSplitOptions.TrimEntries)?.ToList() ?? new List<string>();
-                var cols = "ProcessId,System,Function,Who,When,Description".Split(",", StringSplitOptions.TrimEntries)?.ToList();
+                var cols = "ProcessId,Result,System,Function,Who,When,Description".Split(",", StringSplitOptions.TrimEntries)?.ToList();
 
                 var page = int.Parse(req.Query["Page"] ?? "1");
                 if (page <= 0)
