@@ -26,6 +26,22 @@ namespace AXERP.API.Business.Commands
             _blobManagerFactory = blobManagerFactory;
         }
 
+        public void LogStatistics(ProcessBlobFilesResponse result)
+        {
+            if (result.Errors.Count == 0)
+            {
+                _logger.LogInformation("Success! Process BL files statistics: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
+            }
+            else if (result.Errors.Count >= 0 && result.Processed.Count >= 0)
+            {
+                _logger.LogWarning("Not all blob files could be processed! Process BL files statistics: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
+            }
+            else if (result.Errors.Count >= 0 && result.Processed.Count == 0)
+            {
+                _logger.LogError("Error! Process BL files statistics: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
+            }
+        }
+
         public async Task<ProcessBlobFilesResponse> Execute(ProcessBlobFilesRequest request)
         {
             var containerHelper = _blobManagerFactory.Create();
@@ -33,6 +49,8 @@ namespace AXERP.API.Business.Commands
             var getBlobFilesResponse = await containerHelper.GetFiles(request.BlobStorageImportFolder, request.BlobStorePdfFileRegexPattern);
 
             var response = await Process(request, getBlobFilesResponse, containerHelper);
+
+            LogStatistics(response);
 
             return response;
         }
