@@ -36,7 +36,7 @@ namespace AXERP.API.Business.Commands
             {
                 _logger.LogWarning("Not all files could be processed! Process BL files statistics: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
             }
-            else if (result.Errors.Count >= 0 && result.Processed.Count == 0)
+            else if (result.Errors.Count > 0 && result.Processed.Count == 0)
             {
                 _logger.LogError("Error! No file could be processed! Process BL files statistics: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
             }
