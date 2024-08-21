@@ -46,11 +46,16 @@ namespace AXERP.API.Business.SheetProcessors
             var partialResults = new List<GenericSheetImportResult<Delivery>>();
 
             var startRowIndex = 0;
+            var allDeliveryIds = new List<string>();
             Parallel.ForEach(dataChunks, dataChunk =>
             {
-                partialResults.Add(_Map(field_names, dataChunk, culture_code, startRowIndex));
+                var pr = _Map(field_names, dataChunk, culture_code, startRowIndex);
+                partialResults.Add(pr.Item1);
+                allDeliveryIds.AddRange(pr.Item2);
                 startRowIndex += 100;
             });
+
+            _logger.LogInformation("All non-empty DeliveryID from the google sheet: {0}", string.Join(", ", allDeliveryIds));
 
             // Merge results
             foreach (var partialResult in partialResults)
@@ -69,7 +74,7 @@ namespace AXERP.API.Business.SheetProcessors
             };
         }
 
-        private GenericSheetImportResult<Delivery> _Map(Dictionary<string, int> field_names, IList<IList<object>>? sheet_rows, string culture_code, int startRowIndex)
+        private (GenericSheetImportResult<Delivery>, List<string>) _Map(Dictionary<string, int> field_names, IList<IList<object>>? sheet_rows, string culture_code, int startRowIndex)
         {
             var result = new List<Delivery>();
             var errors = new List<string>();
@@ -583,8 +588,6 @@ namespace AXERP.API.Business.SheetProcessors
                 }
             }
 
-            _logger.LogInformation("All non-empty DeliveryID from the google sheet: {0}", string.Join(", ", allDeliveryIds));
-
             var importResult = new GenericSheetImportResult<Delivery>
             {
                 Data = result,
@@ -593,7 +596,7 @@ namespace AXERP.API.Business.SheetProcessors
                 Errors = errors
             };
 
-            return importResult;
+            return (importResult, allDeliveryIds);
         }
     }
 }
