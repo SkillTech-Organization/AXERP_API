@@ -211,7 +211,13 @@ namespace AXERP.API.Business.Commands
                 if (!Statuses.Contains(sheetRow.Status))
                 {
                     Statuses.Add(sheetRow.Status);
-                    uow.TransactionStatusRepository.Add(new TransactionStatus { Name = sheetRow.Status });
+                    uow.TransactionStatusRepository.Add(new TransactionStatus { Name = sheetRow.Status }, true);
+                }
+
+                if (!Statuses.Contains(sheetRow.SalesStatus))
+                {
+                    Statuses.Add(sheetRow.SalesStatus);
+                    uow.TransactionStatusRepository.Add(new TransactionStatus { Name = sheetRow.SalesStatus }, true);
                 }
 
                 transaction.StatusID = sheetRow.Status;
