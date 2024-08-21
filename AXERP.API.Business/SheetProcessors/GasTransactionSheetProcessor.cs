@@ -1,5 +1,7 @@
-﻿using AXERP.API.Domain.Entities;
+﻿using AXERP.API.Domain;
+using AXERP.API.Domain.Entities;
 using AXERP.API.GoogleHelper.Models;
+using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
 using Newtonsoft.Json;
@@ -9,7 +11,7 @@ using System.Reflection;
 
 namespace AXERP.API.Business.SheetProcessors
 {
-    [Description("GoogleSheet Processing")]
+    [ForSystem("GoogleSheet Processing", LogConstants.FUNCTION_GOOGLE_SYNC)]
     public class GasTransactionSheetProcessor : BaseSheetProcessors<Delivery, GasTransactionSheetProcessor>
     {
         private readonly UnitOfWorkFactory _uowFactory;
