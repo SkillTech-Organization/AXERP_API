@@ -39,21 +39,17 @@ namespace AXERP.API.Business.Commands
 
         public void LogStatistics(ImportGasTransactionResponse result)
         {
-            if (result.InvalidRows == 0 && result.ImportedRows == result.NewRows)
+            if (result.InvalidRows == 0)
             {
                 _logger.LogInformation("Success! Import statistics: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
             }
-            else if (result.InvalidRows == 0 && result.ImportedRows >= result.NewRows)
-            {
-                _logger.LogWarning("Warning! Import succeeded but some rows were already in the database. Import statistics: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
-            }
             else if (result.InvalidRows > 0)
             {
-                _logger.LogError("Error! Import statistics: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
+                _logger.LogWarning("Warning, one or more rows could not be imported! Import statistics: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
             }
-            else
+            else if (result.InvalidRows > 0 && result.InvalidRows == result.ImportedRows)
             {
-                _logger.LogError("Error! Invalid import statistics: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
+                _logger.LogError("Error! No row could be imported! Import statistics: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
             }
         }
 
@@ -184,6 +180,9 @@ namespace AXERP.API.Business.Commands
             _logger.LogInformation("Deleted {0} rows: {1}", nameof(TruckCompanyToDelivery), deleted);
 
             _logger.LogInformation("Deleting {0} rows.", nameof(Transaction));
+
+            _logger.LogInformation("DeliveryIDs for delete: {0}", string.Join(", ", ids));
+
             deleted = uow.TransactionRepository.Delete(ids);
             _logger.LogInformation("Deleted {0} rows: {1}", nameof(Transaction), deleted);
 
@@ -208,6 +207,12 @@ namespace AXERP.API.Business.Commands
                 var transaction = _mapper.Map<Transaction>(sheetRow);
 
                 transaction.ID = sheetRow.DeliveryID;
+
+                if (!Statuses.Contains(sheetRow.Status))
+                {
+                    Statuses.Add(sheetRow.Status);
+                    uow.TransactionStatusRepository.Add(new TransactionStatus { Name = sheetRow.Status });
+                }
 
                 transaction.StatusID = sheetRow.Status;
                 transaction.SalesStatusID = sheetRow.SalesStatus;
@@ -356,32 +361,34 @@ namespace AXERP.API.Business.Commands
                 transactionDtos.Add(transaction);
             }
 
+            var allDeliveryIds = transactionDtos.Select(x => x.ID);
+
             if (create)
             {
                 _logger.LogInformation("Inserting new {0} rows. Count: {1}", nameof(Transaction), transactionDtos.Count);
+                _logger.LogInformation("DeliveryIDs for create: {0}", string.Join(", ", allDeliveryIds));
+
                 uow.GenericRepository.BulkCopy<Transaction>(transactionDtos);
             }
             else
             {
                 _logger.LogInformation("Updating {0} rows. Count: {1}", nameof(Transaction), transactionDtos.Count);
+                _logger.LogInformation("DeliveryIDs for update: {0}", string.Join(", ", allDeliveryIds));
+
                 uow.TransactionRepository.Update(transactionDtos);
             }
 
             _logger.LogInformation("Inserting new {0} rows. Count: {1}", nameof(CustomerToDelivery), ctdNew.Count);
-            // uow.CustomerToDeliveryRepository.Add(ctdNew);
-            uow.GenericRepository.BulkCopy<CustomerToDelivery>(ctdNew);
+            uow.GenericRepository.BulkCopy(ctdNew);
 
             _logger.LogInformation("Inserting new {0} rows. Count: {1}", nameof(TruckCompanyToDelivery), ttdNew.Count);
-            // uow.TruckCompanyToDeliveryRepository.Add(ttdNew);
-            uow.GenericRepository.BulkCopy<TruckCompanyToDelivery>(ttdNew);
+            uow.GenericRepository.BulkCopy(ttdNew);
 
             _logger.LogInformation("Updating {0} rows. Count: {1}", nameof(CustomerToDelivery), ctdUpdate.Count);
             uow.CustomerToDeliveryRepository.Update(ctdUpdate);
-            //uow.GenericRepository.BulkCopy<CustomerToDelivery>(ctdUpdate);
 
             _logger.LogInformation("Updating {0} rows. Count: {1}", nameof(TruckCompanyToDelivery), ttdUpdate.Count);
             uow.TruckCompanyToDeliveryRepository.Update(ttdUpdate);
-            //uow.GenericRepository.BulkCopy<TruckCompanyToDelivery>(ttdUpdate);
 
             uow.Save("update_done");
         }

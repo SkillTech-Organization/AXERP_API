@@ -19,18 +19,6 @@ namespace AXERP.API.Business.SheetProcessors
             _uowFactory = uowFactory;
         }
 
-        private List<string> GetStatuses()
-        {
-            var result = new List<string>();
-
-            using (var uow = _uowFactory.Create())
-            {
-                result = uow.TransactionStatusRepository.GetAll().Select(x => x.Name).ToList();
-            }
-
-            return result;
-        }
-
         public override GenericSheetImportResult<Delivery> ProcessRows(IList<IList<object>> sheet_value_range, string culture_code)
         {
             var headers = sheet_value_range[0];
@@ -53,15 +41,15 @@ namespace AXERP.API.Business.SheetProcessors
             var invalidRows = 0;
             var totalRows = sheet_value_range.Count - 1;
 
-            var valid_statuses = GetStatuses();
-
             // Parallel processing
             var dataChunks = sheet_rows.Chunk(100);
             var partialResults = new List<GenericSheetImportResult<Delivery>>();
 
+            var startRowIndex = 0;
             Parallel.ForEach(dataChunks, dataChunk =>
             {
-                partialResults.Add(_Map(field_names, dataChunk, culture_code, valid_statuses.ToList()));
+                partialResults.Add(_Map(field_names, dataChunk, culture_code, startRowIndex));
+                startRowIndex += 100;
             });
 
             // Merge results
@@ -72,12 +60,6 @@ namespace AXERP.API.Business.SheetProcessors
                 errors.AddRange(partialResult.Errors);
             }
 
-            // Process
-            //var partialResult = _Map(field_names, sheet_rows, culture_code, valid_statuses.ToList());
-            //result.AddRange(partialResult.Data ?? new List<Delivery>());
-            //invalidRows += partialResult.InvalidRows;
-            //errors.AddRange(partialResult.Errors);
-
             return new GenericSheetImportResult<Delivery>
             {
                 Data = result,
@@ -87,7 +69,7 @@ namespace AXERP.API.Business.SheetProcessors
             };
         }
 
-        private GenericSheetImportResult<Delivery> _Map(Dictionary<string, int> field_names, IList<IList<object>>? sheet_rows, string culture_code, List<string> valid_statuses)
+        private GenericSheetImportResult<Delivery> _Map(Dictionary<string, int> field_names, IList<IList<object>>? sheet_rows, string culture_code, int startRowIndex)
         {
             var result = new List<Delivery>();
             var errors = new List<string>();
@@ -95,9 +77,11 @@ namespace AXERP.API.Business.SheetProcessors
 
             var minSqlYear = 1753;
 
+            var allDeliveryIds = new List<string>();
+
             for (var i = 0; i < sheet_rows.Count; i++)
             {
-                var sheet_row_index = i + 2;
+                var sheet_row_index = startRowIndex + i + 2;
                 var row = sheet_rows[i];
 
                 try
@@ -145,6 +129,7 @@ namespace AXERP.API.Business.SheetProcessors
                     }
 
                     gasTransaction.DeliveryID = row[field_idx].ToString()!;
+                    allDeliveryIds.Add(gasTransaction.DeliveryID);
 
                     if (result.Any(x => x.DeliveryID == gasTransaction.DeliveryID))
                     {
@@ -210,10 +195,10 @@ namespace AXERP.API.Business.SheetProcessors
                     }
 
                     var rawSalesStatus = row[field_idx]?.ToString();
-                    if (!string.IsNullOrWhiteSpace(rawSalesStatus) && !valid_statuses.Contains(rawSalesStatus))
+                    if (!string.IsNullOrWhiteSpace(rawSalesStatus))
                     {
                         invalidRows++;
-                        errors.Add($"Invalid Sales Status: '{rawSalesStatus}' for row with Delivery ID: {gasTransaction.DeliveryID}. Row index: {sheet_row_index}");
+                        errors.Add($"Missing Sales Status: '{rawSalesStatus}' for row with Delivery ID: {gasTransaction.DeliveryID}. Row index: {sheet_row_index}");
                         continue;
                     }
 
@@ -285,10 +270,10 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.Status)];
 
                     var rawStatus = row[field_idx]?.ToString();
-                    if (!string.IsNullOrWhiteSpace(rawStatus) && !valid_statuses.Contains(rawStatus))
+                    if (!string.IsNullOrWhiteSpace(rawStatus))
                     {
                         invalidRows++;
-                        errors.Add($"Invalid Status: {rawStatus} for row with Delivery ID: {gasTransaction.DeliveryID}. Row index: {sheet_row_index}");
+                        errors.Add($"Missing Status: {rawStatus} for row with Delivery ID: {gasTransaction.DeliveryID}. Row index: {sheet_row_index}");
                         continue;
                     }
 
@@ -598,13 +583,17 @@ namespace AXERP.API.Business.SheetProcessors
                 }
             }
 
-            return new GenericSheetImportResult<Delivery>
+            _logger.LogInformation("All non-empty DeliveryID from the google sheet: {0}", string.Join(", ", allDeliveryIds));
+
+            var importResult = new GenericSheetImportResult<Delivery>
             {
                 Data = result,
                 InvalidRows = invalidRows,
                 TotalRowsInSheet = sheet_rows.Count(),
                 Errors = errors
             };
+
+            return importResult;
         }
     }
 }
