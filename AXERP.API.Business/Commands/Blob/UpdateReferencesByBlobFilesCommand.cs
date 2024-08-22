@@ -162,7 +162,7 @@ namespace AXERP.API.Business.Commands
 
                                 _logger.LogInformation("Matching transactions updated.");
 
-                                //await containerHelper.MoveFile(item.BlobItem, fileName, request.BlobStorageProcessedFolder);
+                                await containerHelper.MoveFile(item.BlobItem, fileName, request.BlobStorageProcessedFolder);
 
                                 processed.Add(blob_name);
                             }
