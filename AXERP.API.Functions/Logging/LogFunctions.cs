@@ -7,7 +7,6 @@ using AXERP.API.Functions.Base;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
-using AXERP.API.Persistence.Queries;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -49,9 +48,6 @@ namespace AXERP.API.Functions.Transactions
             {
                 SetLoggerProcessData(UserName);
 
-                _logger.LogInformation("Querying LogEvents...");
-                _logger.LogInformation("Checking parameters...");
-
                 var cols = "ProcessId,Result,System,Function,Who,When,Description".Split(",", StringSplitOptions.TrimEntries)?.ToList();
 
                 var page = int.Parse(req.Query["Page"] ?? "1");
@@ -88,11 +84,7 @@ namespace AXERP.API.Functions.Transactions
                         SearchOnlyInSelectedColumns = bool.Parse(req.Query["SearchOnlyInSelectedColumns"] ?? "false")
                     };
 
-                    _logger.LogInformation("Executing query with request: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(request));
-
                     var result = uow.GenericRepository.PagedQuery<LogEvent>(request);
-
-                    _logger.LogInformation("Query finished. Total rows in DB: {0}, queried rows: {1}", result.TotalCount, result.DataCount);
 
                     return new OkObjectResult(result);
                 }
