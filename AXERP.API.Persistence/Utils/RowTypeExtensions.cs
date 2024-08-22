@@ -25,11 +25,26 @@ namespace AXERP.API.Persistence.Utils
                         jsonName = jsonAttribute.PropertyName;
                     }
 
+                    int? order = null;
+                    int? minW = null;
+                    int? maxW = null;
+
+                    var gridPropsAttribute = property.GetCustomAttribute<GridPropsAttribute>(true);
+                    if (gridPropsAttribute != null)
+                    {
+                        order = gridPropsAttribute.Order == 0 ? null : gridPropsAttribute.Order;
+                        minW = gridPropsAttribute.MinWidth == 0 ? null : gridPropsAttribute.MinWidth;
+                        maxW = gridPropsAttribute.MaxWidth == 0 ? null : gridPropsAttribute.MaxWidth;
+                    }
+
                     columns.Add(new ColumnData
                     {
                         Name = property.Name,
                         Title = jsonName,
-                        Type = property.PropertyType.ToString()
+                        Type = property.PropertyType.ToString(),
+                        Order = order,
+                        MinWidth = minW,
+                        MaxWidth = maxW
                     });
                 }
             }
