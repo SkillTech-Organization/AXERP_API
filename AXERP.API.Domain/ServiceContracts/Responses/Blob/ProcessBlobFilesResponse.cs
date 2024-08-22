@@ -11,5 +11,8 @@ namespace AXERP.API.Domain.ServiceContracts.Responses
 
         [DataMember]
         public List<string> Errors { get; set; }
+
+        [DataMember]
+        public List<string> Warnings { get; set; }
     }
 }

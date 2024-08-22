@@ -5,6 +5,7 @@
         Ok,
         Warning,
         Error,
-        Debug
+        Debug,
+        Trace
     }
 }

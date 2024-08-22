@@ -28,6 +28,7 @@ namespace AXERP.API.LogHelper.Managers
             { LogResults.Warning, "Warning" },
             { LogResults.Error, "Error" },
             { LogResults.Debug, "Debug" },
+            { LogResults.Trace, "Trace" },
         };
 
         private const string MESSAGE_TEMPLATE =
@@ -88,6 +89,34 @@ namespace AXERP.API.LogHelper.Managers
             _stopwatch.Stop();
             LogInformation("Finished measuring execution time. Result: {0}", _stopwatch.Elapsed);
             _stopwatch.Reset();
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public void LogTrace(int id, string message, params object?[] args)
+        {
+            string _renderedMessage = RenderMessage(message, args);
+
+            var callerMethod = new StackFrame(1, false).GetMethod()!;
+            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
+
+            _logger.LogTrace(
+                MESSAGE_TEMPLATE,
+                id, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Trace]
+            );
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public void LogTrace(string message, params object?[] args)
+        {
+            string _renderedMessage = RenderMessage(message, args);
+
+            var callerMethod = new StackFrame(1, false).GetMethod()!;
+            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
+
+            _logger.LogTrace(
+                MESSAGE_TEMPLATE,
+                ProcessId, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Trace]
+            );
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]

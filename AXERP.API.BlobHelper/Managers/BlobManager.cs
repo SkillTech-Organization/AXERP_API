@@ -52,17 +52,17 @@ namespace AXERP.API.BlobHelper.Managers
         {
             var result = new List<BlobFile>();
 
-            _logger.LogInformation("Getting files from blob storage");
+            _logger.LogTrace("Getting files from blob storage");
 
             if (!string.IsNullOrWhiteSpace(folderNameFilter))
             {
-                _logger.LogInformation("Filter by folder name: {0}", folderNameFilter);
+                _logger.LogTrace("Filter by folder name: {0}", folderNameFilter);
             }
 
             var _excludeFolders = excludeFolders ?? new List<string>();
             if (excludeFolders != null && excludeFolders.Count > 0)
             {
-                _logger.LogInformation("Excluding folders: {0}", string.Join(", ", _excludeFolders));
+                _logger.LogTrace("Excluding folders: {0}", string.Join(", ", _excludeFolders));
             }
 
             await foreach (var blob in Container.GetBlobsByHierarchyAsync())
@@ -75,7 +75,7 @@ namespace AXERP.API.BlobHelper.Managers
                         continue;
                     }
 
-                    _logger.LogInformation("Blob: {0}", path);
+                    _logger.LogTrace("Blob: {0}", path);
 
                     var fileName = string.Empty;
                     var folderName = string.Empty;
@@ -112,17 +112,17 @@ namespace AXERP.API.BlobHelper.Managers
                 Errors = new List<string>()
             };
 
-            _logger.LogInformation("Deleting files from blob storage. Paths: {0}", string.Join(", ", files.Select(x => x.Path)));
+            _logger.LogTrace("Deleting files from blob storage. Paths: {0}", string.Join(", ", files.Select(x => x.Path)));
 
             foreach (var file in files)
             {
                 var path = file.Path;
 
-                _logger.LogInformation("Requesting: {0}", path);
+                _logger.LogTrace("Requesting: {0}", path);
 
                 var sourceBlob = Container.GetBlobClient(path);
 
-                _logger.LogInformation("Deleting: {0}", path);
+                _logger.LogTrace("Deleting: {0}", path);
 
                 var deleteResponse = await sourceBlob.DeleteAsync();
 
@@ -137,7 +137,7 @@ namespace AXERP.API.BlobHelper.Managers
 
                 response.Deleted.Add(file);
 
-                _logger.LogInformation("Blob successfully deleted!");
+                _logger.LogTrace("Blob successfully deleted!");
             }
 
             return response;
@@ -147,11 +147,11 @@ namespace AXERP.API.BlobHelper.Managers
         {
             var response = new BaseResponse();
 
-            _logger.LogInformation("Uploading file to blob storage. Path: {0}", string.Join(", ", file.Path));
+            _logger.LogTrace("Uploading file to blob storage. Path: {0}", string.Join(", ", file.Path));
 
             var path = file.Path;
 
-            _logger.LogInformation("Uploading: {0}", path);
+            _logger.LogTrace("Uploading: {0}", path);
 
             using(var mem = new MemoryStream(file.Content))
             {
@@ -166,7 +166,7 @@ namespace AXERP.API.BlobHelper.Managers
                 }
             }
 
-            _logger.LogInformation("Blob successfully uploaded!");
+            _logger.LogTrace("Blob successfully uploaded!");
 
             return response;
         }
@@ -180,13 +180,13 @@ namespace AXERP.API.BlobHelper.Managers
                 Errors = new List<string>()
             };
 
-            _logger.LogInformation("Uploading files to blob storage. Paths: {0}", string.Join(", ", files.Select(x => x.Path)));
+            _logger.LogTrace("Uploading files to blob storage. Paths: {0}", string.Join(", ", files.Select(x => x.Path)));
 
             foreach (var file in files)
             {
                 var path = file.Path;
 
-                _logger.LogInformation("Uploading: {0}", path);
+                _logger.LogTrace("Uploading: {0}", path);
 
                 using (var mem = new MemoryStream(file.Content))
                 {
@@ -204,7 +204,7 @@ namespace AXERP.API.BlobHelper.Managers
 
                     response.Uploaded.Add(file);
 
-                    _logger.LogInformation("Blob successfully uploaded!");
+                    _logger.LogTrace("Blob successfully uploaded!");
                 }
             }
 
@@ -220,14 +220,14 @@ namespace AXERP.API.BlobHelper.Managers
 
             var result = new List<GetBlobFilesItem>();
 
-            _logger.LogInformation("Getting files from folder '{0}' with regex: {1}", folderName, regexPattern ?? "NO REGEX FILTER USED");
+            _logger.LogTrace("Getting files from folder '{0}' with regex: {1}", folderName, regexPattern ?? "NO REGEX FILTER USED");
 
             await foreach (var blob in Container.GetBlobsByHierarchyAsync(prefix: folderName))
             {
                 if (blob.IsBlob)
                 {
 
-                    _logger.LogInformation("Checking blob for folder: {0}", blob.Blob.Name);
+                    _logger.LogTrace("Checking blob for folder: {0}", blob.Blob.Name);
 
                     if (!blob.Blob.Name.Contains($"{folderName}/"))
                     {
@@ -235,7 +235,7 @@ namespace AXERP.API.BlobHelper.Managers
                     }
                     if (!string.IsNullOrWhiteSpace(regexPattern))
                     {
-                        _logger.LogInformation("Checking blob for regex: {0}", blob.Blob.Name);
+                        _logger.LogTrace("Checking blob for regex: {0}", blob.Blob.Name);
 
                         var matches = Regex.Matches(blob.Blob.Name, regexPattern, RegexOptions.IgnoreCase);
                         if (matches.Count == 0)
@@ -244,7 +244,7 @@ namespace AXERP.API.BlobHelper.Managers
                         }
                         else
                         {
-                            _logger.LogInformation("Matching blob found: {0}", blob.Blob.Name);
+                            _logger.LogTrace("Matching blob found: {0}", blob.Blob.Name);
 
                             result.Add(new GetBlobFilesItem
                             {
@@ -256,7 +256,7 @@ namespace AXERP.API.BlobHelper.Managers
                     }
                     else
                     {
-                        _logger.LogInformation("Blob found: {0}", blob.Blob.Name);
+                        _logger.LogTrace("Blob found: {0}", blob.Blob.Name);
 
                         result.Add(new GetBlobFilesItem
                         {
@@ -273,12 +273,12 @@ namespace AXERP.API.BlobHelper.Managers
 
         public async Task MoveFile(BlobHierarchyItem blob, string destinationName, string destinationFolder)
         {
-            _logger.LogInformation("Moving blob file '{blob_name}' to folder '{dst}' with name '{name}'", blob.Blob.Name, destinationFolder, destinationName);
+            _logger.LogTrace("Moving blob file '{blob_name}' to folder '{dst}' with name '{name}'", blob.Blob.Name, destinationFolder, destinationName);
 
             var sourceBlob = Container.GetBlobClient(blob.Blob.Name);
             var destinationBlob = Container.GetBlobClient($"{destinationFolder}/{destinationName}");
 
-            _logger.LogInformation("Copying between folders...");
+            _logger.LogTrace("Copying between folders...");
 
             var copyResponse = await destinationBlob.StartCopyFromUriAsync(sourceBlob.Uri);
 
@@ -287,7 +287,7 @@ namespace AXERP.API.BlobHelper.Managers
                 throw new Exception(copyResponse.GetRawResponse().ReasonPhrase);
             }
 
-            _logger.LogInformation("Deleting from original folder...");
+            _logger.LogTrace("Deleting from original folder...");
 
             var deleteResponse = await sourceBlob.DeleteAsync();
 
@@ -296,7 +296,7 @@ namespace AXERP.API.BlobHelper.Managers
                 throw new Exception(errorMessage);
             }
 
-            _logger.LogInformation("Blob successfully moved to other folder!");
+            _logger.LogTrace("Blob successfully moved to other folder!");
         }
     }
 }

@@ -28,7 +28,15 @@ namespace AXERP.API.Business.Commands
 
         public void LogStatistics(ProcessBlobFilesResponse result)
         {
-            if (result.Errors.Count == 0)
+            if (result.Errors.Count == 0 && result.Warnings.Count == 0 && result.Processed.Count == 0)
+            {
+                _logger.LogInformation("There are no blob files to process.");
+            }
+            else if (result.Errors.Count == 0 && result.Warnings.Count > 0 && result.Processed.Count == 0)
+            {
+                _logger.LogInformation("There were no processable blob files.");
+            }
+            else if (result.Errors.Count == 0)
             {
                 _logger.LogInformation("Success! Process BL files statistics: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(result));
             }
@@ -60,13 +68,12 @@ namespace AXERP.API.Business.Commands
             var response = new ProcessBlobFilesResponse
             {
                 Processed = new List<string>(),
-                Errors = new List<string>()
+                Errors = new List<string>(),
+                Warnings = new List<string>()
             };
 
             if (data.Data.Count == 0)
             {
-                _logger.LogInformation("There are no blob files to process.");
-
                 return response;
             }
 
@@ -116,16 +123,16 @@ namespace AXERP.API.Business.Commands
                                 if (referenced != null && !string.IsNullOrWhiteSpace(referenced.FileName))
                                 {
                                     var msg = $"Blob file '{fileName}' was already processed at {referenced.ProcessedAt}.";
-                                    _logger.LogInformation(msg);
-                                    response.Errors.Add(msg);
+                                    _logger.LogWarning(msg);
+                                    response.Warnings.Add(msg);
                                     continue;
                                 }
 
                                 if (referenced == null)
                                 {
                                     var msg = $"No 'Reference' found with value: {referenceName}";
-                                    _logger.LogInformation(msg);
-                                    response.Errors.Add(msg);
+                                    _logger.LogWarning(msg);
+                                    response.Warnings.Add(msg);
                                     continue;
                                 }
 
@@ -155,7 +162,7 @@ namespace AXERP.API.Business.Commands
 
                                 _logger.LogInformation("Matching transactions updated.");
 
-                                await containerHelper.MoveFile(item.BlobItem, fileName, request.BlobStorageProcessedFolder);
+                                //await containerHelper.MoveFile(item.BlobItem, fileName, request.BlobStorageProcessedFolder);
 
                                 processed.Add(blob_name);
                             }

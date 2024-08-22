@@ -97,7 +97,7 @@ var host = new HostBuilder()
                 UseSqlBulkCopy = true
             }, columnOptions: colOpts)
             //.Filter.ByIncludingOnly(x => x.Properties["SourceContext"].ToString().StartsWith("AXERP.API"))
-            .Filter.ByIncludingOnly(x => x.MessageTemplate.Text.Contains("ProcessId"))
+            .Filter.ByIncludingOnly(x => x.MessageTemplate.Text.Contains("ProcessId") && x.Level != LogEventLevel.Verbose)
             .CreateLogger();
 
         logging.AddSerilog(Log.Logger, true);
