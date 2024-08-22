@@ -55,7 +55,10 @@ namespace AXERP.API.Functions.Blobs
                 SetLoggerProcessData(UserName);
 
                 _listBlobFilesQuery.SetLoggerProcessData(UserName, id: _logger.ProcessId);
-                var result = await _listBlobFilesQuery.Execute();
+                var result = await _listBlobFilesQuery.Execute(new Domain.ServiceContracts.Requests.ListBlobFilesQueryRequest
+                {
+                    ExcludeFolders = new List<string> { EnvironmentHelper.TryGetParameter("BlobStorageProcessedFolder") }
+                });
 
                 if (result.IsSuccess)
                 {

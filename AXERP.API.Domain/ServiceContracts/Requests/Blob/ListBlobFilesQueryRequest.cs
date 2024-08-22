@@ -7,5 +7,8 @@ namespace AXERP.API.Domain.ServiceContracts.Requests
     {
         [DataMember]
         public string FolderName { get; set; }
+
+        [DataMember]
+        public List<string> ExcludeFolders { get; set; }
     }
 }

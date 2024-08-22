@@ -48,7 +48,7 @@ namespace AXERP.API.BlobHelper.Managers
             return false;
         }
 
-        public async Task<List<BlobFile>> ListFiles(string? folderNameFilter = null)
+        public async Task<List<BlobFile>> ListFiles(string? folderNameFilter = null, List<string>? excludeFolders = null)
         {
             var result = new List<BlobFile>();
 
@@ -59,14 +59,23 @@ namespace AXERP.API.BlobHelper.Managers
                 _logger.LogInformation("Filter by folder name: {0}", folderNameFilter);
             }
 
+            var _excludeFolders = excludeFolders ?? new List<string>();
+            if (excludeFolders != null && excludeFolders.Count > 0)
+            {
+                _logger.LogInformation("Excluding folders: {0}", string.Join(", ", _excludeFolders));
+            }
+
             await foreach (var blob in Container.GetBlobsByHierarchyAsync())
             {
                 if (blob.IsBlob)
                 {
-
-                    _logger.LogInformation("Blob: {0}", blob.Blob.Name);
-
                     var path = blob.Blob.Name;
+                    if (_excludeFolders.Any(x => path.Contains(x + "/")))
+                    {
+                        continue;
+                    }
+
+                    _logger.LogInformation("Blob: {0}", path);
 
                     var fileName = string.Empty;
                     var folderName = string.Empty;
