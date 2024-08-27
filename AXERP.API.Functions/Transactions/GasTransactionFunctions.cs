@@ -1,16 +1,18 @@
 using AutoMapper;
 using AXERP.API.Business.Commands;
+using AXERP.API.Business.Queries;
 using AXERP.API.Business.SheetProcessors;
 using AXERP.API.Domain;
 using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.ServiceContracts.Requests;
+using AXERP.API.Domain.ServiceContracts.Requests.Transactions;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.Functions.Base;
 using AXERP.API.GoogleHelper.Managers;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
-using AXERP.API.Persistence.Queries;
+using AXERP.API.Persistence.Utils;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -28,6 +30,8 @@ namespace AXERP.API.Functions.Transactions
         private readonly UnitOfWorkFactory _unitOfWorkFactory;
         private readonly InsertTransactionsCommand _insertTransactionsCommand;
         private readonly DeleteTransactionsCommand _deleteTransactionsCommand;
+        private readonly GetGasTransactionCsvQuery _getGasTransactionCsvQuery;
+        private readonly GetPagedGasTransactionsQuery _getPagedGasTransactionsQuery;
         private readonly IMapper _mapper;
 
         public GasTransactionFunctions(
@@ -36,6 +40,8 @@ namespace AXERP.API.Functions.Transactions
             UnitOfWorkFactory unitOfWorkFactory,
             InsertTransactionsCommand insertTransactionsCommand,
             DeleteTransactionsCommand deleteTransactionsCommand,
+            GetGasTransactionCsvQuery getGasTransactionCsvQuery,
+            GetPagedGasTransactionsQuery getPagedGasTransactionsQuery,
             IMapper mapper) : base(loggerFactory)
         {
             _gasTransactionSheetProcessor = gasTransactionSheetProcessor;
@@ -43,6 +49,8 @@ namespace AXERP.API.Functions.Transactions
             _mapper = mapper;
             _insertTransactionsCommand = insertTransactionsCommand;
             _deleteTransactionsCommand = deleteTransactionsCommand;
+            _getGasTransactionCsvQuery = getGasTransactionCsvQuery;
+            _getPagedGasTransactionsQuery = getPagedGasTransactionsQuery;
         }
 
         [Function(nameof(ImportGasTransactions))]
@@ -153,8 +161,6 @@ namespace AXERP.API.Functions.Transactions
 
         [Function(nameof(QueryGasTransactions))]
         [OpenApiOperation(operationId: nameof(QueryGasTransactions), tags: new[] { "gas-transactions" })]
-        //[OpenApiParameter(name: "UserName", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "User calling the function")]
-        [OpenApiParameter(name: "Search", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Search in all columns, type Column = Search for specific search, eg. DeliveryID = 5")]
         [OpenApiParameter(name: "SearchOnlyInSelectedColumns", In = ParameterLocation.Query, Required = false, Type = typeof(bool), Description = "Search only in columns provided in the Columns parameter - ignored if Search is written for specific column")]
         [OpenApiParameter(name: "Columns", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "List of columns, separated by ',' character, all columns will be used by default")]
         [OpenApiParameter(name: "OrderBy", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Order by column, default is DeliveryID")]
@@ -223,5 +229,138 @@ namespace AXERP.API.Functions.Transactions
             }
         }
 
+        [Function(nameof(QueryPagedGasTransactions))]
+        [OpenApiOperation(operationId: nameof(QueryPagedGasTransactions), tags: new[] { "gas-transactions" })]
+        [OpenApiParameter(name: "FromDate", In = ParameterLocation.Query, Required = false, Type = typeof(DateTime))]
+        [OpenApiParameter(name: "ToDate", In = ParameterLocation.Query, Required = false, Type = typeof(DateTime))]
+        [OpenApiParameter(name: "SearchOnlyInSelectedColumns", In = ParameterLocation.Query, Required = false, Type = typeof(bool), Description = "Search only in columns provided in the Columns parameter - ignored if Search is written for specific column")]
+        [OpenApiParameter(name: "OrderBy", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Order by column, default is DeliveryID")]
+        [OpenApiParameter(name: "OrderByDesc", In = ParameterLocation.Query, Required = false, Type = typeof(bool), Description = "Descending order, false by default")]
+        [OpenApiParameter(name: "PageSize", In = ParameterLocation.Query, Required = false, Type = typeof(int), Description = "Returned row count, default is 5")]
+        [OpenApiParameter(name: "Page", In = ParameterLocation.Query, Required = false, Type = typeof(int), Description = "Page index, starting from 1 (0 will be interpreted as 1), default is 1")]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
+        public IActionResult QueryPagedGasTransactions(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
+        {
+            SetLoggerProcessData(base.UserName);
+
+            _logger.LogInformation("Querying GasTransactions...");
+            _logger.LogInformation("Checking parameters...");
+
+            var page = int.Parse(req.Query["Page"] ?? "0");
+            if (page < 0)
+            {
+                page = 0;
+            }
+
+            var pageSize = int.Parse(req.Query["PageSize"] ?? "5");
+            if (pageSize <= 0)
+            {
+                pageSize = 5;
+            }
+
+            var isFrom = DateTime.TryParse(req.Query["FromDate"], out DateTime FromDate);
+            var isTo = DateTime.TryParse(req.Query["ToDate"], out DateTime ToDate);
+
+            try
+            {
+                using (var uow = _unitOfWorkFactory.Create())
+                {
+                    var request = new GetPagedGasTransactionsQueryRequest
+                    {
+                        OrderBy = req.Query["OrderBy"] ?? "DeliveryID",
+                        OrderDesc = bool.Parse(req.Query["OrderByDesc"] ?? "false"),
+                        Page = page,
+                        PageSize = pageSize,
+                        FromDate = isFrom ? FromDate : default,
+                        ToDate = isTo ? ToDate : default
+                    };
+
+                    _logger.LogInformation("Executing query with request: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(request));
+
+                    var paged = _getPagedGasTransactionsQuery.Execute(request);
+
+                    var result = new GenericPagedQueryResponse<Delivery>
+                    {
+                        Columns = typeof(Delivery).GetColumnDatas(),
+                        Data = paged,
+                        PageIndex = page,
+                        PageSize = pageSize,
+                        TotalCount = paged.TotalCount,
+                        HttpStatusCode = HttpStatusCode.OK
+                    };
+
+                    _logger.LogInformation("Query finished. Total rows in DB: {0}, queried rows: {1}", result.TotalCount, result.DataCount);
+
+                    return new OkObjectResult(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while querying GasTransactions");
+                var res = new ObjectResult(new GenericPagedQueryResponse<dynamic>
+                {
+                    HttpStatusCode = HttpStatusCode.InternalServerError,
+                    RequestError = ex.Message
+                })
+                {
+                    StatusCode = 500
+                };
+                return res;
+            }
+        }
+
+        [Function(nameof(GasTransactionCsv))]
+        [OpenApiOperation(operationId: nameof(GasTransactionCsv), tags: new[] { "gas-transactions" })]
+        [OpenApiParameter(name: "FromDate", In = ParameterLocation.Query, Required = false, Type = typeof(DateTime))]
+        [OpenApiParameter(name: "ToDate", In = ParameterLocation.Query, Required = false, Type = typeof(DateTime))]
+        [OpenApiParameter(name: "OrderBy", In = ParameterLocation.Query, Required = false, Type = typeof(string))]
+        [OpenApiParameter(name: "OrderByDesc", In = ParameterLocation.Query, Required = false, Type = typeof(bool))]
+        [OpenApiParameter(name: "Columns", In = ParameterLocation.Query, Required = false, Type = typeof(string))]
+        public HttpResponseData GasTransactionCsv(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
+        {
+            SetLoggerProcessData(base.UserName);
+
+            _logger.LogInformation("Exporting GasTransactions to CSV...");
+            _logger.LogInformation("Checking parameters...");
+
+            var isFrom = DateTime.TryParse(req.Query["FromDate"], out DateTime FromDate);
+            var isTo = DateTime.TryParse(req.Query["ToDate"], out DateTime ToDate);
+            if (isTo)
+            {
+                ToDate = ToDate.Date.AddDays(1).AddSeconds(-1);
+            }
+            var orderBy = req.Query["OrderBy"] ?? "DeliveryID";
+            var orderDesc = bool.Parse(req.Query["OrderByDesc"] ?? "false");
+
+            var cols = req.Query["Columns"]?.ToString()?.Split(",", StringSplitOptions.TrimEntries)?.ToList() ?? new List<string>();
+
+            try
+            {
+                var bytes = _getGasTransactionCsvQuery.Execute(new Domain.ServiceContracts.Requests.Transactions.GasTransactionCsvRequest
+                {
+                    FromDate = FromDate,
+                    ToDate = ToDate,
+                    Order = orderBy,
+                    OrderDesc = orderDesc,
+                    Columns = cols
+                });
+
+                _logger.LogInformation("CSV export finished.");
+
+                var response = req.CreateResponse(HttpStatusCode.OK);
+                response.WriteBytes(bytes);
+                response.Headers.Add("Content-Type", "text/csv");
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while exporting GasTransactions CSV");
+                var response = req.CreateResponse(HttpStatusCode.InternalServerError);
+                response.WriteString(ex.Message);
+                return response;
+            }
+        }
     }
 }

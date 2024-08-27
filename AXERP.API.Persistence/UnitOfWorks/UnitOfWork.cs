@@ -71,6 +71,19 @@ namespace AXERP.API.Persistence.UnitOfWorks
             }
         }
 
+        private IRepository<Delivery, string> _deliveryRepository;
+        public IRepository<Delivery, string> DeliveryRepository
+        {
+            get
+            {
+                if (_deliveryRepository == null)
+                {
+                    return new GenericEntityRepository<Delivery, string>(this);
+                }
+                return _deliveryRepository;
+            }
+        }
+
         private IRepository<Interface, int> _interfaceRepository;
         public IRepository<Interface, int> InterfaceRepository
         {

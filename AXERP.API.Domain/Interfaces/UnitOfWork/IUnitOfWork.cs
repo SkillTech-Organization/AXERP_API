@@ -15,6 +15,8 @@ namespace AXERP.API.Domain.Interfaces.UnitOfWork
 
         IRepository<Interface, int> InterfaceRepository { get; }
 
+        IRepository<Delivery, string> DeliveryRepository { get; }
+
         IRepository<Entity, int> EntityRepository { get; }
 
         IRepository<TruckCompany, int> TruckCompanyRepository { get; }
