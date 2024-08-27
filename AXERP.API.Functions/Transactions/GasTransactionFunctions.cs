@@ -4,7 +4,6 @@ using AXERP.API.Business.Queries;
 using AXERP.API.Business.SheetProcessors;
 using AXERP.API.Domain;
 using AXERP.API.Domain.Entities;
-using AXERP.API.Domain.Models;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Requests.Transactions;
 using AXERP.API.Domain.ServiceContracts.Responses;
@@ -13,7 +12,6 @@ using AXERP.API.GoogleHelper.Managers;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
-using AXERP.API.Persistence.Queries;
 using AXERP.API.Persistence.Utils;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
@@ -163,9 +161,6 @@ namespace AXERP.API.Functions.Transactions
 
         [Function(nameof(QueryGasTransactions))]
         [OpenApiOperation(operationId: nameof(QueryGasTransactions), tags: new[] { "gas-transactions" })]
-        //[OpenApiParameter(name: "UserName", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "User calling the function")]
-        //[OpenApiParameter(name: "FromDate", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Search in all columns, type Column = Search for specific search, eg. DeliveryID = 5")]
-        //[OpenApiParameter(name: "ToDate", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Search in all columns, type Column = Search for specific search, eg. DeliveryID = 5")]
         [OpenApiParameter(name: "SearchOnlyInSelectedColumns", In = ParameterLocation.Query, Required = false, Type = typeof(bool), Description = "Search only in columns provided in the Columns parameter - ignored if Search is written for specific column")]
         [OpenApiParameter(name: "Columns", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "List of columns, separated by ',' character, all columns will be used by default")]
         [OpenApiParameter(name: "OrderBy", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Order by column, default is DeliveryID")]
@@ -322,7 +317,6 @@ namespace AXERP.API.Functions.Transactions
         [OpenApiParameter(name: "OrderBy", In = ParameterLocation.Query, Required = false, Type = typeof(string))]
         [OpenApiParameter(name: "OrderByDesc", In = ParameterLocation.Query, Required = false, Type = typeof(bool))]
         [OpenApiParameter(name: "Columns", In = ParameterLocation.Query, Required = false, Type = typeof(string))]
-        //[OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/octet", bodyType: typeof(FileContentResult), Description = "The OK response")]
         public HttpResponseData GasTransactionCsv(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
@@ -355,16 +349,6 @@ namespace AXERP.API.Functions.Transactions
 
                 _logger.LogInformation("CSV export finished.");
 
-                //return new FileStreamResult(new MemoryStream(bytes), "application/octet-stream")
-                //{
-                //    FileDownloadName = "gastransactions.csv"
-                //};
-
-                //return new FileContentResult(bytes, "application/octet-stream")
-                //{
-                //    FileDownloadName = "gastransactions.csv"
-                //};
-
                 var response = req.CreateResponse(HttpStatusCode.OK);
                 response.WriteBytes(bytes);
                 response.Headers.Add("Content-Type", "text/csv");
@@ -376,15 +360,6 @@ namespace AXERP.API.Functions.Transactions
                 var response = req.CreateResponse(HttpStatusCode.InternalServerError);
                 response.WriteString(ex.Message);
                 return response;
-                //var res = new BadRequestObjectResult(new BaseResponse
-                //{
-                //    HttpStatusCode = HttpStatusCode.InternalServerError,
-                //    RequestError = ex.Message
-                //})
-                //{
-                //    StatusCode = 500
-                //};
-                //return res;
             }
         }
     }

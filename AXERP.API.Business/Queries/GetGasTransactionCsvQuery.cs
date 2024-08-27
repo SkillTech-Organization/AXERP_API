@@ -92,11 +92,6 @@ namespace AXERP.API.Business.Queries
                 }
 
                 return Encoding.Default.GetBytes(strBuilder.ToString());
-
-                //byte[] byteArray = Encoding.Default.GetBytes(strBuilder.ToString());
-                //var stream = new MemoryStream(byteArray);
-
-                //return stream;
             }
         }
 
