@@ -3,6 +3,7 @@ using AXERP.API.Business.Commands;
 using AXERP.API.Business.SheetProcessors;
 using AXERP.API.Domain;
 using AXERP.API.Domain.Entities;
+using AXERP.API.Domain.Models;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.Functions.Base;
@@ -11,6 +12,7 @@ using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
 using AXERP.API.Persistence.Queries;
+using AXERP.API.Persistence.Utils;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -154,7 +156,8 @@ namespace AXERP.API.Functions.Transactions
         [Function(nameof(QueryGasTransactions))]
         [OpenApiOperation(operationId: nameof(QueryGasTransactions), tags: new[] { "gas-transactions" })]
         //[OpenApiParameter(name: "UserName", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "User calling the function")]
-        [OpenApiParameter(name: "Search", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Search in all columns, type Column = Search for specific search, eg. DeliveryID = 5")]
+        //[OpenApiParameter(name: "FromDate", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Search in all columns, type Column = Search for specific search, eg. DeliveryID = 5")]
+        //[OpenApiParameter(name: "ToDate", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Search in all columns, type Column = Search for specific search, eg. DeliveryID = 5")]
         [OpenApiParameter(name: "SearchOnlyInSelectedColumns", In = ParameterLocation.Query, Required = false, Type = typeof(bool), Description = "Search only in columns provided in the Columns parameter - ignored if Search is written for specific column")]
         [OpenApiParameter(name: "Columns", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "List of columns, separated by ',' character, all columns will be used by default")]
         [OpenApiParameter(name: "OrderBy", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Order by column, default is DeliveryID")]
@@ -202,6 +205,93 @@ namespace AXERP.API.Functions.Transactions
                     _logger.LogInformation("Executing query with request: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(request));
 
                     var result = uow.GenericRepository.PagedQuery<Delivery>(request);
+
+                    _logger.LogInformation("Query finished. Total rows in DB: {0}, queried rows: {1}", result.TotalCount, result.DataCount);
+
+                    return new OkObjectResult(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while querying GasTransactions");
+                var res = new ObjectResult(new GenericPagedQueryResponse<dynamic>
+                {
+                    HttpStatusCode = HttpStatusCode.InternalServerError,
+                    RequestError = ex.Message
+                })
+                {
+                    StatusCode = 500
+                };
+                return res;
+            }
+        }
+
+        [Function(nameof(QueryPagedGasTransactions))]
+        [OpenApiOperation(operationId: nameof(QueryPagedGasTransactions), tags: new[] { "gas-transactions" })]
+        [OpenApiParameter(name: "FromDate", In = ParameterLocation.Query, Required = false, Type = typeof(DateTime))]
+        [OpenApiParameter(name: "ToDate", In = ParameterLocation.Query, Required = false, Type = typeof(DateTime))]
+        [OpenApiParameter(name: "SearchOnlyInSelectedColumns", In = ParameterLocation.Query, Required = false, Type = typeof(bool), Description = "Search only in columns provided in the Columns parameter - ignored if Search is written for specific column")]
+        //[OpenApiParameter(name: "Columns", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "List of columns, separated by ',' character, all columns will be used by default")]
+        [OpenApiParameter(name: "OrderBy", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Order by column, default is DeliveryID")]
+        [OpenApiParameter(name: "OrderByDesc", In = ParameterLocation.Query, Required = false, Type = typeof(bool), Description = "Descending order, false by default")]
+        [OpenApiParameter(name: "PageSize", In = ParameterLocation.Query, Required = false, Type = typeof(int), Description = "Returned row count, default is 5")]
+        [OpenApiParameter(name: "Page", In = ParameterLocation.Query, Required = false, Type = typeof(int), Description = "Page index, starting from 1 (0 will be interpreted as 1), default is 1")]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
+        public IActionResult QueryPagedGasTransactions(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
+        {
+            SetLoggerProcessData(base.UserName);
+
+            _logger.LogInformation("Querying GasTransactions...");
+            _logger.LogInformation("Checking parameters...");
+
+            var page = int.Parse(req.Query["Page"] ?? "0");
+            if (page < 0)
+            {
+                page = 0;
+            }
+
+            var pageSize = int.Parse(req.Query["PageSize"] ?? "5");
+            if (pageSize <= 0)
+            {
+                pageSize = 5;
+            }
+
+            var isFrom = DateTime.TryParse(req.Query["FromDate"], out DateTime FromDate);
+            var isTo = DateTime.TryParse(req.Query["ToDate"], out DateTime ToDate);
+
+            try
+            {
+                using (var uow = _unitOfWorkFactory.Create())
+                {
+                    var request = new PagedQueryRequest
+                    {
+                        OrderBy = req.Query["OrderBy"] ?? "DeliveryID",
+                        OrderDesc = bool.Parse(req.Query["OrderByDesc"] ?? "false"),
+                        Page = page,
+                        PageSize = pageSize,
+                        Search = req.Query["Search"],
+                        SearchOnlyInSelectedColumns = bool.Parse(req.Query["SearchOnlyInSelectedColumns"] ?? "false")
+                    };
+
+                    var deliveries = uow.DeliveryRepository.GetAll();
+                    deliveries.Where(x => !x.DateDelivered.HasValue ||
+                                          ((!isFrom || x.DateDelivered >= FromDate) &&
+                                          (!isTo || x.DateDelivered <= ToDate)));
+
+                    var paged = Domain.Models.PagedList<Delivery>.ToPagedList(deliveries, page, pageSize, 0);
+
+                    _logger.LogInformation("Executing query with request: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(request));
+
+                    var result = new GenericPagedQueryResponse<Delivery>
+                    {
+                        Columns = typeof(Delivery).GetColumnDatas(),
+                        Data = paged,
+                        PageIndex = page,
+                        PageSize = pageSize,
+                        TotalCount = deliveries.Count(),
+                        HttpStatusCode = HttpStatusCode.OK
+                    };
 
                     _logger.LogInformation("Query finished. Total rows in DB: {0}, queried rows: {1}", result.TotalCount, result.DataCount);
 
