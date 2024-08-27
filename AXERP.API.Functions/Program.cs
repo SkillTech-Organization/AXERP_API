@@ -119,6 +119,8 @@ var host = new HostBuilder()
         services.AddTransient<UploadBlobFilesCommand>();
         services.AddTransient<UploadBlobFileCommand>();
         services.AddTransient<BlobManagerFactory>();
+        services.AddTransient<GetGasTransactionCsvQuery>();
+        services.AddTransient<GetPagedGasTransactionsQuery>();
     })
     // Source: https://learn.microsoft.com/en-us/azure/azure-functions/dotnet-isolated-process-guide?tabs=windows#application-insights
     // Quote: "However, by default, the Application Insights SDK adds a logging filter that instructs the logger to capture only warnings and more severe logs. If you want to disable this behavior, remove the filter rule as part of service configuration"
