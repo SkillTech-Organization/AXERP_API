@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
+using Microsoft.OpenApi.Models;
 using System.Net;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using FromBodyAttribute = Microsoft.Azure.Functions.Worker.Http.FromBodyAttribute;
@@ -27,6 +28,7 @@ namespace AXERP.API.Functions.Blobs
         private readonly DeleteBlobFilesCommand _deleteBlobFilesCommand;
         private readonly UploadBlobFilesCommand _uploadBlobFilesCommand;
         private readonly UploadBlobFileCommand _uploadBlobFileCommand;
+        private readonly DownLoadBlobFileCommand _getBlobFileCommand;
 
         public const string PATH_PARAM_UPLOAD = "path";
 
@@ -36,13 +38,15 @@ namespace AXERP.API.Functions.Blobs
             DeleteBlobFilesCommand deleteBlobFilesCommand,
             UploadBlobFilesCommand uploadBlobFilesCommand,
             UploadBlobFileCommand uploadBlobFileCommand,
-            UpdateReferencesByBlobFilesCommand updateReferencesByBlobFilesCommand) : base(loggerFactory)
+            UpdateReferencesByBlobFilesCommand updateReferencesByBlobFilesCommand,
+            DownLoadBlobFileCommand getBlobFileCommand) : base(loggerFactory)
         {
             _updateReferencesByBlobFilesCommand = updateReferencesByBlobFilesCommand;
             _listBlobFilesQuery = listBlobFilesQuery;
             _deleteBlobFilesCommand = deleteBlobFilesCommand;
             _uploadBlobFilesCommand = uploadBlobFilesCommand;
             _uploadBlobFileCommand = uploadBlobFileCommand;
+            _getBlobFileCommand = getBlobFileCommand;
         }
 
         [Function(nameof(ListBlobFiles))]
@@ -295,6 +299,65 @@ namespace AXERP.API.Functions.Blobs
                 };
             }
             return bl;
+        }
+
+        [Function(nameof(DownloadBlFile))]
+        [OpenApiOperation(operationId: nameof(DownloadBlFile), tags: new[] { "blob" }, Description = "Downloads a blob file by name. Only processed blob files can be downloaded.")]
+        [OpenApiParameter(name: "FileName", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "Name of the processed BL file.")]
+        public async Task<HttpResponseData> DownloadBlFile(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
+        {
+            SetLoggerProcessData(base.UserName);
+
+            _logger.LogInformation("Downloading BL file...");
+            _logger.LogInformation("Checking parameters...");
+
+            var fileName = req.Query["FileName"] ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                _logger.LogError("Parameter FileName is required!");
+                var response = req.CreateResponse(HttpStatusCode.InternalServerError);
+                response.WriteString("Parameter FileName is required!");
+                return response;
+            }
+
+            _logger.LogInformation("FileName: {0}", fileName);
+
+            try
+            {
+                var resp = await _getBlobFileCommand.Execute(new Domain.ServiceContracts.Requests.Blob.DownloadBlobFileRequest
+                {
+                    FilePath = $"{EnvironmentHelper.TryGetParameter("BlobStorageProcessedFolder")}/{fileName}"
+                });
+
+                if (resp.Errors.Any())
+                {
+                    var msg = string.Join(", ", resp.Errors);
+
+                    _logger.LogError("Blob file download failed. {0}", msg);
+
+                    var response = req.CreateResponse(HttpStatusCode.InternalServerError);
+                    response.WriteString(msg);
+                    return response;
+                }
+                else
+                {
+                    _logger.LogInformation("Blob file download finished.");
+
+                    var response = req.CreateResponse(HttpStatusCode.OK);
+                    response.WriteBytes(resp.FileContent);
+                    response.Headers.Add("Content-Type", "application/octet-stream");
+                    return response;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while downloading BL file");
+                var response = req.CreateResponse(HttpStatusCode.InternalServerError);
+                response.WriteString("Error while downloading BL file: " + ex.Message);
+                return response;
+            }
         }
     }
 }

@@ -48,6 +48,25 @@ namespace AXERP.API.BlobHelper.Managers
             return false;
         }
 
+        private bool CheckError(Response<BlobDownloadResult>? response, out string errorMessage)
+        {
+            var resp = response?.GetRawResponse();
+            errorMessage = "Unknown Azure Blob Error";
+            if (response == null || resp == null)
+            {
+                return true;
+            }
+            else if (resp.IsError)
+            {
+                if (!string.IsNullOrWhiteSpace(resp.ReasonPhrase))
+                {
+                    errorMessage = resp.ReasonPhrase;
+                }
+                return true;
+            }
+            return false;
+        }
+
         public async Task<List<BlobFile>> ListFiles(string? folderNameFilter = null, List<string>? excludeFolders = null)
         {
             var result = new List<BlobFile>();
@@ -101,6 +120,40 @@ namespace AXERP.API.BlobHelper.Managers
             }
 
             return result;
+        }
+
+        public async Task<DownloadBlobFileResponse> DownloadFile(string path)
+        {
+            var response = new DownloadBlobFileResponse
+            {
+                Errors = new List<string>()
+            };
+
+            var sourceBlob = Container.GetBlobClient(path);
+            
+            var doExist = await sourceBlob.ExistsAsync();
+            if (!doExist.Value)
+            {
+                var errorMsg = $"Could not download blob file. Blob does not exist!";
+                response.Errors.Add(errorMsg);
+                _logger.LogError(errorMsg);
+                return response;
+            }
+
+            var downloadResponse = await sourceBlob.DownloadContentAsync();
+
+            if (CheckError(downloadResponse, out string msg))
+            {
+                var errorMsg = $"Could not download blob file. Error: {msg}";
+                response.Errors.Add(errorMsg);
+                _logger.LogError(errorMsg);
+                return response;
+            }
+
+            response.FileContent = downloadResponse.Value.Content.ToArray();
+            response.FileName = path.Contains("/") ? path.Split("/").Last() : path;
+
+            return response;
         }
 
         public async Task<DeleteBlobfilesResponse> DeleteFiles(List<BlobFile> files)

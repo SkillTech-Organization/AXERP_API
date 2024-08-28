@@ -35,12 +35,12 @@ namespace AXERP.API.Business.Queries
 
                 if (request.FromDate.HasValue)
                 {
-                    builder.Where($"{nameof(Delivery.DateDelivered)} >= @dateFrom", new { dateFrom = request.FromDate.Value });
+                    builder.Where($"{nameof(Delivery.DateLoadedEnd)} >= @dateFrom", new { dateFrom = request.FromDate.Value });
                 }
 
                 if (request.ToDate.HasValue)
                 {
-                    builder.Where($"{nameof(Delivery.DateDelivered)} <= @dateTo", new { dateTo = request.ToDate.Value });
+                    builder.Where($"{nameof(Delivery.DateLoadedEnd)} <= @dateTo", new { dateTo = request.ToDate.Value });
                 }
 
                 var tmp = builder.AddTemplate(
