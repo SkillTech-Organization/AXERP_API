@@ -10,5 +10,8 @@ namespace AXERP.API.Domain.ServiceContracts.Requests.Transactions
 
         [DataMember]
         public DateTime? ToDate { get; set; }
+
+        [DataMember]
+        public string Customer { get; set; }
     }
 }

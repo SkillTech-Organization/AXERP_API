@@ -33,6 +33,11 @@ namespace AXERP.API.Business.Queries
                 builder
                     .OrderBy($"{request.OrderBy} {orderByMode}");
 
+                if (!string.IsNullOrWhiteSpace(request.Customer))
+                {
+                    builder.Where($"{nameof(Delivery.Customer)} = @customer", new { customer = request.Customer });
+                }
+
                 if (request.FromDate.HasValue)
                 {
                     builder.Where($"{nameof(Delivery.DateDelivered)} >= @dateFrom", new { dateFrom = request.FromDate.Value });

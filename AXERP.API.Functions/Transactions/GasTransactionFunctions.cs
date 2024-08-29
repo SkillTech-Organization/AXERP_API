@@ -231,6 +231,7 @@ namespace AXERP.API.Functions.Transactions
 
         [Function(nameof(QueryPagedGasTransactions))]
         [OpenApiOperation(operationId: nameof(QueryPagedGasTransactions), tags: new[] { "gas-transactions" })]
+        [OpenApiParameter(name: "Customer", In = ParameterLocation.Query, Required = false, Type = typeof(string))]
         [OpenApiParameter(name: "FromDate", In = ParameterLocation.Query, Required = false, Type = typeof(DateTime))]
         [OpenApiParameter(name: "ToDate", In = ParameterLocation.Query, Required = false, Type = typeof(DateTime))]
         [OpenApiParameter(name: "SearchOnlyInSelectedColumns", In = ParameterLocation.Query, Required = false, Type = typeof(bool), Description = "Search only in columns provided in the Columns parameter - ignored if Search is written for specific column")]
@@ -246,6 +247,8 @@ namespace AXERP.API.Functions.Transactions
 
             _logger.LogInformation("Querying GasTransactions...");
             _logger.LogInformation("Checking parameters...");
+
+            var customerId = req.Query["Customer"];
 
             var page = int.Parse(req.Query["Page"] ?? "0");
             if (page < 0)
@@ -273,7 +276,8 @@ namespace AXERP.API.Functions.Transactions
                         Page = page,
                         PageSize = pageSize,
                         FromDate = isFrom ? FromDate : default,
-                        ToDate = isTo ? ToDate : default
+                        ToDate = isTo ? ToDate : default,
+                        Customer = customerId
                     };
 
                     _logger.LogInformation("Executing query with request: {0}", Newtonsoft.Json.JsonConvert.SerializeObject(request));
