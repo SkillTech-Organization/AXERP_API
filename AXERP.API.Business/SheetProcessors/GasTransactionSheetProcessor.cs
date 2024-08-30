@@ -38,10 +38,19 @@ namespace AXERP.API.Business.SheetProcessors
                 }
             }
 
+            // Filtering range by EOD
+            var eodRowIndex = sheet_rows.FindIndex(row =>
+            {
+                return row.Any(x => x != null && (x.ToString() ?? string.Empty).ToLower().Contains("#end"));
+            });
+            sheet_rows = sheet_rows.GetRange(0, eodRowIndex);
+
+            _logger.LogInformation("EOD marker encountered at line: {0}.", eodRowIndex - 1);
+
             var result = new List<Delivery>();
             var errors = new List<string>();
             var invalidRows = 0;
-            var totalRows = sheet_value_range.Count - 1;
+            var totalRows = sheet_rows.Count - 1;
 
             // Parallel processing
             var dataChunks = sheet_rows.Chunk(100);
