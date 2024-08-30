@@ -8,13 +8,18 @@ using AXERP.API.Persistence.Factories;
 using Newtonsoft.Json;
 using System.Globalization;
 using System.Reflection;
+using System.Reflection.Metadata;
+using System.Text.RegularExpressions;
 
 namespace AXERP.API.Business.SheetProcessors
 {
     [ForSystem("GoogleSheet Processing", LogConstants.FUNCTION_GOOGLE_SYNC)]
-    public class GasTransactionSheetProcessor : BaseSheetProcessors<Delivery, GasTransactionSheetProcessor>
+    public partial class GasTransactionSheetProcessor : BaseSheetProcessors<Delivery, GasTransactionSheetProcessor>
     {
         private readonly UnitOfWorkFactory _uowFactory;
+
+        [GeneratedRegex("(?<id>[0-9]+)(?<suffix>[^0-9]{0,})", RegexOptions.IgnoreCase, "hu-HU")]
+        private static partial Regex DeliveryIdRegex();
 
         public GasTransactionSheetProcessor(AxerpLoggerFactory loggerFactory, UnitOfWorkFactory uowFactory) : base(loggerFactory)
         {
@@ -88,6 +93,12 @@ namespace AXERP.API.Business.SheetProcessors
         private (GenericSheetImportResult<Delivery>, List<string>) _Map(Dictionary<string, int> field_names, IList<IList<object>>? sheet_rows, string culture_code, int startRowIndex)
         {
             var result = new List<Delivery>();
+            void add_transaction(Delivery d, IList<object> row)
+            {
+                d.AXERPHash = row.GenerateHash();
+                result.Add(d);
+            }
+
             var errors = new List<string>();
             var invalidRows = 0;
 
@@ -143,11 +154,27 @@ namespace AXERP.API.Business.SheetProcessors
                         errors.Add($"Missing Delivery ID. Row index: {sheet_row_index}");
                         continue;
                     }
+                    var rawDeliveryId = row[field_idx].ToString()!.Trim();
+                    var matches = DeliveryIdRegex().Matches(rawDeliveryId);
 
-                    gasTransaction.DeliveryID = row[field_idx].ToString()!;
-                    allDeliveryIds.Add(gasTransaction.DeliveryID);
+                    var id = matches[0].Groups["id"].Value.Trim();
+                    var sf = matches[0].Groups["suffix"].Value.Trim();
 
-                    if (result.Any(x => x.DeliveryID == gasTransaction.DeliveryID))
+                    if (int.TryParse(id, out int deliveryId))
+                    {
+                        gasTransaction.DeliveryID = deliveryId;
+                        gasTransaction.DeliveryIDSffx = sf;
+                    }
+                    else
+                    {
+                        invalidRows++;
+                        errors.Add($"Invalid Delivery ID. Row index: {sheet_row_index}");
+                        continue;
+                    }
+
+                    allDeliveryIds.Add($"{gasTransaction.DeliveryID}{gasTransaction.DeliveryIDSffx}");
+
+                    if (result.Any(x => x.DeliveryID == gasTransaction.DeliveryID && x.DeliveryIDSffx == gasTransaction.DeliveryIDSffx))
                     {
                         invalidRows++;
                         errors.Add($"Duplicate Delivery ID: {gasTransaction.DeliveryID}. RowIndex: {sheet_row_index}");
@@ -158,7 +185,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.SalesStatus)];
                     if (row.Count <= field_idx)
                     {
-                        //result.Add(gasTransaction);
+                        //add_transaction(gasTransaction, row);
 
                         invalidRows++;
                         errors.Add($"Missing Sales Status for row with Delivery ID: {gasTransaction.DeliveryID}. Row index: {sheet_row_index}");
@@ -180,7 +207,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.Status)];
                     if (row.Count <= field_idx)
                     {
-                        //result.Add(gasTransaction);
+                        //add_transaction(gasTransaction, row);
 
                         invalidRows++;
                         errors.Add($"Missing Status for row with Delivery ID: {gasTransaction.DeliveryID}. Row index: {sheet_row_index}");
@@ -202,7 +229,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.DateLoadedEnd)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -221,7 +248,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.DateDelivered)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -240,7 +267,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.SalesContractID)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -250,7 +277,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.Terminal)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -260,7 +287,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.QtyLoaded)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -273,7 +300,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.StockDays)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -286,7 +313,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.SlotBookedByAXGTT)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -299,20 +326,17 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.ToDeliveryID)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
-                    if (long.TryParse(row[field_idx]?.ToString(), new CultureInfo(culture_code), out long ToDeliveryID))
-                    {
-                        gasTransaction.ToDeliveryID = ToDeliveryID;
-                    }
+                    gasTransaction.ToDeliveryID = row[field_idx]?.ToString();
 
                     // SpecificDeliveryPoint
                     field_idx = field_names[nameof(gasTransaction.SpecificDeliveryPoint)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -322,7 +346,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.DeliveryPoint)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -332,7 +356,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.Transporter)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -342,7 +366,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.DeliveryUP)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -355,7 +379,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.TransportCharges)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -368,7 +392,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.UnitSlotCharge)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -381,7 +405,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.ServiceCharges)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -394,7 +418,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.UnitStorageCharge)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -407,7 +431,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.StorageCharge)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -420,7 +444,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.OtherCharges)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -433,7 +457,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.Sales)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -446,7 +470,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.CMR)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -465,7 +489,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.BioMWh)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -478,7 +502,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.BillOfLading)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -491,7 +515,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.BioAddendum)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -501,7 +525,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.Comment)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -511,7 +535,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.CustomerNote)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -521,7 +545,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.Customer)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -531,7 +555,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.Reference)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -541,7 +565,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.Reference2)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -551,7 +575,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.Reference3)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -561,7 +585,7 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.TruckLoadingCompanyComment)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
@@ -571,18 +595,15 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.TruckCompany)];
                     if (row.Count <= field_idx)
                     {
-                        result.Add(gasTransaction);
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
                     gasTransaction.TruckCompany = row[field_idx]?.ToString();
 
-                    // AXERP Hash
-                    gasTransaction.AXERPHash = row.GenerateHash();
-
                     // Add to result
 
-                    result.Add(gasTransaction);
+                    add_transaction(gasTransaction, row);
                 }
                 catch (Exception ex)
                 {

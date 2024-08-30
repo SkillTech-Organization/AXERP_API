@@ -4,13 +4,17 @@ using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Base;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
+using System.Text.RegularExpressions;
 
 namespace AXERP.API.Business.Commands
 {
     [ForSystem("SQL Server", LogConstants.FUNCTION_GOOGLE_SYNC)]
-    public class UpdateBillOfLadingCommand : BaseAuditedClass<UpdateBillOfLadingCommand>
+    public partial class UpdateBillOfLadingCommand : BaseAuditedClass<UpdateBillOfLadingCommand>
     {
         private readonly UnitOfWorkFactory _uowFactory;
+
+        [GeneratedRegex("(?<id>[0-9]+)(?<suffix>[^0-9]{0,})", RegexOptions.IgnoreCase, "hu-HU")]
+        private static partial Regex DeliveryIdRegex();
 
         public UpdateBillOfLadingCommand(
             AxerpLoggerFactory axerpLoggerFactory,
@@ -27,7 +31,12 @@ namespace AXERP.API.Business.Commands
             {
                 try
                 {
-                    var delivery = uow.TransactionRepository.GetById(deliveryID);
+                    var matches = DeliveryIdRegex().Matches(deliveryID);
+
+                    var id = int.Parse(matches[0].Groups["id"].Value.Trim());
+                    var sf = matches[0].Groups["suffix"].Value.Trim();
+
+                    var delivery = uow.TransactionRepository.GetById(id, sf);
 
                     if (delivery == null)
                     {

@@ -417,5 +417,33 @@ namespace AXERP.API.Persistence.Utils
 
             return null;
         }
+
+        public static List<string> GetKeyColumnNames(this Type t)
+        {
+            var keys = new List<string>();
+            PropertyInfo[] properties = t.GetProperties();
+
+            foreach (PropertyInfo property in properties)
+            {
+                object[] keyAttributes = property.GetCustomAttributes(typeof(KeyAttribute), true);
+
+                if (keyAttributes != null && keyAttributes.Length > 0)
+                {
+                    object[] columnAttributes = property.GetCustomAttributes(typeof(ColumnAttribute), true);
+
+                    if (columnAttributes != null && columnAttributes.Length > 0)
+                    {
+                        ColumnAttribute columnAttribute = (ColumnAttribute)columnAttributes[0];
+                        keys.Add(columnAttribute.Name);
+                    }
+                    else
+                    {
+                        keys.Add(property.Name);
+                    }
+                }
+            }
+
+            return keys;
+        }
     }
 }

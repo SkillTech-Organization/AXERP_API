@@ -3,18 +3,17 @@ using AXERP.API.Domain.Interfaces.UnitOfWork;
 using AXERP.API.Persistence.Utils;
 using Dapper;
 using Microsoft.Data.SqlClient;
-using System.Data.Common;
 using System.Text;
 
 namespace AXERP.API.Persistence.Repositories
 {
-    public class GenericEntityRepository<RowType, KeyType> : IRepository<RowType, KeyType> where RowType : class
+    public class GenericTwoPartKeyEntityRepository<RowType, KeyTypeA, KeyTypeB> : ITwoPartKeyRepository<RowType, KeyTypeA, KeyTypeB> where RowType : class
     {
         private readonly IConnectionProvider _connectionProvider;
         private SqlConnection _connection => _connectionProvider.Connection;
         private SqlTransaction? _sqlTransaction => _connectionProvider.Transaction;
 
-        public GenericEntityRepository(IConnectionProvider connectionProvider)
+        public GenericTwoPartKeyEntityRepository(IConnectionProvider connectionProvider)
         {
             _connectionProvider = connectionProvider;
         }
@@ -81,8 +80,8 @@ namespace AXERP.API.Persistence.Repositories
             var t = typeof(RowType);
 
             string tableName = t.GetTableName();
-            string key = t.GetKeyColumnName();
-            string query = $"DELETE FROM {tableName} WHERE {key} = @{key}";
+            var keys = t.GetKeyColumnNames();
+            string query = $"DELETE FROM {tableName} WHERE {keys[0]} = @{keys[0]} and {keys[1]} = @{keys[1]}";
 
             rowsEffected = _connection.Execute(query, entity, transaction: _sqlTransaction);
 
@@ -101,30 +100,30 @@ namespace AXERP.API.Persistence.Repositories
             var t = typeof(RowType);
 
             string tableName = t.GetTableName();
-            string key = t.GetKeyColumnName();
-            string query = $"DELETE FROM {tableName} WHERE {key} = @{key}";
+            var keys = t.GetKeyColumnNames();
+            string query = $"DELETE FROM {tableName} WHERE {keys[0]} = @{keys[0]} and {keys[1]} = @{keys[1]}";
 
             rowsEffected = _connection.Execute(query, entities, transaction: _sqlTransaction);
 
             return rowsEffected;
         }
 
-        public bool Delete(KeyType id)
+        public bool Delete(KeyTypeA idA, KeyTypeB idB)
         {
             int rowsEffected = 0;
 
             var t = typeof(RowType);
 
             string tableName = t.GetTableName();
-            string key = t.GetKeyColumnName();
-            string query = $"DELETE FROM {tableName} WHERE {key} = @id";
+            var keys = t.GetKeyColumnNames();
+            string query = $"DELETE FROM {tableName} WHERE {keys[0]} = @idA and {keys[1]} = @idB";
 
-            rowsEffected = _connection.Execute(query, new { id = id }, transaction: _sqlTransaction);
+            rowsEffected = _connection.Execute(query, new { idA = idA, idB = idB }, transaction: _sqlTransaction);
 
             return rowsEffected == 1;
         }
 
-        public int Delete(IEnumerable<KeyType> ids)
+        public int Delete(IEnumerable<(KeyTypeA, KeyTypeB)> ids)
         {
             if (!ids.Any())
             {
@@ -136,10 +135,10 @@ namespace AXERP.API.Persistence.Repositories
             var t = typeof(RowType);
 
             string tableName = t.GetTableName();
-            string key = t.GetKeyColumnName();
-            string query = $"DELETE FROM {tableName} WHERE {key} = @id";
+            var keys = t.GetKeyColumnNames();
+            string query = $"DELETE FROM {tableName} WHERE {keys[0]} = @idA and {keys[1]} = @idB";
 
-            rowsEffected = _connection.Execute(query, ids.Select(x => new { id = x }), transaction: _sqlTransaction);
+            rowsEffected = _connection.Execute(query, ids.Select(x => new { idA = x.Item1, idB = x.Item2 }), transaction: _sqlTransaction);
 
             return rowsEffected;
         }
@@ -171,75 +170,6 @@ namespace AXERP.API.Persistence.Repositories
             }
 
             rows = _connection.Execute(tmp.RawSql, transaction: _sqlTransaction);
-
-            return rows;
-        }
-
-        public int Delete(Dictionary<string, object?> where)
-        {
-            int rows;
-
-            string tableName = typeof(RowType).GetTableName();
-
-            SqlBuilder query = new SqlBuilder();
-
-            var tmp = query.AddTemplate(
-                @$"DELETE FROM {typeof(RowType).GetTableName()} /**where**/"
-            );
-
-            foreach (var s in where)
-            {
-                var column = s.Key;
-                var value = s.Value;
-
-                if (typeof(RowType).FilterValidColumn(column) == null)
-                {
-                    throw new Exception($"Invalid column '{column}' for table '{tableName}'");
-                }
-
-                if (value != null)
-                {
-                    query.Where($"{column} = @{nameof(value)}", new { value });
-                }
-                else
-                {
-                    query.Where($"{column} is null");
-                }
-            }
-
-            rows = _connection.Execute(tmp.RawSql, transaction: _sqlTransaction);
-
-            return rows;
-        }
-
-        public int Delete<TypeA, TypeB>((string, string) column, IEnumerable<(TypeA, TypeB)> values)
-        {
-            if (!values.Any())
-            {
-                return 0;
-            }
-
-            int rows;
-
-            string tableName = typeof(RowType).GetTableName();
-
-            if (typeof(RowType).FilterValidColumn(column.Item1) == null || typeof(RowType).FilterValidColumn(column.Item2) == null)
-            {
-                throw new Exception($"Invalid pair of columns '{column.Item1}, {column.Item2}' for table '{tableName}'");
-            }
-
-            SqlBuilder query = new SqlBuilder();
-
-            var tmp = query.AddTemplate(
-                @$"DELETE FROM {typeof(RowType).GetTableName()} /**where**/"
-            );
-
-            if (values != null && values.Any())
-            {
-                query.Where($"{column.Item1} = @valueA and {column.Item2} = @valueB");
-            }
-
-            rows = _connection.Execute(tmp.RawSql, values.Select(x => new { valueA = x.Item1, valueB = x.Item2 }), transaction: _sqlTransaction);
 
             return rows;
         }
@@ -282,16 +212,16 @@ namespace AXERP.API.Persistence.Repositories
             return result;
         }
 
-        public RowType GetById(KeyType Id)
+        public RowType GetById(KeyTypeA IdA, KeyTypeB IdB)
         {
             RowType result = null;
 
             var t = typeof(RowType);
 
             string tableName = t.GetTableName();
-            string key = t.GetKeyColumnName();
+            var keys = t.GetKeyColumnNames();
 
-            string query = $"SELECT * FROM {tableName} WHERE {key} = '{Id}'";
+            string query = $"SELECT * FROM {tableName} WHERE {keys[0]} = '{IdA}' and {keys[1]} = '{IdB}'";
 
             result = _connection.QuerySingle<RowType>(query, transaction: _sqlTransaction);
 
@@ -306,13 +236,13 @@ namespace AXERP.API.Persistence.Repositories
 
             string tableName = t.GetTableName();
             string cols = t.GetColumnNamesAsSqlAssignmentList(columnFilter, true);
-            string key = t.GetKeyColumnName();
+            var keys = t.GetKeyColumnNames();
 
             StringBuilder query = new StringBuilder();
 
             query.Append($"UPDATE {tableName} SET {cols}");
 
-            query.Append($" WHERE {key} = @{key}");
+            query.Append($" WHERE {keys[0]} = @{keys[0]} and {keys[1]} = @{keys[1]}");
 
             rowsEffected = _connection.Execute(query.ToString(), entity, transaction: _sqlTransaction);
 
@@ -332,13 +262,13 @@ namespace AXERP.API.Persistence.Repositories
 
             string tableName = t.GetTableName();
             string cols = t.GetColumnNamesAsSqlAssignmentList(columnFilter, true);
-            string key = t.GetKeyColumnName();
+            var keys = t.GetKeyColumnNames();
 
             StringBuilder query = new StringBuilder();
 
             query.Append($"UPDATE {tableName} SET {cols}");
 
-            query.Append($" WHERE {key} = @{key}");
+            query.Append($" WHERE {keys[0]} = @{keys[0]} and {keys[1]} = @{keys[1]}");
 
             rowsEffected = _connection.Execute(query.ToString(), entities, transaction: _sqlTransaction);
 

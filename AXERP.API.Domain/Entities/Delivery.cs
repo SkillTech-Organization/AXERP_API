@@ -7,11 +7,15 @@ namespace AXERP.API.Domain.Entities
     [Table("Deliveries")]
     public class Delivery
     {
-        [SqlModifier(SqlModifiers.StringNumeral)]
         [JsonProperty("Delivery ID")]
         [JsonRequired]
         [GridProps(maxWidth: 150)]
-        public string DeliveryID { get; set; }
+        public int DeliveryID { get; set; }
+
+        [JsonProperty("Delivery ID Suffix")]
+        [JsonRequired]
+        [GridProps(maxWidth: 200)]
+        public string DeliveryIDSffx { get; set; }
 
         [JsonProperty("Date loaded (end)")]
         [GridProps(maxWidth: 180)]
@@ -47,7 +51,7 @@ namespace AXERP.API.Domain.Entities
 
         [JsonProperty("To delivery ID")]
         [GridProps(maxWidth: 300)]
-        public long? ToDeliveryID { get; set; }
+        public string ToDeliveryID { get; set; }
 
         [JsonProperty("Status")]
         [GridProps(maxWidth: 100)]

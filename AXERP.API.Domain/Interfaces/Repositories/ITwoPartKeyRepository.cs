@@ -1,10 +1,10 @@
 ﻿namespace AXERP.API.Domain.Interfaces.Repositories
 {
-    public interface IRepository<RowType, KeyType> where RowType : class
+    public interface ITwoPartKeyRepository<RowType, KeyTypeA, KeyTypeB> where RowType : class
     {
         IEnumerable<RowType> GetAll();
 
-        RowType GetById(KeyType id);
+        RowType GetById(KeyTypeA idA, KeyTypeB idB);
 
         int Add(List<RowType> entities, bool insertId = false);
 
@@ -18,15 +18,11 @@
 
         int Delete(IEnumerable<RowType> entities);
 
-        int Delete(Dictionary<string, object?> where);
-
-        int Delete<TypeA, TypeB>((string, string) column, IEnumerable<(TypeA, TypeB)> values);
-
         bool Delete(RowType entity);
 
-        bool Delete(KeyType id);
+        bool Delete(KeyTypeA idA, KeyTypeB idB);
 
-        int Delete(IEnumerable<KeyType> ids);
+        int Delete(IEnumerable<(KeyTypeA, KeyTypeB)> ids);
 
         int Delete(string column, object? value);
 

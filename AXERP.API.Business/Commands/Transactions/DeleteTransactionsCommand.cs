@@ -38,11 +38,10 @@ namespace AXERP.API.Business.Commands
                 {
                     uow.BeginTransaction();
 
-                    var customerToDeliveries = uow.CustomerToDeliveryRepository.GetAll().Where(x => request.TransactionIds.Contains(x.DeliveryID));
-                    var truckCompanyToDeliveries = uow.TruckCompanyToDeliveryRepository.GetAll().Where(x => request.TransactionIds.Contains(x.DeliveryID));
-                    var transactions = uow.TransactionRepository.GetAll().Where(x => request.TransactionIds.Contains(x.ID));
+                    var customerToDeliveries = uow.CustomerToDeliveryRepository.GetAll().Where(x => request.TransactionIds.Contains($"{x.DeliveryID}{x.DeliveryIDSffx}"));
+                    var truckCompanyToDeliveries = uow.TruckCompanyToDeliveryRepository.GetAll().Where(x => request.TransactionIds.Contains($"{x.DeliveryID}{x.DeliveryIDSffx}"));
+                    var transactions = uow.TransactionRepository.GetAll().Where(x => request.TransactionIds.Contains($"{x.ID}{x.IDSffx}"));
 
-                    //TODO: cascade delete on DB level
                     _logger.LogInformation("Deleting {0} CustomerToDelivery records...", customerToDeliveries.Count());
                     uow.CustomerToDeliveryRepository.Delete(customerToDeliveries);
 

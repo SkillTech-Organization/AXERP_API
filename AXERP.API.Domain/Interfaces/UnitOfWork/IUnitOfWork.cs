@@ -11,11 +11,11 @@ namespace AXERP.API.Domain.Interfaces.UnitOfWork
 
         IRepository<CustomerToDelivery, int> CustomerToDeliveryRepository { get; }
 
-        IRepository<Transaction, string> TransactionRepository { get; }
+        ITwoPartKeyRepository<Transaction, int, string> TransactionRepository { get; }
 
         IRepository<Interface, int> InterfaceRepository { get; }
 
-        IRepository<Delivery, string> DeliveryRepository { get; }
+        ITwoPartKeyRepository<Delivery, int, string> DeliveryRepository { get; }
 
         IRepository<Entity, int> EntityRepository { get; }
 

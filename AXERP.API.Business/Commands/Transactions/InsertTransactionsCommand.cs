@@ -9,6 +9,7 @@ using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
 using System.Data;
 using AXERP.API.Domain;
+using System.Linq;
 
 namespace AXERP.API.Business.Commands
 {
@@ -19,7 +20,7 @@ namespace AXERP.API.Business.Commands
         private readonly IMapper _mapper;
 
         private List<Transaction> Transactions { get; set; }
-        private List<string> TransactionIds { get; set; }
+        private List<(int, string)> TransactionIds { get; set; }
         private List<Interface> Interfaces { get; set; }
         private List<string> Statuses { get; set; }
         private List<Document> Documents { get; set; }
@@ -88,13 +89,13 @@ namespace AXERP.API.Business.Commands
                     /*
                      * FILTER NEW / UPDATED / DELETED DATA
                      */
-                    var sheetIds = importResult.Data.Select(x => x.DeliveryID);
+                    var sheetIds = importResult.Data.Select(x => (x.DeliveryID, x.DeliveryIDSffx));
 
                     _logger.LogInformation("Selecting and counting imported rows for CREATE, UPDATE and DELETE.");
 
-                    var newSheetRows = importResult.Data.Where(x => !TransactionIds.Contains(x.DeliveryID));
-                    var updatedSheetRows = importResult.Data.Where(x => Transactions.Any(y => x.DeliveryID == y.ID && x.AXERPHash != y.AXERPHash));
-                    var deletedSheetRowIds = TransactionIds.Where(x => !sheetIds.Contains(x));
+                    var newSheetRows = importResult.Data.Where(x => !TransactionIds.Contains((x.DeliveryID, x.DeliveryIDSffx)));
+                    var updatedSheetRows = importResult.Data.Where(x => Transactions.Any(y => x.DeliveryIDSffx == y.IDSffx && x.DeliveryID == y.ID && x.AXERPHash != y.AXERPHash));
+                    var deletedSheetRowIds = TransactionIds.Where(x => !sheetIds.Contains((x.Item1, x.Item2)));
 
                     res.NewRows = newSheetRows.Count();
                     res.UpdatedRows = updatedSheetRows.Count();
@@ -159,7 +160,7 @@ namespace AXERP.API.Business.Commands
         private void RefreshBusinessDataCache(IUnitOfWork uow)
         {
             Transactions = uow.TransactionRepository.GetAll().ToList();
-            TransactionIds = Transactions.Select(x => x.ID).ToList();
+            TransactionIds = Transactions.Select(x => (x.ID, x.IDSffx)).ToList();
             Interfaces = uow.InterfaceRepository.GetAll().ToList();
             Statuses = uow.TransactionStatusRepository.GetAll().Select(x => x.Name).ToList();
             Documents = uow.DocumentRepository.GetAll().ToList();
@@ -169,19 +170,25 @@ namespace AXERP.API.Business.Commands
             CustomerToDeliveries = uow.CustomerToDeliveryRepository.GetAll().ToList();
         }
 
-        private void Delete(IUnitOfWork uow, IEnumerable<string> ids)
+        private void Delete(IUnitOfWork uow, IEnumerable<(int, string)> ids)
         {
             _logger.LogInformation("Deleting associated {0} rows.", nameof(CustomerToDelivery));
-            var deleted = uow.CustomerToDeliveryRepository.Delete(nameof(CustomerToDelivery.DeliveryID), ids);
+            var deleted = uow.CustomerToDeliveryRepository.Delete(
+                (nameof(CustomerToDelivery.DeliveryID), nameof(CustomerToDelivery.DeliveryIDSffx)),
+                ids
+            );
             _logger.LogInformation("Deleted {0} rows: {1}", nameof(CustomerToDelivery), deleted);
 
             _logger.LogInformation("Deleting associated {0} rows.", nameof(TruckCompanyToDelivery));
-            deleted = uow.TruckCompanyToDeliveryRepository.Delete(nameof(TruckCompanyToDelivery.DeliveryID), ids);
+            deleted = uow.TruckCompanyToDeliveryRepository.Delete(
+                (nameof(TruckCompanyToDelivery.DeliveryID), nameof(TruckCompanyToDelivery.DeliveryIDSffx)),
+                ids
+            );
             _logger.LogInformation("Deleted {0} rows: {1}", nameof(TruckCompanyToDelivery), deleted);
 
             _logger.LogInformation("Deleting {0} rows.", nameof(Transaction));
 
-            _logger.LogInformation("DeliveryIDs for delete: {0}", string.Join(", ", ids));
+            _logger.LogInformation("DeliveryIDs for delete: {0}", string.Join(", ", ids.Select(x => $"{x.Item1}{x.Item2}")));
 
             deleted = uow.TransactionRepository.Delete(ids);
             _logger.LogInformation("Deleted {0} rows: {1}", nameof(Transaction), deleted);
@@ -207,6 +214,7 @@ namespace AXERP.API.Business.Commands
                 var transaction = _mapper.Map<Transaction>(sheetRow);
 
                 transaction.ID = sheetRow.DeliveryID;
+                transaction.IDSffx = sheetRow.DeliveryIDSffx;
 
                 if (!Statuses.Contains(sheetRow.Status))
                 {
@@ -306,7 +314,7 @@ namespace AXERP.API.Business.Commands
                 {
                     if (!isCustomerNew)
                     {
-                        var u = CustomerToDeliveries.FirstOrDefault(x => x.DeliveryID == sheetRow.DeliveryID);
+                        var u = CustomerToDeliveries.FirstOrDefault(x => x.DeliveryID == sheetRow.DeliveryID && x.DeliveryIDSffx == sheetRow.DeliveryIDSffx);
                         if (u != null)
                         {
                             u.Comment = sheetRow.CustomerNote;
@@ -317,6 +325,7 @@ namespace AXERP.API.Business.Commands
                             ctdNew.Add(new CustomerToDelivery
                             {
                                 DeliveryID = transaction.ID,
+                                DeliveryIDSffx = transaction.IDSffx,
                                 CustomerID = sheetCustomer.ID,
                                 Comment = sheetRow.CustomerNote
                             });
@@ -327,6 +336,7 @@ namespace AXERP.API.Business.Commands
                         ctdNew.Add(new CustomerToDelivery
                         {
                             DeliveryID = transaction.ID,
+                            DeliveryIDSffx = transaction.IDSffx,
                             CustomerID = sheetCustomer.ID,
                             Comment = sheetRow.CustomerNote
                         });
@@ -337,7 +347,7 @@ namespace AXERP.API.Business.Commands
                 {
                     if (!isTruckCompanyNew)
                     {
-                        var u = TruckCompanyToDeliveries.FirstOrDefault(x => x.DeliveryID == sheetRow.DeliveryID);
+                        var u = TruckCompanyToDeliveries.FirstOrDefault(x => x.DeliveryID == sheetRow.DeliveryID && x.DeliveryIDSffx == sheetRow.DeliveryIDSffx);
                         if (u != null)
                         {
                             u.Comment = sheetRow.TruckLoadingCompanyComment;
@@ -348,6 +358,7 @@ namespace AXERP.API.Business.Commands
                             ttdNew.Add(new TruckCompanyToDelivery
                             {
                                 DeliveryID = transaction.ID,
+                                DeliveryIDSffx = transaction.IDSffx,
                                 TruckCompanyID = sheetTruckCompany.ID,
                                 Comment = sheetRow.TruckLoadingCompanyComment
                             });
@@ -358,6 +369,7 @@ namespace AXERP.API.Business.Commands
                         ttdNew.Add(new TruckCompanyToDelivery
                         {
                             DeliveryID = transaction.ID,
+                            DeliveryIDSffx = transaction.IDSffx,
                             TruckCompanyID = sheetTruckCompany.ID,
                             Comment = sheetRow.TruckLoadingCompanyComment
                         });
@@ -367,7 +379,7 @@ namespace AXERP.API.Business.Commands
                 transactionDtos.Add(transaction);
             }
 
-            var allDeliveryIds = transactionDtos.Select(x => x.ID);
+            var allDeliveryIds = transactionDtos.Select(x => $"{x.ID}{x.IDSffx}");
 
             if (create)
             {

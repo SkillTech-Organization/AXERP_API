@@ -5,11 +5,13 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace AXERP.API.Domain.Entities
 {
     [Table("Transactions")]
-    public class Transaction : BaseEntity<string>
+    public class Transaction : BaseEntity<int>
     {
-        [SqlModifier(SqlModifiers.StringNumeral)]
         [Key]
-        public override string ID { get; set; }
+        public override int ID { get; set; }
+
+        [Key]
+        public string IDSffx { get; set; }
 
         public DateTime? DateLoadedEnd { get; set; }
 
@@ -23,7 +25,7 @@ namespace AXERP.API.Domain.Entities
 
         public double? QtyLoaded { get; set; }
 
-        public int? StockDays{ get; set; }
+        public int? StockDays { get; set; }
 
         public int? SlotBookedByAXGTT { get; set; }
 

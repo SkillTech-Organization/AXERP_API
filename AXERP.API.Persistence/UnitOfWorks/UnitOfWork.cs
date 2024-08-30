@@ -58,27 +58,27 @@ namespace AXERP.API.Persistence.UnitOfWorks
             }
         }
 
-        private IRepository<Transaction, string> _transactionRepository;
-        public IRepository<Transaction, string> TransactionRepository
+        private ITwoPartKeyRepository<Transaction, int, string> _transactionRepository;
+        public ITwoPartKeyRepository<Transaction, int, string> TransactionRepository
         {
             get
             {
                 if (_transactionRepository == null)
                 {
-                    return new GenericEntityRepository<Transaction, string>(this);
+                    return new GenericTwoPartKeyEntityRepository<Transaction, int, string>(this);
                 }
                 return _transactionRepository;
             }
         }
 
-        private IRepository<Delivery, string> _deliveryRepository;
-        public IRepository<Delivery, string> DeliveryRepository
+        private ITwoPartKeyRepository<Delivery, int, string> _deliveryRepository;
+        public ITwoPartKeyRepository<Delivery, int, string> DeliveryRepository
         {
             get
             {
                 if (_deliveryRepository == null)
                 {
-                    return new GenericEntityRepository<Delivery, string>(this);
+                    return new GenericTwoPartKeyEntityRepository<Delivery, int, string>(this);
                 }
                 return _deliveryRepository;
             }
