@@ -230,7 +230,7 @@ namespace AXERP.API.Functions.Transactions
         }
 
         [Function(nameof(QueryPagedGasTransactions))]
-        [OpenApiOperation(operationId: nameof(QueryPagedGasTransactions), tags: new[] { "gas-transactions" })]
+        [OpenApiOperation(operationId: nameof(QueryPagedGasTransactions), tags: new[] { "customer-ui" })]
         [OpenApiParameter(name: "Customer", In = ParameterLocation.Query, Required = false, Type = typeof(string))]
         [OpenApiParameter(name: "FromDate", In = ParameterLocation.Query, Required = false, Type = typeof(DateTime))]
         [OpenApiParameter(name: "ToDate", In = ParameterLocation.Query, Required = false, Type = typeof(DateTime))]

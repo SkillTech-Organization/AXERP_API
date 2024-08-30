@@ -305,7 +305,7 @@ namespace AXERP.API.Functions.Blobs
         }
 
         [Function(nameof(DownloadBlFile))]
-        [OpenApiOperation(operationId: nameof(DownloadBlFile), tags: new[] { "blob" }, Description = "Downloads a blob file by name. Only processed blob files can be downloaded.")]
+        [OpenApiOperation(operationId: nameof(DownloadBlFile), tags: new[] { "customer-ui" }, Description = "Downloads a blob file by name. Only processed blob files can be downloaded.")]
         [OpenApiParameter(name: "FileName", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "Name of the processed BL file.")]
         [OpenApiParameter(name: "DeliveryID", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "Associated Delivery ID")]
         public async Task<HttpResponseData> DownloadBlFile(
