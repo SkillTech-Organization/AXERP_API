@@ -29,6 +29,7 @@ namespace AXERP.API.Functions.Blobs
         private readonly UploadBlobFilesCommand _uploadBlobFilesCommand;
         private readonly UploadBlobFileCommand _uploadBlobFileCommand;
         private readonly DownLoadBlobFileCommand _getBlobFileCommand;
+        private readonly UpdateBillOfLadingCommand _updateBillOfLadingCommand;
 
         public const string PATH_PARAM_UPLOAD = "path";
 
@@ -39,7 +40,8 @@ namespace AXERP.API.Functions.Blobs
             UploadBlobFilesCommand uploadBlobFilesCommand,
             UploadBlobFileCommand uploadBlobFileCommand,
             UpdateReferencesByBlobFilesCommand updateReferencesByBlobFilesCommand,
-            DownLoadBlobFileCommand getBlobFileCommand) : base(loggerFactory)
+            DownLoadBlobFileCommand getBlobFileCommand,
+            UpdateBillOfLadingCommand updateBillOfLadingCommand) : base(loggerFactory)
         {
             _updateReferencesByBlobFilesCommand = updateReferencesByBlobFilesCommand;
             _listBlobFilesQuery = listBlobFilesQuery;
@@ -47,6 +49,7 @@ namespace AXERP.API.Functions.Blobs
             _uploadBlobFilesCommand = uploadBlobFilesCommand;
             _uploadBlobFileCommand = uploadBlobFileCommand;
             _getBlobFileCommand = getBlobFileCommand;
+            _updateBillOfLadingCommand = updateBillOfLadingCommand;
         }
 
         [Function(nameof(ListBlobFiles))]
@@ -304,6 +307,7 @@ namespace AXERP.API.Functions.Blobs
         [Function(nameof(DownloadBlFile))]
         [OpenApiOperation(operationId: nameof(DownloadBlFile), tags: new[] { "blob" }, Description = "Downloads a blob file by name. Only processed blob files can be downloaded.")]
         [OpenApiParameter(name: "FileName", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "Name of the processed BL file.")]
+        [OpenApiParameter(name: "DeliveryID", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "Associated Delivery ID")]
         public async Task<HttpResponseData> DownloadBlFile(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
@@ -313,6 +317,7 @@ namespace AXERP.API.Functions.Blobs
             _logger.LogInformation("Checking parameters...");
 
             var fileName = req.Query["FileName"] ?? string.Empty;
+            var deliveryId = req.Query["DeliveryID"] ?? string.Empty;
 
             if (string.IsNullOrWhiteSpace(fileName))
             {
@@ -322,10 +327,19 @@ namespace AXERP.API.Functions.Blobs
                 return response;
             }
 
-            _logger.LogInformation("FileName: {0}", fileName);
+            if (string.IsNullOrWhiteSpace(deliveryId))
+            {
+                _logger.LogError("Parameter DeliveryID is required!");
+                var response = req.CreateResponse(HttpStatusCode.InternalServerError);
+                response.WriteString("Parameter DeliveryID is required!");
+                return response;
+            }
+
+            _logger.LogInformation("FileName: {0}. Delivery ID: {1}", fileName, deliveryId);
 
             try
             {
+                _getBlobFileCommand.SetLoggerProcessData(UserName, id: _logger.ProcessId);
                 var resp = await _getBlobFileCommand.Execute(new Domain.ServiceContracts.Requests.Blob.DownloadBlobFileRequest
                 {
                     FilePath = $"{EnvironmentHelper.TryGetParameter("BlobStorageProcessedFolder")}/{fileName}"
@@ -345,10 +359,23 @@ namespace AXERP.API.Functions.Blobs
                 {
                     _logger.LogInformation("Blob file download finished.");
 
-                    var response = req.CreateResponse(HttpStatusCode.OK);
-                    response.WriteBytes(resp.FileContent);
-                    response.Headers.Add("Content-Type", "application/octet-stream");
-                    return response;
+                    _logger.LogInformation("Setting Bill Of Lading if not set already.");
+                    _updateBillOfLadingCommand.SetLoggerProcessData(UserName, id: _logger.ProcessId);
+                    var billOfLadigResp = _updateBillOfLadingCommand.Execute(deliveryId);
+
+                    if (billOfLadigResp.HttpStatusCode != HttpStatusCode.OK)
+                    {
+                        var response = req.CreateResponse(billOfLadigResp.HttpStatusCode);
+                        response.WriteString(billOfLadigResp.RequestError!);
+                        return response;
+                    }
+                    else
+                    {
+                        var response = req.CreateResponse(HttpStatusCode.OK);
+                        response.WriteBytes(resp.FileContent);
+                        response.Headers.Add("Content-Type", "application/octet-stream");
+                        return response;
+                    }
                 }
             }
             catch (Exception ex)
