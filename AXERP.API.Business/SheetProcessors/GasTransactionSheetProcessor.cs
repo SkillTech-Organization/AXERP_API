@@ -1,11 +1,11 @@
 ﻿using AXERP.API.Domain;
 using AXERP.API.Domain.Entities;
+using AXERP.API.Domain.Extensions;
 using AXERP.API.GoogleHelper.Models;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
 using Newtonsoft.Json;
-using System.ComponentModel;
 using System.Globalization;
 using System.Reflection;
 
@@ -578,14 +578,7 @@ namespace AXERP.API.Business.SheetProcessors
                     gasTransaction.TruckCompany = row[field_idx]?.ToString();
 
                     // AXERP Hash
-                    field_idx = field_names[nameof(gasTransaction.AXERPHash)];
-                    if (row.Count <= field_idx)
-                    {
-                        result.Add(gasTransaction);
-                        continue;
-                    }
-
-                    gasTransaction.AXERPHash = row[field_idx]?.ToString();
+                    gasTransaction.AXERPHash = row.GenerateHash();
 
                     // Add to result
 
