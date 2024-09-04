@@ -3,9 +3,9 @@ using AXERP.API.Domain.ServiceContracts.Responses.Diagnostics;
 using AXERP.API.Functions.Base;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Factories;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
 using System.Net;
 
@@ -21,9 +21,9 @@ namespace AXERP.API.Functions.Diagnostics
         [Function(nameof(GetVersionInfo))]
         [OpenApiOperation(operationId: nameof(GetVersionInfo), tags: new[] { "diagnostics" })]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(GetVersionInfoResponse), Description = "The OK response")]
-        public IActionResult GetVersionInfo([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req)
+        public IActionResult GetVersionInfo([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
-            SetLoggerProcessData(UserName);
+            SetLoggerProcessData(req);
 
             _logger.LogInformation("Calling {name}", nameof(GetVersionInfo));
 

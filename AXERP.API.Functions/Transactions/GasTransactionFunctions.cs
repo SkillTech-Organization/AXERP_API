@@ -60,7 +60,7 @@ namespace AXERP.API.Functions.Transactions
         {
             try
             {
-                SetLoggerProcessData(UserName);
+                SetLoggerProcessData(req);
 
                 _logger.LogInformation("Importing GasTransactions...");
                 _logger.LogInformation("Checking parameters...");
@@ -114,7 +114,7 @@ namespace AXERP.API.Functions.Transactions
         {
             try
             {
-                SetLoggerProcessData(base.UserName);
+                SetLoggerProcessData(req);
 
                 if (data == null)
                 {
@@ -171,7 +171,7 @@ namespace AXERP.API.Functions.Transactions
         public IActionResult QueryGasTransactions(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
-            SetLoggerProcessData(base.UserName);
+            SetLoggerProcessData(req);
 
             _logger.LogInformation("Querying GasTransactions...");
             _logger.LogInformation("Checking parameters...");
@@ -243,7 +243,7 @@ namespace AXERP.API.Functions.Transactions
         public IActionResult QueryPagedGasTransactions(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
-            SetLoggerProcessData(base.UserName);
+            SetLoggerProcessData(req);
 
             _logger.LogInformation("Querying GasTransactions...");
             _logger.LogInformation("Checking parameters...");
@@ -324,7 +324,7 @@ namespace AXERP.API.Functions.Transactions
         public HttpResponseData GasTransactionCsv(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
-            SetLoggerProcessData(base.UserName);
+            SetLoggerProcessData(req);
 
             _logger.LogInformation("Exporting GasTransactions to CSV...");
             _logger.LogInformation("Checking parameters...");

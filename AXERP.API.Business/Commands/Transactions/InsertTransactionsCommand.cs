@@ -255,27 +255,36 @@ namespace AXERP.API.Business.Commands
                 }
 
                 var newRef3 = Documents.FirstOrDefault(x => x.Name == sheetRow.Reference3);
+                if (newRef3 != null && !string.IsNullOrWhiteSpace(newRef3.FileName))
+                {
+                    transaction.BlFileID = newRef3.ID;
+                }
                 if (newRef3 == null && !string.IsNullOrWhiteSpace(sheetRow.Reference3) && !Documents.Any(x => x.Name == sheetRow.Reference3))
                 {
                     newRef3 = uow.DocumentRepository.Add(new Document { Name = sheetRow.Reference3 });
                     Documents.Add(newRef3);
-                    transaction.BlFileID = newRef3.ID;
                 }
 
                 var newRef2 = Documents.FirstOrDefault(x => x.Name == sheetRow.Reference2);
+                if (newRef2 != null && !string.IsNullOrWhiteSpace(newRef2.FileName))
+                {
+                    transaction.BlFileID = newRef2.ID;
+                }
                 if (newRef2 == null && !string.IsNullOrWhiteSpace(sheetRow.Reference2) && !Documents.Any(x => x.Name == sheetRow.Reference2))
                 {
                     newRef2 = uow.DocumentRepository.Add(new Document { Name = sheetRow.Reference2 });
                     Documents.Add(newRef2);
-                    transaction.BlFileID = newRef2.ID;
                 }
 
                 var newRef = Documents.FirstOrDefault(x => x.Name == sheetRow.Reference);
+                if (newRef != null && !string.IsNullOrWhiteSpace(newRef.FileName))
+                {
+                    transaction.BlFileID = newRef.ID;
+                }
                 if (newRef == null && !string.IsNullOrWhiteSpace(sheetRow.Reference) && !Documents.Any(x => x.Name == sheetRow.Reference))
                 {
                     newRef = uow.DocumentRepository.Add(new Document { Name = sheetRow.Reference });
                     Documents.Add(newRef);
-                    transaction.BlFileID = newRef.ID;
                 }
 
                 var newTransporter = Entities.FirstOrDefault(x => x.Name == sheetRow.Transporter);

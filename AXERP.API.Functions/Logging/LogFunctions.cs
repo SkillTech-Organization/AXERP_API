@@ -46,7 +46,7 @@ namespace AXERP.API.Functions.Transactions
         {
             try
             {
-                SetLoggerProcessData(UserName);
+                SetLoggerProcessData(req);
 
                 var cols = "ProcessId,Result,System,Function,Who,When,Description".Split(",", StringSplitOptions.TrimEntries)?.ToList();
 

@@ -326,7 +326,7 @@ namespace AXERP.API.BlobHelper.Managers
 
         public async Task MoveFile(BlobHierarchyItem blob, string destinationName, string destinationFolder)
         {
-            _logger.LogTrace("Moving blob file '{blob_name}' to folder '{dst}' with name '{name}'", blob.Blob.Name, destinationFolder, destinationName);
+            _logger.LogTrace("Moving blob file '{0}' to folder '{1}' with name '{2}'", blob.Blob.Name, destinationFolder, destinationName);
 
             var sourceBlob = Container.GetBlobClient(blob.Blob.Name);
             var destinationBlob = Container.GetBlobClient($"{destinationFolder}/{destinationName}");

@@ -1,5 +1,6 @@
 ﻿using AXERP.API.LogHelper.Base;
 using AXERP.API.LogHelper.Factories;
+using Microsoft.Azure.Functions.Worker.Http;
 
 namespace AXERP.API.Functions.Base
 {
@@ -9,6 +10,13 @@ namespace AXERP.API.Functions.Base
 
         public BaseFunctions(AxerpLoggerFactory axerpLoggerFactory) : base(axerpLoggerFactory)
         {
+        }
+
+        public void SetLoggerProcessData(HttpRequestData req)
+        {
+            var isUserNameProvided = req.Headers.TryGetValues("x-user-name", out IEnumerable<string>? vals);
+            UserName = isUserNameProvided ? (vals?.FirstOrDefault() ?? UserName) : UserName;
+            SetLoggerProcessData(UserName);
         }
     }
 }

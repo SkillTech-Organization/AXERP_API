@@ -59,7 +59,7 @@ namespace AXERP.API.Functions.Blobs
         {
             try
             {
-                SetLoggerProcessData(UserName);
+                SetLoggerProcessData(req);
 
                 _listBlobFilesQuery.SetLoggerProcessData(UserName, id: _logger.ProcessId);
                 var result = await _listBlobFilesQuery.Execute(new Domain.ServiceContracts.Requests.ListBlobFilesQueryRequest
@@ -102,7 +102,7 @@ namespace AXERP.API.Functions.Blobs
         {
             try
             {
-                SetLoggerProcessData(UserName);
+                SetLoggerProcessData(req);
 
                 if (req == null || request == null)
                 {
@@ -147,7 +147,7 @@ namespace AXERP.API.Functions.Blobs
         {
             try
             {
-                SetLoggerProcessData(UserName);
+                SetLoggerProcessData(req);
 
                 if (req == null)
                 {
@@ -223,7 +223,7 @@ namespace AXERP.API.Functions.Blobs
         {
             try
             {
-                SetLoggerProcessData(UserName);
+                SetLoggerProcessData(req);
 
                 var blobImportFolder = EnvironmentHelper.TryGetParameter("BlobStorageImportFolder");
                 var blobProcessedFolder = EnvironmentHelper.TryGetParameter("BlobStorageProcessedFolder");
@@ -311,7 +311,7 @@ namespace AXERP.API.Functions.Blobs
         public async Task<HttpResponseData> DownloadBlFile(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
-            SetLoggerProcessData(base.UserName);
+            SetLoggerProcessData(req);
 
             _logger.LogInformation("Downloading BL file...");
             _logger.LogInformation("Checking parameters...");

@@ -1,6 +1,7 @@
 ﻿using AXERP.API.BlobHelper.Managers;
 using AXERP.API.BlobHelper.ServiceContracts.Responses;
 using AXERP.API.Domain;
+using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.LogHelper.Attributes;
@@ -119,7 +120,6 @@ namespace AXERP.API.Business.Commands
                                 _logger.LogInformation("Processing: {0}", fileName);
 
                                 var referenced = entities.FirstOrDefault(x => x.Name?.Trim() == referenceName);
-
                                 if (referenced != null && !string.IsNullOrWhiteSpace(referenced.FileName))
                                 {
                                     var msg = $"Blob file '{fileName}' was already processed at {referenced.ProcessedAt}.";
@@ -139,12 +139,6 @@ namespace AXERP.API.Business.Commands
                                 referenced.FileName = fileName;
                                 referenced.ProcessedAt = DateTime.Now;
 
-                                _logger.LogInformation("Updating Document record.");
-
-                                uow.DocumentRepository.Update(referenced);
-
-                                _logger.LogInformation("Document updated.");
-
                                 // Updating transactions without a bl file
                                 // Order of priority: Reference > Reference2 > Reference3
                                 var matchingTransactions = transactrions
@@ -153,14 +147,16 @@ namespace AXERP.API.Business.Commands
                                                 x.Reference3 == referenceName);
 
                                 _logger.LogInformation("Matching transactions: {0}", matchingTransactions.Count());
-
                                 foreach (var transaction in matchingTransactions)
                                 {
                                     transaction.BlFileID = referenced.ID;
                                 }
                                 uow.TransactionRepository.Update(matchingTransactions, new List<string> { nameof(Transaction.BlFileID) });
-
                                 _logger.LogInformation("Matching transactions updated.");
+
+                                _logger.LogInformation("Updating Document.");
+                                uow.DocumentRepository.Update(referenced);
+                                _logger.LogInformation("Document updated.");
 
                                 await containerHelper.MoveFile(item.BlobItem, fileName, request.BlobStorageProcessedFolder);
 
