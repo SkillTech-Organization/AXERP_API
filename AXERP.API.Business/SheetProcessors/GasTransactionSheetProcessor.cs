@@ -185,23 +185,11 @@ namespace AXERP.API.Business.SheetProcessors
                     field_idx = field_names[nameof(gasTransaction.SalesStatus)];
                     if (row.Count <= field_idx)
                     {
-                        //add_transaction(gasTransaction, row);
-
-                        invalidRows++;
-                        errors.Add($"Missing Sales Status for row with Delivery ID: {gasTransaction.DeliveryID}. Row index: {sheet_row_index}");
-
+                        add_transaction(gasTransaction, row);
                         continue;
                     }
 
-                    var rawSalesStatus = row[field_idx]?.ToString();
-                    if (string.IsNullOrWhiteSpace(rawSalesStatus))
-                    {
-                        invalidRows++;
-                        errors.Add($"Missing Sales Status for row with Delivery ID: {gasTransaction.DeliveryID}. Row index: {sheet_row_index}");
-                        continue;
-                    }
-
-                    gasTransaction.SalesStatus = string.IsNullOrWhiteSpace(rawSalesStatus) ? null : rawSalesStatus;
+                    gasTransaction.SalesStatus = row[field_idx]?.ToString();
 
                     // Status
                     field_idx = field_names[nameof(gasTransaction.Status)];
@@ -223,7 +211,7 @@ namespace AXERP.API.Business.SheetProcessors
                         continue;
                     }
 
-                    gasTransaction.Status = string.IsNullOrWhiteSpace(rawSalesStatus) ? null : rawSalesStatus;
+                    gasTransaction.Status = string.IsNullOrWhiteSpace(rawStatus) ? null : rawStatus;
 
                     // DateLoadedEnd
                     field_idx = field_names[nameof(gasTransaction.DateLoadedEnd)];
