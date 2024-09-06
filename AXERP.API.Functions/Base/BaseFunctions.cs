@@ -12,11 +12,11 @@ namespace AXERP.API.Functions.Base
         {
         }
 
-        public void SetLoggerProcessData(HttpRequestData req)
+        public void SetLoggerProcessData(HttpRequestData req, string? system = null, string? function = null, long? id = null)
         {
             var isUserNameProvided = req.Headers.TryGetValues("x-user-name", out IEnumerable<string>? vals);
             UserName = isUserNameProvided ? (vals?.FirstOrDefault() ?? UserName) : UserName;
-            SetLoggerProcessData(UserName);
+            SetLoggerProcessData(UserName, system, function, id);
         }
     }
 }

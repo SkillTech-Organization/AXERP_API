@@ -171,7 +171,7 @@ namespace AXERP.API.Functions.Transactions
         public IActionResult QueryGasTransactions(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
-            SetLoggerProcessData(req);
+            SetLoggerProcessData(req, function: "Get GasTransaction Data");
 
             _logger.LogInformation("Querying GasTransactions...");
             _logger.LogInformation("Checking parameters...");
@@ -243,7 +243,7 @@ namespace AXERP.API.Functions.Transactions
         public IActionResult QueryPagedGasTransactions(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
-            SetLoggerProcessData(req);
+            SetLoggerProcessData(req, function: "Get GasTransaction Data");
 
             _logger.LogInformation("Querying GasTransactions...");
             _logger.LogInformation("Checking parameters...");
