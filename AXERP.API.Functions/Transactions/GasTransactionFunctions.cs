@@ -53,6 +53,9 @@ namespace AXERP.API.Functions.Transactions
             _getPagedGasTransactionsQuery = getPagedGasTransactionsQuery;
         }
 
+        /// <summary>
+        /// Importing, processing gas transaction records from GoogleSheet then saving them to database.
+        /// </summary>
         [Function(nameof(ImportGasTransactions))]
         [OpenApiOperation(operationId: nameof(ImportGasTransactions), tags: new[] { "gas-transactions" })]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
@@ -105,6 +108,9 @@ namespace AXERP.API.Functions.Transactions
             }
         }
 
+        /// <summary>
+        /// Deleting one or more gas transaction records from database. Doesn't affect GoogleSheet.
+        /// </summary>
         [Function(nameof(DeleteGasTransactions))]
         [OpenApiOperation(operationId: nameof(DeleteGasTransactions), tags: new[] { "gas-transactions" })]
         [OpenApiRequestBody("application/json", typeof(DeleteTransactionRequest), Required = true)]
@@ -140,6 +146,9 @@ namespace AXERP.API.Functions.Transactions
             }
         }
 
+        /// <summary>
+        /// Gives back the total count of Gas Transaction rows from the database as a simple number - no JSON structure.
+        /// </summary>
         [Function(nameof(CountGasTransactions))]
         [OpenApiOperation(operationId: nameof(CountGasTransactions), tags: new[] { "gas-transactions" })]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/plain", bodyType: typeof(string), Description = "The OK response")]
@@ -229,6 +238,9 @@ namespace AXERP.API.Functions.Transactions
             }
         }
 
+        /// <summary>
+        /// Specialized version of gas-transactions/QueryGasTransactions for Customer UI.
+        /// </summary>
         [Function(nameof(QueryPagedGasTransactions))]
         [OpenApiOperation(operationId: nameof(QueryPagedGasTransactions), tags: new[] { "customer-ui" })]
         [OpenApiParameter(name: "Customer", In = ParameterLocation.Query, Required = false, Type = typeof(string))]
@@ -314,6 +326,9 @@ namespace AXERP.API.Functions.Transactions
             }
         }
 
+        /// <summary>
+        /// Generating CSV for Gas Transaction records.
+        /// </summary>
         [Function(nameof(GasTransactionCsv))]
         [OpenApiOperation(operationId: nameof(GasTransactionCsv), tags: new[] { "gas-transactions" })]
         [OpenApiParameter(name: "FromDate", In = ParameterLocation.Query, Required = false, Type = typeof(DateTime))]

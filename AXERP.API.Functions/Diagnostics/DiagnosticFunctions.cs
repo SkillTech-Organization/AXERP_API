@@ -18,6 +18,9 @@ namespace AXERP.API.Functions.Diagnostics
         {
         }
 
+        /// <summary>
+        /// Provides information about the version of both .NET Runtime and Application.
+        /// </summary>
         [Function(nameof(GetVersionInfo))]
         [OpenApiOperation(operationId: nameof(GetVersionInfo), tags: new[] { "diagnostics" })]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(GetVersionInfoResponse), Description = "The OK response")]

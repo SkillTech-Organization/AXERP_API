@@ -52,6 +52,9 @@ namespace AXERP.API.Functions.Blobs
             _updateBillOfLadingCommand = updateBillOfLadingCommand;
         }
 
+        /// <summary>
+        /// Lists all unprocessed files from the blob storage folder used for importing files.
+        /// </summary>
         [Function(nameof(ListBlobFiles))]
         [OpenApiOperation(operationId: nameof(ListBlobFiles), tags: new[] { "blob" })]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(BaseDataResponse<BlobFile>), Description = "The OK response")]
@@ -94,6 +97,9 @@ namespace AXERP.API.Functions.Blobs
             }
         }
 
+        /// <summary>
+        /// Deletes the specified blob files from the blob storage.
+        /// </summary>
         [Function(nameof(DeleteBlobFiles))]
         [OpenApiOperation(operationId: nameof(DeleteBlobFiles), tags: new[] { "blob" })]
         [OpenApiRequestBody("application/json", typeof(DeleteBlobFilesRequest), Required = true)]
@@ -139,6 +145,10 @@ namespace AXERP.API.Functions.Blobs
             }
         }
 
+        /// <summary>
+        /// Uploads the provided file to blob storage.
+        /// Both path (including requested destination folder) and the files are multipart/form-data parameters ("file" and "path").
+        /// </summary>
         [Function(nameof(UploadBlobFile))]
         [OpenApiOperation(operationId: nameof(UploadBlobFile), tags: new[] { "blob" })]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(BaseResponse), Description = "The OK response")]
@@ -216,6 +226,10 @@ namespace AXERP.API.Functions.Blobs
             }
         }
 
+        /// <summary>
+        /// Process blob files from the blob storage folder used for importing blob files.
+        /// The files are moved between folders, so they will be deleted from the source folder.
+        /// </summary>
         [Function(nameof(ProcessBlobFiles))]
         [OpenApiOperation(operationId: nameof(ProcessBlobFiles), tags: new[] { "blob" })]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/json", bodyType: typeof(string), Description = "The OK response")]
@@ -304,6 +318,9 @@ namespace AXERP.API.Functions.Blobs
             return bl;
         }
 
+        /// <summary>
+        /// Downloads a processed file from the blob storage.
+        /// </summary>
         [Function(nameof(DownloadBlFile))]
         [OpenApiOperation(operationId: nameof(DownloadBlFile), tags: new[] { "customer-ui" }, Description = "Downloads a blob file by name. Only processed blob files can be downloaded.")]
         [OpenApiParameter(name: "FileName", In = ParameterLocation.Query, Required = true, Type = typeof(string), Description = "Name of the processed BL file.")]

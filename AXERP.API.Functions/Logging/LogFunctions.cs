@@ -31,6 +31,9 @@ namespace AXERP.API.Functions.Transactions
             _unitOfWorkFactory = unitOfWorkFactory;
         }
 
+        /// <summary>
+        /// Querying application logs with pagination.
+        /// </summary>
         [Function(nameof(QueryLogEvents))]
         [OpenApiOperation(operationId: nameof(QueryLogEvents), tags: new[] { "logs" })]
         [OpenApiParameter(name: "Search", In = ParameterLocation.Query, Required = false, Type = typeof(string), Description = "Search in message")]
