@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.21.1" />
+    <PackageReference Include="Azure.Storage.Blobs.Batch" Version="12.18.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AXERP.API.Domain\AXERP.API.Domain.csproj" />
+    <ProjectReference Include="..\AXERP.API.LogHelper\AXERP.API.LogHelper.csproj" />
+  </ItemGroup>
+
+</Project>

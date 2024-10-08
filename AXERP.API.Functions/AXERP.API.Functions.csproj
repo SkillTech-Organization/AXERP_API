@@ -5,19 +5,49 @@
     <OutputType>Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Version>$(VersionPrefix)0.0.2</Version>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="1.21.0" />
-    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.1.0" />
-    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore" Version="1.2.0" />
+    <PackageReference Include="AutoMapper" Version="13.0.1" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.21.1" />
+    <PackageReference Include="Azure.Storage.Blobs.Batch" Version="12.18.1" />
+    <PackageReference Include="Dapper" Version="2.1.35" />
+    <PackageReference Include="Dapper.Contrib" Version="2.0.78" />
+    <PackageReference Include="Dapper.FluentMap" Version="2.0.0" />
+    <PackageReference Include="Dapper.SqlBuilder" Version="2.0.78" />
+    <PackageReference Include="DapperExtensions" Version="1.7.0" />
+    <PackageReference Include="HttpMultipartParser" Version="8.4.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="1.22.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.2.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore" Version="1.3.2" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.OpenApi" Version="1.5.1" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Storage.Blobs" Version="6.3.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="1.17.0" />
     <PackageReference Include="Microsoft.ApplicationInsights.WorkerService" Version="2.22.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.ApplicationInsights" Version="1.2.0" />
+    <PackageReference Include="Serilog" Version="4.0.1" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="4.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.MSSqlServer" Version="6.6.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AXERP.API.AppInsightsHelper\AXERP.API.AppInsightsHelper.csproj" />
+    <ProjectReference Include="..\AXERP.API.BlobHelper\AXERP.API.BlobHelper.csproj" />
+    <ProjectReference Include="..\AXERP.API.Business\AXERP.API.Business.csproj" />
+    <ProjectReference Include="..\AXERP.API.Domain\AXERP.API.Domain.csproj" />
+    <ProjectReference Include="..\AXERP.API.GoogleHelper\AXERP.API.GoogleHelper.csproj" />
+    <ProjectReference Include="..\AXERP.API.LogHelper\AXERP.API.LogHelper.csproj" />
+    <ProjectReference Include="..\AXERP.API.Persistence\AXERP.API.Persistence.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="host.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="OLD-local.settings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
     </None>
     <None Update="local.settings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

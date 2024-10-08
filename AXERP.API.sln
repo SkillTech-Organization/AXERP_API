@@ -3,11 +3,28 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.33516.290
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AXERP.API.Functions", "AXERP.API.Functions\AXERP.API.Functions.csproj", "{D5AADA63-578C-4362-87C7-5DAF17DD517C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AXERP.API.Functions", "AXERP.API.Functions\AXERP.API.Functions.csproj", "{D5AADA63-578C-4362-87C7-5DAF17DD517C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AXERP.API.GoogleHelper", "AXERP.API.GoogleHelper\AXERP.API.GoogleHelper.csproj", "{793A21C6-FE74-4758-BDF1-410CAEE1693C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AXERP.API.GoogleHelper", "AXERP.API.GoogleHelper\AXERP.API.GoogleHelper.csproj", "{793A21C6-FE74-4758-BDF1-410CAEE1693C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AXERP.API.Domain", "AXERP.API.Domain\AXERP.API.Domain.csproj", "{4CB0084A-4C80-49A2-A2DC-DA748495EEE0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AXERP.API.Domain", "AXERP.API.Domain\AXERP.API.Domain.csproj", "{4CB0084A-4C80-49A2-A2DC-DA748495EEE0}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AXERP.API.Business", "AXERP.API.Business\AXERP.API.Business.csproj", "{696D330C-24E1-4676-AE10-D3E1B01F6406}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AXERP.API.Persistence", "AXERP.API.Persistence\AXERP.API.Persistence.csproj", "{42BE7819-9D1D-42A1-BF7E-FEF059393A0E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AXERP.API.BlobHelper", "AXERP.API.BlobHelper\AXERP.API.BlobHelper.csproj", "{35024675-E2E5-43A4-B106-658898EF4FC1}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MiscFiles", "MiscFiles", "{0B5BB711-695D-43D9-BB95-7A56F12F6E22}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SQLScripts", "SQLScripts", "{3C58B7BD-0A01-4C2F-967C-B30BCB0399A2}"
+	ProjectSection(SolutionItems) = preProject
+		MiscFiles\SQLScripts\clear_tables.sql = MiscFiles\SQLScripts\clear_tables.sql
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AXERP.API.AppInsightsHelper", "AXERP.API.AppInsightsHelper\AXERP.API.AppInsightsHelper.csproj", "{A419A73C-4162-409A-B336-184C5BCE735F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AXERP.API.LogHelper", "AXERP.API.LogHelper\AXERP.API.LogHelper.csproj", "{5F720FC9-4972-42E2-B93B-07C0B416A8EF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,9 +44,32 @@ Global
 		{4CB0084A-4C80-49A2-A2DC-DA748495EEE0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4CB0084A-4C80-49A2-A2DC-DA748495EEE0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4CB0084A-4C80-49A2-A2DC-DA748495EEE0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{696D330C-24E1-4676-AE10-D3E1B01F6406}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{696D330C-24E1-4676-AE10-D3E1B01F6406}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{696D330C-24E1-4676-AE10-D3E1B01F6406}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{696D330C-24E1-4676-AE10-D3E1B01F6406}.Release|Any CPU.Build.0 = Release|Any CPU
+		{42BE7819-9D1D-42A1-BF7E-FEF059393A0E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{42BE7819-9D1D-42A1-BF7E-FEF059393A0E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{42BE7819-9D1D-42A1-BF7E-FEF059393A0E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{42BE7819-9D1D-42A1-BF7E-FEF059393A0E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{35024675-E2E5-43A4-B106-658898EF4FC1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{35024675-E2E5-43A4-B106-658898EF4FC1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{35024675-E2E5-43A4-B106-658898EF4FC1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{35024675-E2E5-43A4-B106-658898EF4FC1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A419A73C-4162-409A-B336-184C5BCE735F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A419A73C-4162-409A-B336-184C5BCE735F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A419A73C-4162-409A-B336-184C5BCE735F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A419A73C-4162-409A-B336-184C5BCE735F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5F720FC9-4972-42E2-B93B-07C0B416A8EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5F720FC9-4972-42E2-B93B-07C0B416A8EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5F720FC9-4972-42E2-B93B-07C0B416A8EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5F720FC9-4972-42E2-B93B-07C0B416A8EF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{3C58B7BD-0A01-4C2F-967C-B30BCB0399A2} = {0B5BB711-695D-43D9-BB95-7A56F12F6E22}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {73E379E6-CE69-4713-9A7C-BCA57EFA015D}
