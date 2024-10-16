@@ -376,23 +376,10 @@ namespace AXERP.API.Functions.Blobs
                 {
                     _logger.LogInformation("Blob file download finished.");
 
-                    _logger.LogInformation("Setting Bill Of Lading if not set already.");
-                    _updateBillOfLadingCommand.SetLoggerProcessData(UserName, id: _logger.ProcessId);
-                    var billOfLadigResp = _updateBillOfLadingCommand.Execute(deliveryId);
-
-                    if (billOfLadigResp.HttpStatusCode != HttpStatusCode.OK)
-                    {
-                        var response = req.CreateResponse(billOfLadigResp.HttpStatusCode);
-                        response.WriteString(billOfLadigResp.RequestError!);
-                        return response;
-                    }
-                    else
-                    {
-                        var response = req.CreateResponse(HttpStatusCode.OK);
-                        response.WriteBytes(resp.FileContent);
-                        response.Headers.Add("Content-Type", "application/octet-stream");
-                        return response;
-                    }
+                    var response = req.CreateResponse(HttpStatusCode.OK);
+                    response.WriteBytes(resp.FileContent);
+                    response.Headers.Add("Content-Type", "application/octet-stream");
+                    return response;
                 }
             }
             catch (Exception ex)
