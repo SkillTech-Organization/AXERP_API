@@ -46,7 +46,10 @@ namespace AXERP.API.Business.SheetProcessors
             // Filtering range by EOD
             var eodRowIndex = sheet_rows.FindIndex(row =>
             {
-                return row.Any(x => x != null && (x.ToString() ?? string.Empty).ToLower().Contains("#end"));
+                return row.Any(x => x != null &&
+                       (x.ToString() ?? string.Empty)
+                            .ToLower()
+                            .Contains(EnvironmentHelper.TryGetOptionalParameter("SheetEndOfDataMarker") ?? "#end"));
             });
             sheet_rows = sheet_rows.GetRange(0, eodRowIndex);
 

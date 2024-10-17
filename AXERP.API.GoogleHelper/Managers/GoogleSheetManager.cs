@@ -170,6 +170,8 @@ namespace AXERP.API.GoogleHelper.Managers
             dataValueRange.Values = new List<IList<object>> { newData };
 
             var request = _sheetsService.Spreadsheets.Values.Update(dataValueRange, spreadSheetId, range);
+            request.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.RAW;
+
             var response = request.Execute();
 
             return response;
