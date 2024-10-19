@@ -1,14 +1,13 @@
 ﻿using AXERP.API.Domain;
 using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.ServiceContracts.Responses;
+using AXERP.API.Domain.Util;
 using AXERP.API.GoogleHelper.Managers;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Base;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
-using Newtonsoft.Json;
 using System.Globalization;
-using System.Reflection;
 using System.Text.RegularExpressions;
 
 namespace AXERP.API.Business.Commands
@@ -43,16 +42,7 @@ namespace AXERP.API.Business.Commands
             var sheet_rows = rows.Skip(1).ToList();
 
             // Eg. DeliveryID -> 0 (indexof Delivery ID in sheet headers)
-            var field_names = new Dictionary<string, int>();
-            foreach (var property in typeof(Delivery).GetProperties())
-            {
-                var jsonAttribute = property.GetCustomAttribute<JsonPropertyAttribute>(true);
-                if (jsonAttribute != null)
-                {
-                    var propertyName = jsonAttribute.PropertyName;
-                    field_names[property.Name] = headers.IndexOf(propertyName ?? property.Name);
-                }
-            }
+            var field_names = SheetHelperMethods.GetFieldNamesWithOrder<Delivery>(headers);
 
             //var billOfLadingFormatted = billOfLading.ToString("G", new CultureInfo(sheetCulture));
             var billOfLadingFormatted = billOfLading.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
@@ -71,16 +61,7 @@ namespace AXERP.API.Business.Commands
                 blFileReferences.Add(referenceName);
             }
 
-            // Filtering range by EOD
-            var eodRowIndex = sheet_rows.FindIndex(row =>
-            {
-                return row.Any(x => x != null &&
-                       (x.ToString() ?? string.Empty)
-                            .ToLower()
-                            .Contains(EnvironmentHelper.TryGetOptionalParameter("SheetEndOfDataMarker") ?? "#end"));
-            });
-            sheet_rows = sheet_rows.GetRange(0, eodRowIndex);
-
+            sheet_rows = SheetHelperMethods.UntilEndOfData(sheet_rows, out int eodRowIndex);
             _logger.LogInformation("EOD marker encountered at line: {0}.", eodRowIndex - 1);
 
             // Updating cells
@@ -176,54 +157,6 @@ namespace AXERP.API.Business.Commands
             return res;
         }
 
-        //private async Task<BaseResponse> WriteBackDb(List<string> deliveryIds, DateTime billOfLading)
-        //{
-        //    var res = new BaseResponse();
-
-        //    using (var uow = _uowFactory.Create())
-        //    {
-        //        try
-        //        {
-        //            foreach (var deliveryID in deliveryIds)
-        //            {
-        //                var matches = DeliveryIdRegex().Matches(deliveryID);
-
-        //                var id = int.Parse(matches[0].Groups["id"].Value.Trim());
-        //                var sf = matches[0].Groups["suffix"].Value.Trim();
-
-        //                var delivery = uow.TransactionRepository.GetById(id, sf);
-
-        //                if (delivery == null)
-        //                {
-        //                    res.HttpStatusCode = System.Net.HttpStatusCode.NotFound;
-        //                    res.RequestError = $"Delivery with id: {deliveryID} cannot not be found.";
-        //                }
-        //                else
-        //                {
-        //                    if (delivery.BillOfLading == null)
-        //                    {
-        //                        delivery.BillOfLading = DateTime.Now;
-        //                        uow.TransactionRepository.Update(delivery);
-
-        //                        _logger.LogInformation("Bill Of Lading set to: {0}", delivery.BillOfLading);
-        //                    }
-        //                    else
-        //                    {
-        //                        _logger.LogInformation("Bill of Lading is already set to: {0}", delivery.BillOfLading);
-        //                    }
-        //                }
-        //            }
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            uow.Rollback();
-        //            throw;
-        //        }
-        //    }
-
-        //    return res;
-        //}
-
         public async Task<BaseResponse> Execute(List<string> fileNames)
         {
             var res = new BaseResponse();
@@ -235,12 +168,6 @@ namespace AXERP.API.Business.Commands
             {
                 return sheetResult;
             }
-
-            //var dbResult = await WriteBackDb(deliveryIds, billOfLading);
-            //if (!dbResult.IsSuccess)
-            //{
-            //    return dbResult;
-            //}
 
             return res;
         }
