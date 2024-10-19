@@ -294,7 +294,7 @@ namespace AXERP.API.Functions.Blobs
             }
         }
 
-        public static BlobUploadFile FormFileToBlobUploadFile(FilePart file, string? nameOverride = null)
+        private static BlobUploadFile FormFileToBlobUploadFile(FilePart file, string? nameOverride = null)
         {
             BlobUploadFile bl;
             byte[] fileBytes;

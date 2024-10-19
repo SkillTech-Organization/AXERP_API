@@ -1,6 +1,7 @@
 ﻿using AXERP.API.Domain;
 using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.Extensions;
+using AXERP.API.Domain.Util;
 using AXERP.API.GoogleHelper.Models;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Factories;
@@ -32,27 +33,9 @@ namespace AXERP.API.Business.SheetProcessors
             var sheet_rows = sheet_value_range.Skip(1).ToList();
 
             // Eg. DeliveryID -> 0 (indexof Delivery ID in sheet headers)
-            var field_names = new Dictionary<string, int>();
-            foreach (var property in typeof(Delivery).GetProperties())
-            {
-                var jsonAttribute = property.GetCustomAttribute<JsonPropertyAttribute>(true);
-                if (jsonAttribute != null)
-                {
-                    var propertyName = jsonAttribute.PropertyName;
-                    field_names[property.Name] = headers.IndexOf(propertyName ?? property.Name);
-                }
-            }
+            var field_names = SheetHelperMethods.GetFieldNamesWithOrder<Delivery>(headers);
 
-            // Filtering range by EOD
-            var eodRowIndex = sheet_rows.FindIndex(row =>
-            {
-                return row.Any(x => x != null &&
-                       (x.ToString() ?? string.Empty)
-                            .ToLower()
-                            .Contains(EnvironmentHelper.TryGetOptionalParameter("SheetEndOfDataMarker") ?? "#end"));
-            });
-            sheet_rows = sheet_rows.GetRange(0, eodRowIndex);
-
+            sheet_rows = SheetHelperMethods.UntilEndOfData(sheet_rows, out int eodRowIndex);
             _logger.LogInformation("EOD marker encountered at line: {0}.", eodRowIndex - 1);
 
             var result = new List<Delivery>();

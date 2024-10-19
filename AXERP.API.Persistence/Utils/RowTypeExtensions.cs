@@ -1,9 +1,11 @@
 ﻿using AXERP.API.Domain.Attributes;
+using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.Models;
 using Newtonsoft.Json;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Reflection;
+using System.Reflection.PortableExecutable;
 
 namespace AXERP.API.Persistence.Utils
 {
