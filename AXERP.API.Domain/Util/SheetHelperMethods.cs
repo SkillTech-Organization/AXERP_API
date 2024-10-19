@@ -24,6 +24,7 @@ namespace AXERP.API.Domain.Util
 
             return sheet_rows;
         }
+
         public static Dictionary<string, int> GetFieldNamesWithOrder<T>(IList<object> headers)
         {
             var field_names = new Dictionary<string, int>();
@@ -37,6 +38,35 @@ namespace AXERP.API.Domain.Util
                 }
             }
             return field_names;
+        }
+
+        public static int GetFieldNameIndex<T>(string fieldName)
+        {
+            var prop = typeof(T).GetProperties().First(x => x.Name == fieldName);
+            return typeof(T).GetProperties().ToList().IndexOf(prop);
+        }
+
+        /// <summary>
+        /// 1 -> A
+        /// 2 -> B
+        /// ...
+        /// ? -> GV
+        /// ...
+        /// </summary>
+        /// <param name="columnNumber"></param>
+        /// <returns></returns>
+        public static string GetExcelColumnName(int columnNumber)
+        {
+            string columnName = "";
+
+            while (columnNumber > 0)
+            {
+                int modulo = (columnNumber - 1) % 26;
+                columnName = Convert.ToChar('A' + modulo) + columnName;
+                columnNumber = (columnNumber - modulo) / 26;
+            }
+
+            return columnName;
         }
     }
 }

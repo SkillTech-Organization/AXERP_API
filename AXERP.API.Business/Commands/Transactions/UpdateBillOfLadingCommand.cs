@@ -7,6 +7,7 @@ using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Base;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
+using Newtonsoft.Json;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
@@ -35,14 +36,15 @@ namespace AXERP.API.Business.Commands
             var regexReferenceKey = EnvironmentHelper.TryGetParameter("RegexReferenceKey");
             var tab_name = EnvironmentHelper.TryGetParameter("BulkDeliveriesSheetDataGasTransactionsTab");
             var sheetCulture = EnvironmentHelper.TryGetParameter("SheetCulture") ?? "fr-FR";
-            var sheetBillOfLadingColumn = EnvironmentHelper.TryGetOptionalParameter("SheetBillOfLadingColumn") ?? "BV";
 
             // Preprocess
             var headers = rows[0];
-            var sheet_rows = rows.Skip(1).ToList();
 
             // Eg. DeliveryID -> 0 (indexof Delivery ID in sheet headers)
             var field_names = SheetHelperMethods.GetFieldNamesWithOrder<Delivery>(headers);
+
+            var sheet_rows = rows.Skip(1).ToList();
+            var sheetBillOfLadingColumn = SheetHelperMethods.GetExcelColumnName(field_names[nameof(Delivery.BillOfLading)] + 1);
 
             //var billOfLadingFormatted = billOfLading.ToString("G", new CultureInfo(sheetCulture));
             var billOfLadingFormatted = billOfLading.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
