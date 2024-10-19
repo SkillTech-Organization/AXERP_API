@@ -71,11 +71,19 @@ namespace AXERP.API.Business.Commands
             {
                 var row = sheet_rows[rowIndex];
 
+                var refBoL = field_names[nameof(Delivery.BillOfLading)];
+
                 var ref1Idx = field_names[nameof(Delivery.Reference)];
                 var ref2Idx = field_names[nameof(Delivery.Reference2)];
                 var ref3Idx = field_names[nameof(Delivery.Reference3)];
 
                 var sheetRowNumber = rowIndex + 2;
+
+                if (!(row.Count <= refBoL || row[refBoL] == null || string.IsNullOrWhiteSpace(row[refBoL].ToString()) || row[refBoL].ToString() == "N/A"))
+                {
+                    // Már ki van töltve, nem változtatjuk meg.
+                    continue;
+                }
 
                 if (!(row.Count <= ref1Idx || row[ref1Idx] == null || string.IsNullOrWhiteSpace(row[ref1Idx].ToString())))
                 {
