@@ -5,26 +5,32 @@ using AXERP.API.Domain.Util;
 using AXERP.API.GoogleHelper.Models;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Factories;
-using AXERP.API.Persistence.Factories;
-using Newtonsoft.Json;
 using System.Globalization;
-using System.Reflection;
-using System.Reflection.Metadata;
 using System.Text.RegularExpressions;
 
 namespace AXERP.API.Business.SheetProcessors
 {
+    public class DataRow
+    {
+        /// <summary>
+        /// Google Sheet row index
+        /// </summary>
+        public int RowIndex { get; set; }
+
+        /// <summary>
+        /// Google Sheet row data
+        /// </summary>
+        public IList<object> Data { get; set; }
+    }
+
     [ForSystem("GoogleSheet Processing", LogConstants.FUNCTION_GOOGLE_SYNC)]
     public partial class GasTransactionSheetProcessor : BaseSheetProcessors<Delivery, GasTransactionSheetProcessor>
     {
-        private readonly UnitOfWorkFactory _uowFactory;
-
         [GeneratedRegex("(?<id>[0-9]+)(?<suffix>[^0-9]{0,})", RegexOptions.IgnoreCase, "hu-HU")]
         private static partial Regex DeliveryIdRegex();
 
-        public GasTransactionSheetProcessor(AxerpLoggerFactory loggerFactory, UnitOfWorkFactory uowFactory) : base(loggerFactory)
+        public GasTransactionSheetProcessor(AxerpLoggerFactory loggerFactory) : base(loggerFactory)
         {
-            _uowFactory = uowFactory;
         }
 
         public override GenericSheetImportResult<Delivery> ProcessRows(IList<IList<object>> sheet_value_range, string culture_code)
@@ -43,18 +49,21 @@ namespace AXERP.API.Business.SheetProcessors
             var invalidRows = 0;
             var totalRows = sheet_rows.Count - 1;
 
+            // Indexed sheetrows
+            var indexed = sheet_rows
+                .Select((data, index) => new DataRow { RowIndex = index + 2, Data = data });
+
             // Parallel processing
-            var dataChunks = sheet_rows.Chunk(100);
+            var dataChunks = indexed.Chunk(100);
             var partialResults = new List<GenericSheetImportResult<Delivery>>();
 
-            var startRowIndex = 0;
             var allDeliveryIds = new List<string>();
+
             Parallel.ForEach(dataChunks, dataChunk =>
             {
-                var pr = _Map(field_names, dataChunk, culture_code, startRowIndex);
+                var pr = _Map(field_names, dataChunk, culture_code);
                 partialResults.Add(pr.Item1);
                 allDeliveryIds.AddRange(pr.Item2);
-                startRowIndex += 100;
             });
 
             _logger.LogInformation("All non-empty DeliveryID from the google sheet: {0}", string.Join(", ", allDeliveryIds));
@@ -76,7 +85,7 @@ namespace AXERP.API.Business.SheetProcessors
             };
         }
 
-        private (GenericSheetImportResult<Delivery>, List<string>) _Map(Dictionary<string, int> field_names, IList<IList<object>>? sheet_rows, string culture_code, int startRowIndex)
+        private (GenericSheetImportResult<Delivery>, List<string>) _Map(Dictionary<string, int> field_names, DataRow[] sheet_rows, string culture_code)
         {
             var result = new List<Delivery>();
             void add_transaction(Delivery d, IList<object> row)
@@ -92,10 +101,10 @@ namespace AXERP.API.Business.SheetProcessors
 
             var allDeliveryIds = new List<string>();
 
-            for (var i = 0; i < sheet_rows.Count; i++)
+            for (var i = 0; i < sheet_rows.Count(); i++)
             {
-                var sheet_row_index = startRowIndex + i + 2;
-                var row = sheet_rows[i];
+                var sheet_row_index = sheet_rows[i].RowIndex;
+                var row = sheet_rows[i].Data;
 
                 try
                 {
