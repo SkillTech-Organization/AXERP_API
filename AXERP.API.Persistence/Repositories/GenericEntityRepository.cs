@@ -371,7 +371,7 @@ namespace AXERP.API.Persistence.Repositories
                 query.Where($"{column} is null");
             }
 
-            rows = _connection.Query<RowType>(tmp.RawSql, tmp.Parameters, transaction: _sqlTransaction).ToList();
+            rows = _connection.Query<RowType>(tmp.RawSql, transaction: _sqlTransaction).ToList();
 
             return rows;
         }

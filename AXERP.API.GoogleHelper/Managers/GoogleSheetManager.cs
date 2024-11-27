@@ -3,7 +3,6 @@ using AXERP.API.GoogleHelper.Models;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
-using Google.Apis.Sheets.v4.Data;
 using Newtonsoft.Json;
 
 namespace AXERP.API.GoogleHelper.Managers
@@ -145,57 +144,6 @@ namespace AXERP.API.GoogleHelper.Managers
             }) ?? new List<RowType>();
 
             return result;
-        }
-
-        public UpdateValuesResponse UpdateCell(string spreadSheetId, string tab, string columnm, int row, object data)
-        {
-            if (row == 1)
-            {
-                throw new Exception("Header row cannot be updated!");
-            }
-            if (row < 1)
-            {
-                throw new Exception("Row number is too small!");
-            }
-
-            var dataValueRange = new ValueRange();
-
-            var _tab = string.IsNullOrWhiteSpace(tab) ? string.Empty : tab + "!";
-            var range = $"{_tab}{columnm}{row}";
-
-            dataValueRange.Range = range;
-            dataValueRange.MajorDimension = "COLUMNS";
-
-            var newData = new List<object>() { data };
-            dataValueRange.Values = new List<IList<object>> { newData };
-
-            var request = _sheetsService.Spreadsheets.Values.Update(dataValueRange, spreadSheetId, range);
-            request.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.RAW;
-
-            var response = request.Execute();
-
-            return response;
-        }
-
-        public BatchUpdateValuesResponse UpdateData(string spreadSheetId, string range, List<IList<object>> data)
-        {
-            var updateData = new List<ValueRange>();
-
-            var dataValueRange = new ValueRange();
-            dataValueRange.Range = range;
-            dataValueRange.Values = data;
-            
-            updateData.Add(dataValueRange);
-
-            var requestBody = new BatchUpdateValuesRequest();
-            requestBody.ValueInputOption = "USER_ENTERED";
-            requestBody.Data = updateData;
-
-            var request = _sheetsService.Spreadsheets.Values.BatchUpdate(requestBody, spreadSheetId);
-
-            var response = request.Execute();
-
-            return response;
         }
     }
 }
