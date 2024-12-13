@@ -92,7 +92,9 @@ namespace AXERP.API.Business.Commands
                 {
                     try
                     {
-                        var entities = uow.DocumentRepository.GetAll();
+                        var entities = uow.DocumentRepository
+                            .GetAll()
+                            .ToList();
                         var processed = new List<string>();
 
                         uow.BeginTransaction();
@@ -130,10 +132,14 @@ namespace AXERP.API.Business.Commands
 
                                 if (referenced == null)
                                 {
-                                    var msg = $"No 'Reference' found with value: {referenceName}";
+                                    var msg = $"No Document record found with name: {referenceName}. New one will be inserted.";
+
                                     _logger.LogWarning(msg);
-                                    response.Warnings.Add(msg);
-                                    continue;
+
+                                    referenced = uow.DocumentRepository.Add(new Document { Name = referenceName });
+                                    uow.Save("referenced-" + referenceName);
+
+                                    entities.Add(referenced);
                                 }
 
                                 referenced.FileName = fileName;
