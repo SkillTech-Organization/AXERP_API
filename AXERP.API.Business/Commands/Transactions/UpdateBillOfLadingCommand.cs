@@ -7,9 +7,7 @@ using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Base;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
-using Newtonsoft.Json;
 using System.Globalization;
-using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace AXERP.API.Business.Commands
@@ -76,7 +74,7 @@ namespace AXERP.API.Business.Commands
             {
                 var row = sheet_rows[rowIndex];
 
-                var transaction_id = row[field_names[nameof(Delivery.DeliveryID)]]?.ToString(); //  GetIdAndPartsFromSheetRow(field_names, row);
+                var transaction_id = row[field_names[nameof(Delivery.DeliveryID)]]?.ToString();
 
                 var refBoL = field_names[nameof(Delivery.BillOfLading)];
 
@@ -196,16 +194,6 @@ namespace AXERP.API.Business.Commands
             return res;
         }
 
-        //private static string GetIdAndPartsFromSheetRow(Dictionary<string, int> field_names, IList<object> row)
-        //{
-        //    var t_id = row[field_names[nameof(Delivery.DeliveryID)]]?.ToString() ?? "";
-        //    var t_id_suffix = row[field_names[nameof(Delivery.DeliveryIDSffx)]]?.ToString();
-
-        //    var t_id_full = t_id + ((t_id_suffix == null) ? "" : t_id_suffix);
-
-        //    return t_id_full;
-        //}
-
         private void WriteBackDatabase(List<string> ids, DateTime bol)
         {
             using (var uow = _uowFactory.Create())
@@ -213,7 +201,7 @@ namespace AXERP.API.Business.Commands
                 var rows = uow.TransactionRepository.GetAll();
                 var filtered = rows
                     .Where(x => ids.Contains(x.ID + x.IDSffx));
-                
+
                 foreach (var row in filtered)
                 {
                     row.BillOfLading = bol;
