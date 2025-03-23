@@ -8,7 +8,6 @@ using AXERP.API.LogHelper.Base;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
 using System.Globalization;
-using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace AXERP.API.Business.Commands
@@ -27,8 +26,9 @@ namespace AXERP.API.Business.Commands
         {
             _uowFactory = uowFactory;
         }
+
         private (List<string>, DateTime) UpdateSheetBillOfLadings(GoogleSheetManager sheetService, List<string> fileNames, DateTime billOfLading, IList<IList<object>> rows)
-        private void UpdateSheetBillOfLadings(GoogleSheetManager sheetService, List<string> fileNames, DateTime billOfLading, IList<IList<object>> rows)
+        {
             // Result
             var ids = new List<string>();
             var bol_date = billOfLading;
@@ -39,7 +39,7 @@ namespace AXERP.API.Business.Commands
             var regexReferenceKey = EnvironmentHelper.TryGetParameter("RegexReferenceKey");
             var tab_name = EnvironmentHelper.TryGetParameter("BulkDeliveriesSheetDataGasTransactionsTab");
             var sheetCulture = EnvironmentHelper.TryGetParameter("SheetCulture") ?? "fr-FR";
-            var sheetCulture = EnvironmentHelper.TryGetParameter("SheetCulture") ?? "fr-FR";
+
             // Preprocess
             var headers = rows[0];
 
@@ -55,11 +55,11 @@ namespace AXERP.API.Business.Commands
             // BL File references in the form they can be found in the Google Sheet
             var blFileReferences = new List<string>();
             foreach (var fileName in fileNames)
-            using (var uow = _uowFactory.Create())
+            {
                 var rawFileName = Path.GetFileName(fileName);
                 var matches = Regex.Matches(rawFileName, regexPattern, RegexOptions.IgnoreCase);
                 if (matches.Count == 0)
-                try
+                {
                     continue;
                 }
                 var referenceName = matches[0].Groups[regexReferenceKey].Value.Trim();
@@ -81,15 +81,15 @@ namespace AXERP.API.Business.Commands
                 var ref1Idx = field_names[nameof(Delivery.Reference)];
                 var ref2Idx = field_names[nameof(Delivery.Reference2)];
                 var ref3Idx = field_names[nameof(Delivery.Reference3)];
-                var ref3Idx = field_names[nameof(Delivery.Reference3)];
+
                 var sheetRowNumber = rowIndex + 2;
-                    var sf = matches[0].Groups["suffix"].Value.Trim();
+
                 if (!(row.Count <= refBoL || row[refBoL] == null || string.IsNullOrWhiteSpace(row[refBoL].ToString()) || row[refBoL].ToString() == "N/A"))
                 {
                     // Már ki van töltve, nem változtatjuk meg.
                     continue;
                 }
-                    var delivery = uow.TransactionRepository.GetById(id, sf);
+
                 if (!(row.Count <= ref1Idx || row[ref1Idx] == null || string.IsNullOrWhiteSpace(row[ref1Idx].ToString())))
                 {
                     var rawRef1 = row[ref1Idx].ToString()!.Trim();
@@ -127,7 +127,7 @@ namespace AXERP.API.Business.Commands
                         }
                     }
                 }
-                }
+
                 else if (!(row.Count <= ref3Idx || row[ref3Idx] == null || string.IsNullOrWhiteSpace(row[ref3Idx].ToString())))
                 {
                     var rawRef1 = row[ref3Idx].ToString()!.Trim();
@@ -139,9 +139,9 @@ namespace AXERP.API.Business.Commands
                         if (!blFileReferences.Any())
                         {
                             break;
-                            break;
                         }
                         else
+                        {
                             continue;
                         }
                     }
@@ -188,7 +188,6 @@ namespace AXERP.API.Business.Commands
             var sheetResult = await WriteBackSheet(fileNames, billOfLading);
             if (!sheetResult.IsSuccess)
             {
-                return sheetResult;
                 return sheetResult;
             }
 
