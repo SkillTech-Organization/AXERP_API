@@ -24,7 +24,7 @@ namespace AXERP.API.Domain.Entities
         [GridProps(order: 6, maxWidth: 100)]
         public string Result { get; set; }
 
-        [GridProps(order: 7, minWidth: 1000)]
+        [GridProps(order: 7, minWidth: 5000)]
         public string Description { get; set; }
     }
 }
