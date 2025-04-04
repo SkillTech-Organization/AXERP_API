@@ -321,24 +321,12 @@ namespace AXERP.API.Business.Commands
 
                 if (sheetCustomer != null)
                 {
-                    if (!isCustomerNew)
+                    var u = CustomerToDeliveries.FirstOrDefault(x => x.DeliveryID == sheetRow.DeliveryID && x.DeliveryIDSffx == sheetRow.DeliveryIDSffx);
+                    if (u != null)
                     {
-                        var u = CustomerToDeliveries.FirstOrDefault(x => x.DeliveryID == sheetRow.DeliveryID && x.DeliveryIDSffx == sheetRow.DeliveryIDSffx);
-                        if (u != null)
-                        {
-                            u.Comment = sheetRow.CustomerNote;
-                            ctdUpdate.Add(u);
-                        }
-                        else
-                        {
-                            ctdNew.Add(new CustomerToDelivery
-                            {
-                                DeliveryID = transaction.ID,
-                                DeliveryIDSffx = transaction.IDSffx,
-                                CustomerID = sheetCustomer.ID,
-                                Comment = sheetRow.CustomerNote
-                            });
-                        }
+                        u.Comment = sheetRow.CustomerNote;
+                        u.CustomerID = sheetCustomer.ID;
+                        ctdUpdate.Add(u);
                     }
                     else
                     {
@@ -354,24 +342,12 @@ namespace AXERP.API.Business.Commands
 
                 if (sheetTruckCompany != null)
                 {
-                    if (!isTruckCompanyNew)
+                    var u = TruckCompanyToDeliveries.FirstOrDefault(x => x.DeliveryID == sheetRow.DeliveryID && x.DeliveryIDSffx == sheetRow.DeliveryIDSffx);
+                    if (u != null)
                     {
-                        var u = TruckCompanyToDeliveries.FirstOrDefault(x => x.DeliveryID == sheetRow.DeliveryID && x.DeliveryIDSffx == sheetRow.DeliveryIDSffx);
-                        if (u != null)
-                        {
-                            u.Comment = sheetRow.TruckLoadingCompanyComment;
-                            ttdUpdate.Add(u);
-                        }
-                        else
-                        {
-                            ttdNew.Add(new TruckCompanyToDelivery
-                            {
-                                DeliveryID = transaction.ID,
-                                DeliveryIDSffx = transaction.IDSffx,
-                                TruckCompanyID = sheetTruckCompany.ID,
-                                Comment = sheetRow.TruckLoadingCompanyComment
-                            });
-                        }
+                        u.Comment = sheetRow.TruckLoadingCompanyComment;
+                        u.TruckCompanyID = sheetTruckCompany.ID;
+                        ttdUpdate.Add(u);
                     }
                     else
                     {
