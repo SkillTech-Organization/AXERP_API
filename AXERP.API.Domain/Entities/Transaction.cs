@@ -17,6 +17,10 @@ namespace AXERP.API.Domain.Entities
 
         public DateTime? DateDelivered { get; set; }
 
+        public string PurchaseContract { get; set; }
+
+        public double? QtaDeliveredInKg { get; set; }
+
         public string SalesContractID { get; set; }
 
         public string SalesStatusID { get; set; }
