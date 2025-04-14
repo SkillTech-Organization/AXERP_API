@@ -371,7 +371,18 @@ namespace AXERP.API.Business.Commands
                 _logger.LogInformation("Inserting new {0} rows. Count: {1}", nameof(Transaction), transactionDtos.Count);
                 _logger.LogInformation("DeliveryIDs for create: {0}", string.Join(", ", allDeliveryIds));
 
-                uow.GenericRepository.BulkCopy<Transaction>(transactionDtos);
+                if (transactionDtos.Count > 1000)
+                {
+                    var chunks = transactionDtos.Chunk(1000);
+                    foreach (var chunk in chunks)
+                    {
+                        uow.GenericRepository.BulkCopy<Transaction>(chunk.ToList());
+                    }
+                }
+                else
+                {
+                    uow.GenericRepository.BulkCopy<Transaction>(transactionDtos);
+                }
             }
             else
             {

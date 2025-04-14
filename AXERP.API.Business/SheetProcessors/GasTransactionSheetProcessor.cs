@@ -246,6 +246,29 @@ namespace AXERP.API.Business.SheetProcessors
                         gasTransaction.DateDelivered = DateDelivered;
                     }
 
+                    // QtyDeliveredInKg
+                    field_idx = field_names[nameof(gasTransaction.QtyDeliveredInKg)];
+                    if (row.Count <= field_idx)
+                    {
+                        add_transaction(gasTransaction, row);
+                        continue;
+                    }
+
+                    if (double.TryParse(row[field_idx]?.ToString(), new CultureInfo(culture_code), out double QtyDeliveredInKg))
+                    {
+                        gasTransaction.QtyDeliveredInKg = QtyDeliveredInKg;
+                    }
+
+                    // PurchaseContract
+                    field_idx = field_names[nameof(gasTransaction.PurchaseContract)];
+                    if (row.Count <= field_idx)
+                    {
+                        add_transaction(gasTransaction, row);
+                        continue;
+                    }
+
+                    gasTransaction.PurchaseContract = row[field_idx]?.ToString();
+
                     // SalesContractID
                     field_idx = field_names[nameof(gasTransaction.SalesContractID)];
                     if (row.Count <= field_idx)

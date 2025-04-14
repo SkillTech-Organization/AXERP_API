@@ -25,6 +25,14 @@ namespace AXERP.API.Domain.Entities
         [GridProps(maxWidth: 150)]
         public DateTime? DateDelivered { get; set; }
 
+        [JsonProperty("Purchase Contract")]
+        [GridProps(maxWidth: 150)]
+        public string PurchaseContract { get; set; }
+
+        [JsonProperty("Qty delivered in Kg")]
+        [GridProps(maxWidth: 150)]
+        public double? QtyDeliveredInKg { get; set; }
+
         [JsonProperty("Sales Contract ID")]
         [GridProps(maxWidth: 200)]
         public string SalesContractID { get; set; }
