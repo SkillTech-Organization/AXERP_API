@@ -19,7 +19,7 @@ namespace AXERP.API.Domain.Entities
 
         public string PurchaseContract { get; set; }
 
-        public double? QtaDeliveredInKg { get; set; }
+        public double? QtyDeliveredInKg { get; set; }
 
         public string SalesContractID { get; set; }
 

@@ -31,7 +31,7 @@ namespace AXERP.API.Domain.Entities
 
         [JsonProperty("Qty delivered in Kg")]
         [GridProps(maxWidth: 150)]
-        public double? QtaDeliveredInKg { get; set; }
+        public double? QtyDeliveredInKg { get; set; }
 
         [JsonProperty("Sales Contract ID")]
         [GridProps(maxWidth: 200)]
