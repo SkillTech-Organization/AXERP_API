@@ -1,11 +1,9 @@
 ﻿using AXERP.API.Domain.Attributes;
-using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.Models;
 using Newtonsoft.Json;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Reflection;
-using System.Reflection.PortableExecutable;
 
 namespace AXERP.API.Persistence.Utils
 {
@@ -27,26 +25,11 @@ namespace AXERP.API.Persistence.Utils
                         jsonName = jsonAttribute.PropertyName;
                     }
 
-                    int? order = null;
-                    int? minW = null;
-                    int? maxW = null;
-
-                    var gridPropsAttribute = property.GetCustomAttribute<GridPropsAttribute>(true);
-                    if (gridPropsAttribute != null)
-                    {
-                        order = gridPropsAttribute.Order == 0 ? null : gridPropsAttribute.Order;
-                        minW = gridPropsAttribute.MinWidth == 0 ? null : gridPropsAttribute.MinWidth;
-                        maxW = gridPropsAttribute.MaxWidth == 0 ? null : gridPropsAttribute.MaxWidth;
-                    }
-
                     columns.Add(new ColumnData
                     {
                         Name = property.Name,
                         Title = jsonName,
                         Type = property.PropertyType.ToString(),
-                        Order = order,
-                        MinWidth = minW,
-                        MaxWidth = maxW
                     });
                 }
             }
