@@ -2,6 +2,7 @@
 using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.Domain.Util;
+using AXERP.API.GoogleHelper;
 using AXERP.API.GoogleHelper.Managers;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Base;
@@ -16,15 +17,20 @@ namespace AXERP.API.Business.Commands
     public partial class UpdateBillOfLadingCommand : BaseAuditedClass<UpdateBillOfLadingCommand>
     {
         private readonly UnitOfWorkFactory _uowFactory;
+        private readonly GoogleSheetManagerFactory _googleSheetManagerFactory;
+
 
         [GeneratedRegex("(?<id>[0-9]+)(?<suffix>[^0-9]{0,})", RegexOptions.IgnoreCase, "hu-HU")]
         private static partial Regex DeliveryIdRegex();
 
         public UpdateBillOfLadingCommand(
             AxerpLoggerFactory axerpLoggerFactory,
-            UnitOfWorkFactory uowFactory) : base(axerpLoggerFactory)
+            UnitOfWorkFactory uowFactory,
+            GoogleSheetManagerFactory googleSheetManagerFactory)
+            : base(axerpLoggerFactory)
         {
             _uowFactory = uowFactory;
+            _googleSheetManagerFactory = googleSheetManagerFactory;
         }
 
         private (List<string>, DateTime) UpdateSheetBillOfLadings(GoogleSheetManager sheetService, List<string> fileNames, DateTime billOfLading, IList<IList<object>> rows)
@@ -157,15 +163,13 @@ namespace AXERP.API.Business.Commands
 
             try
             {
-                var credentialsJson = EnvironmentHelper.TryGetParameter("GoogleCredentials");
-
                 var sheet_id = EnvironmentHelper.TryGetParameter("BulkDeliveriesSheetDataSheetId");
                 var tab_name = EnvironmentHelper.TryGetParameter("BulkDeliveriesSheetDataGasTransactionsTab");
                 var range = EnvironmentHelper.TryGetOptionalParameter("BulkDeliveriesSheetDataGasTransactionRange");
 
-                var sheetService = new GoogleSheetManager(credentials: credentialsJson, format: CredentialsFormats.Text);
+                using GoogleSheetManager sheetService = _googleSheetManagerFactory.Create();
 
-                var rows = await sheetService.ReadGoogleSheetRaw(sheet_id, $"{tab_name}{(range?.Length > 0 ? "!" : "")}{range}");
+                var rows = await sheetService.ReadGoogleSheetRawAsync(sheet_id, $"{tab_name}{(range?.Length > 0 ? "!" : "")}{range}");
 
                 var bolResult = UpdateSheetBillOfLadings(sheetService, fileNames, billOfLading, rows);
 
