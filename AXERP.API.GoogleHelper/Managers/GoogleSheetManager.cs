@@ -1,72 +1,27 @@
 ﻿using AXERP.API.GoogleHelper.JsonConverters;
 using AXERP.API.GoogleHelper.Models;
-using Google.Apis.Auth.OAuth2;
-using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
 using Google.Apis.Sheets.v4.Data;
 using Newtonsoft.Json;
+using Polly;
+using static Google.Apis.Sheets.v4.SpreadsheetsResource.ValuesResource;
 
 namespace AXERP.API.GoogleHelper.Managers
 {
-    public enum CredentialsFormats
-    {
-        None, FileName, Text
-    }
-
-    public class GoogleSheetManager
+    public sealed class GoogleSheetManager : IDisposable
     {
         public const string DEFAULT_CREDENTIALS_FILENAME = "google-credentials.json";
 
-        private SheetsService _sheetsService;
+        private readonly SheetsService _sheetsService;
+        private readonly ResiliencePipeline _resiliencePipeline;
 
-        public GoogleSheetManager(string appName = "AXERP.API", string credentials = DEFAULT_CREDENTIALS_FILENAME, CredentialsFormats format = CredentialsFormats.FileName)
+        public GoogleSheetManager(SheetsService sheetsService, ResiliencePipeline resiliencePipeline)
         {
-            GoogleCredential credential;
-            switch (format)
-            {
-                case CredentialsFormats.FileName:
-                    {
-                        using (var stream = new FileStream(credentials, FileMode.Open, FileAccess.Read))
-                        {
-                            credential = GoogleCredential.FromStream(stream).CreateScoped(SheetsService.Scope.Spreadsheets);
-                        }
-
-                        _sheetsService = new SheetsService(new BaseClientService.Initializer()
-                        {
-                            HttpClientInitializer = credential,
-                            ApplicationName = appName
-                        });
-
-                        break;
-                    }
-                case CredentialsFormats.Text:
-                    {
-                        using (var stream = new MemoryStream())
-                        {
-                            using (var writer = new StreamWriter(stream))
-                            {
-                                writer.Write(credentials);
-                                writer.Flush();
-                                stream.Position = 0;
-                                credential = GoogleCredential.FromStream(stream).CreateScoped(SheetsService.Scope.Spreadsheets);
-                            }
-                        }
-
-                        _sheetsService = new SheetsService(new BaseClientService.Initializer()
-                        {
-                            HttpClientInitializer = credential,
-                            ApplicationName = appName
-                        });
-
-                        break;
-                    }
-                case CredentialsFormats.None:
-                default:
-                    throw new Exception("Google Sheet Service validation / initialization failed.");
-            }
+            _sheetsService = sheetsService;
+            _resiliencePipeline = resiliencePipeline;
         }
 
-        private string SheetJsonToObjectJson(IList<IList<object>> values)
+        private static string SheetJsonToObjectJson(IList<IList<object>> values)
         {
             var _keys = values[0];
             var _values = values.Skip(1).ToList();
@@ -93,28 +48,31 @@ namespace AXERP.API.GoogleHelper.Managers
             return dataJson;
         }
 
-        public async Task<IList<IList<object>>> ReadGoogleSheetRaw(string spreadSheetId, string range)
+        public async Task<IList<IList<object>>> ReadGoogleSheetRawAsync(string spreadSheetId, string range)
         {
-            SpreadsheetsResource.ValuesResource.GetRequest getRequest = _sheetsService.Spreadsheets.Values.Get(spreadSheetId, range);
+            return await _resiliencePipeline.ExecuteAsync(async token =>
+            {
+                GetRequest getRequest = _sheetsService.Spreadsheets.Values.Get(spreadSheetId, range);
 
-            var getResponse = await getRequest.ExecuteAsync();
-            IList<IList<object>> values = getResponse.Values;
+                var getResponse = await getRequest.ExecuteAsync(token);
+                IList<IList<object>> values = getResponse.Values;
 
-            return values;
+                return values;
+            });
         }
 
-        public async Task<string> ReadGoogleSheetAsJson(string spreadSheetId, string range)
+        public async Task<string> ReadGoogleSheetAsJsonAsync(string spreadSheetId, string range)
         {
-            var values = await ReadGoogleSheetRaw(spreadSheetId, range);
+            var values = await ReadGoogleSheetRawAsync(spreadSheetId, range);
 
             var dataJson = JsonConvert.SerializeObject(values);
 
             return dataJson;
         }
 
-        public async Task<GenericSheetImportResult<RowType>> ReadGoogleSheet<RowType>(string spreadSheetId, string range, string sheetCulture)
+        public async Task<GenericSheetImportResult<RowType>> ReadGoogleSheetAsync<RowType>(string spreadSheetId, string range, string sheetCulture)
         {
-            var raw = await ReadGoogleSheetRaw(spreadSheetId, range);
+            var raw = await ReadGoogleSheetRawAsync(spreadSheetId, range);
             var dataJson = SheetJsonToObjectJson(raw);
 
             var result = new GenericSheetImportResult<RowType>
@@ -196,6 +154,11 @@ namespace AXERP.API.GoogleHelper.Managers
             var response = request.Execute();
 
             return response;
+        }
+
+        public void Dispose()
+        {
+            _sheetsService.Dispose();
         }
     }
 }
