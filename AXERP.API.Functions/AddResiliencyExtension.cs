@@ -16,8 +16,6 @@ public static class AddResiliencyExtension
     {
         services.AddResiliencePipeline(GoogleSheetManagerFactory.PipelineName, (builder, context) =>
         {
-            var logger = context.ServiceProvider.GetRequiredService<ILogger>();
-
             builder
                 .AddRetry(SetRetry(context.ServiceProvider))
                 .AddTimeout(SetTimeout(context.ServiceProvider));
