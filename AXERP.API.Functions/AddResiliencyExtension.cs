@@ -1,5 +1,6 @@
 using AXERP.API.GoogleHelper;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
 using Polly.Timeout;
@@ -13,17 +14,19 @@ public static class AddResiliencyExtension
 
     public static IServiceCollection AddResiliency(this IServiceCollection services)
     {
-        services.AddResiliencePipeline(GoogleSheetManagerFactory.PipelineName, builder =>
+        services.AddResiliencePipeline(GoogleSheetManagerFactory.PipelineName, (builder, context) =>
         {
+            var logger = context.ServiceProvider.GetRequiredService<ILogger>();
+
             builder
-                .AddRetry(SetRetry())
-                .AddTimeout(SetTimeout());
+                .AddRetry(SetRetry(context.ServiceProvider))
+                .AddTimeout(SetTimeout(context.ServiceProvider));
         });
 
         return services;
     }
 
-    private static RetryStrategyOptions SetRetry()
+    private static RetryStrategyOptions SetRetry(IServiceProvider serviceProvider)
     {
         string? value = Environment.GetEnvironmentVariable(RetryCounter);
 
@@ -32,13 +35,20 @@ public static class AddResiliencyExtension
 
         int retryAttempts = Convert.ToInt32(value);
 
+        var logger = serviceProvider.GetRequiredService<ILogger<RetryStrategyOptions>>();
+
         return new()
         {
             MaxRetryAttempts = retryAttempts,
+            OnRetry = args =>
+            {
+                logger.LogWarning("Retry. Attempt: {0}", args.AttemptNumber);
+                return ValueTask.CompletedTask;
+            },
         };
     }
 
-    private static TimeoutStrategyOptions SetTimeout()
+    private static TimeoutStrategyOptions SetTimeout(IServiceProvider serviceProvider)
     {
         string? value = Environment.GetEnvironmentVariable("GSTimeoutHandlerInSeconds");
 
@@ -47,9 +57,16 @@ public static class AddResiliencyExtension
 
         int timeout = Convert.ToInt32(value);
 
+        var logger = serviceProvider.GetRequiredService<ILogger<TimeoutStrategyOptions>>();
+
         return new()
         {
             Timeout = TimeSpan.FromSeconds(timeout),
+            OnTimeout = args => 
+            {
+                logger.LogWarning("Request timed our.");
+                return ValueTask.CompletedTask;
+            }
         };
     }
 }
