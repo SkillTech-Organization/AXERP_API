@@ -37,6 +37,8 @@ public sealed class GoogleSheetManagerFactory
             ApplicationName = appName
         });
 
+        sheetsService.HttpClient.Timeout = TimeSpan.FromSeconds(400);
+
         return new GoogleSheetManager(sheetsService, _pipeline);
     }
 
