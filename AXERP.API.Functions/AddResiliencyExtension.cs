@@ -1,4 +1,5 @@
 using AXERP.API.GoogleHelper;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Polly;
@@ -26,12 +27,8 @@ public static class AddResiliencyExtension
 
     private static RetryStrategyOptions SetRetry(IServiceProvider serviceProvider)
     {
-        string? value = Environment.GetEnvironmentVariable(RetryCounter);
-
-        if (string.IsNullOrWhiteSpace(value))
-            throw new InvalidOperationException($"Parameter {RetryCounter} is missing");
-
-        int retryAttempts = Convert.ToInt32(value);
+        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+        int retryAttempts = configuration.GetValue<int>(RetryCounter);
 
         var logger = serviceProvider.GetRequiredService<ILogger<RetryStrategyOptions>>();
 
@@ -48,12 +45,8 @@ public static class AddResiliencyExtension
 
     private static TimeoutStrategyOptions SetTimeout(IServiceProvider serviceProvider)
     {
-        string? value = Environment.GetEnvironmentVariable("GSTimeoutHandlerInSeconds");
-
-        if (string.IsNullOrWhiteSpace(value))
-            throw new InvalidOperationException($"Parameter {TimeoutHandlerInSeconds} is missing");
-
-        int timeout = Convert.ToInt32(value);
+        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+        int timeout = configuration.GetValue<int>(TimeoutHandlerInSeconds);
 
         var logger = serviceProvider.GetRequiredService<ILogger<TimeoutStrategyOptions>>();
 

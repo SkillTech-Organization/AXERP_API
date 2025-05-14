@@ -2,6 +2,7 @@ using AXERP.API.GoogleHelper.Managers;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
+using Microsoft.Extensions.Configuration;
 using Polly;
 using Polly.Registry;
 
@@ -17,37 +18,37 @@ public sealed class GoogleSheetManagerFactory
     }
 
     private readonly ResiliencePipeline _pipeline;
+    private readonly IConfiguration _configuration;
 
-    public GoogleSheetManagerFactory(ResiliencePipelineProvider<string> provider)
+    public GoogleSheetManagerFactory(ResiliencePipelineProvider<string> provider, IConfiguration configuration)
     {
         _pipeline = provider.GetPipeline(PipelineName);
+        _configuration = configuration;
     }
 
     public GoogleSheetManager Create()
     {
-        const string appName = "AXERP.API";
-
-        SheetsService sheetsService;
-
         GoogleCredential credential = GetCredential();
 
-        sheetsService = new SheetsService(new BaseClientService.Initializer()
+        SheetsService sheetsService = new(new BaseClientService.Initializer()
         {
             HttpClientInitializer = credential,
-            ApplicationName = appName
+            ApplicationName = "AXERP.API"
         });
 
-        sheetsService.HttpClient.Timeout = TimeSpan.FromSeconds(400);
+        int timeout = _configuration.GetValue<int>("GSTimeoutHandlerInSeconds");
+
+        sheetsService.HttpClient.Timeout = TimeSpan.FromSeconds(timeout);
 
         return new GoogleSheetManager(sheetsService, _pipeline);
     }
 
-    private static GoogleCredential GetCredential()
+    private GoogleCredential GetCredential()
     {
-        const string Key = "GoogleCredentials";
-        string? credentialsJson = Environment.GetEnvironmentVariable(Key) ?? throw new Exception("Missing parameter: " + Key);
+        string credentialsJson = _configuration.GetValue<string>("GoogleCredentials") ?? throw new InvalidOperationException("Invalid Google credentials in configuration");
 
-        switch (CredentialsFormats.Text)
+        var format = CredentialsFormats.Text;
+        switch (format)
         {
             case CredentialsFormats.FileName:
             {
