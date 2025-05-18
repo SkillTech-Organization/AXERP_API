@@ -28,6 +28,16 @@ public sealed class GoogleSheetManagerFactory
 
     public GoogleSheetManager Create()
     {
+        string? spreadSheetId = _configuration.GetValue<string>("BulkDeliveriesSheetDataSheetId");
+
+        if (string.IsNullOrEmpty(spreadSheetId))
+            throw new InvalidOperationException("BulkDeliveriesSheetDataSheetId is not configured.");
+
+        return new GoogleSheetManager(CreateSheetsService(), spreadSheetId, _pipeline);
+    }
+
+    private SheetsService CreateSheetsService()
+    {
         GoogleCredential credential = GetCredential();
 
         SheetsService sheetsService = new(new BaseClientService.Initializer()
@@ -40,7 +50,7 @@ public sealed class GoogleSheetManagerFactory
 
         sheetsService.HttpClient.Timeout = TimeSpan.FromSeconds(timeout);
 
-        return new GoogleSheetManager(sheetsService, _pipeline);
+        return sheetsService;
     }
 
     private GoogleCredential GetCredential()
@@ -51,25 +61,25 @@ public sealed class GoogleSheetManagerFactory
         switch (format)
         {
             case CredentialsFormats.FileName:
-            {
-                using (var stream = new FileStream(credentialsJson, FileMode.Open, FileAccess.Read))
                 {
-                    return GoogleCredential.FromStream(stream).CreateScoped(SheetsService.Scope.Spreadsheets);
-                }
-            }
-            case CredentialsFormats.Text:
-            {
-                using (var stream = new MemoryStream())
-                {
-                    using (var writer = new StreamWriter(stream))
+                    using (var stream = new FileStream(credentialsJson, FileMode.Open, FileAccess.Read))
                     {
-                        writer.Write(credentialsJson);
-                        writer.Flush();
-                        stream.Position = 0;
                         return GoogleCredential.FromStream(stream).CreateScoped(SheetsService.Scope.Spreadsheets);
                     }
                 }
-            }
+            case CredentialsFormats.Text:
+                {
+                    using (var stream = new MemoryStream())
+                    {
+                        using (var writer = new StreamWriter(stream))
+                        {
+                            writer.Write(credentialsJson);
+                            writer.Flush();
+                            stream.Position = 0;
+                            return GoogleCredential.FromStream(stream).CreateScoped(SheetsService.Scope.Spreadsheets);
+                        }
+                    }
+                }
             case CredentialsFormats.None:
             default:
                 throw new Exception("Google Sheet Service validation / initialization failed.");

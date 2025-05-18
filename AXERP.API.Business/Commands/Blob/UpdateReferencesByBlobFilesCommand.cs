@@ -51,20 +51,20 @@ namespace AXERP.API.Business.Commands
             }
         }
 
-        public async Task<ProcessBlobFilesResponse> Execute(ProcessBlobFilesRequest request)
+        public async Task<ProcessBlobFilesResponse> ExecuteAsync(ProcessBlobFilesRequest request)
         {
             var containerHelper = _blobManagerFactory.Create();
 
             var getBlobFilesResponse = await containerHelper.GetFiles(request.BlobStorageImportFolder, request.BlobStorePdfFileRegexPattern);
 
-            var response = await Process(request, getBlobFilesResponse, containerHelper);
+            var response = await ProcessAsync(request, getBlobFilesResponse, containerHelper);
 
             LogStatistics(response);
 
             return response;
         }
 
-        private async Task<ProcessBlobFilesResponse> Process(ProcessBlobFilesRequest request, GetBlobFilesResponse data, BlobManager containerHelper)
+        private async Task<ProcessBlobFilesResponse> ProcessAsync(ProcessBlobFilesRequest request, GetBlobFilesResponse data, BlobManager containerHelper)
         {
             var response = new ProcessBlobFilesResponse
             {
@@ -106,13 +106,13 @@ namespace AXERP.API.Business.Commands
 
                             _logger.LogInformation("Querying transactions without BL File.");
 
-                            var transactrions = uow.TransactionRepository.Where(nameof(Transaction.BlFileID), null);
-                            if (transactrions == null)
+                            var transactions = uow.TransactionRepository.Where(nameof(Transaction.BlFileID), null);
+                            if (transactions == null)
                             {
                                 throw new Exception("Query transactions without BL File failed!");
                             }
 
-                            _logger.LogInformation("Transactions without BL File: {0}", transactrions.Count());
+                            _logger.LogInformation("Transactions without BL File: {0}", transactions.Count);
 
                             try
                             {
@@ -147,12 +147,13 @@ namespace AXERP.API.Business.Commands
 
                                 // Updating transactions without a bl file
                                 // Order of priority: Reference > Reference2 > Reference3
-                                var matchingTransactions = transactrions
+                                var matchingTransactions = transactions
                                     .Where(x => x.Reference == referenceName ||
                                                 x.Reference2 == referenceName ||
-                                                x.Reference3 == referenceName);
+                                                x.Reference3 == referenceName)
+                                    .ToArray();
 
-                                _logger.LogInformation("Matching transactions: {0}", matchingTransactions.Count());
+                                _logger.LogInformation("Matching transactions: {0}", matchingTransactions.Length);
                                 foreach (var transaction in matchingTransactions)
                                 {
                                     transaction.BlFileID = referenced.ID;
@@ -184,7 +185,7 @@ namespace AXERP.API.Business.Commands
 
                         _logger.LogInformation("All blob files processed.");
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         uow.Rollback();
                         throw;

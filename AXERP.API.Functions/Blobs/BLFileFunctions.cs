@@ -3,6 +3,7 @@ using AXERP.API.Business.Commands;
 using AXERP.API.Business.Queries;
 using AXERP.API.Domain;
 using AXERP.API.Domain.Models;
+using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.Domain.ServiceContracts.Responses.General;
 using AXERP.API.Functions.Base;
@@ -260,7 +261,7 @@ namespace AXERP.API.Functions.Blobs
                 }
 
                 _updateReferencesByBlobFilesCommand.SetLoggerProcessData(UserName, id: _logger.ProcessId);
-                var result = await _updateReferencesByBlobFilesCommand.Execute(new Domain.ServiceContracts.Requests.ProcessBlobFilesRequest
+                var result = await _updateReferencesByBlobFilesCommand.ExecuteAsync(new ProcessBlobFilesRequest
                 {
                     BlobStorageImportFolder = blobImportFolder,
                     BlobStorageProcessedFolder = blobProcessedFolder,
