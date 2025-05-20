@@ -1,9 +1,9 @@
-﻿using AXERP.API.GoogleHelper.JsonConverters;
-using AXERP.API.GoogleHelper.Models;
+﻿using AXERP.API.Domain.Util;
 using Google.Apis.Sheets.v4;
 using Google.Apis.Sheets.v4.Data;
-using Newtonsoft.Json;
 using Polly;
+using GoogleCellData = Google.Apis.Sheets.v4.Data.CellData;
+using AxerpCellData = AXERP.API.Domain.Models.CellData;
 using static Google.Apis.Sheets.v4.SpreadsheetsResource.ValuesResource;
 
 namespace AXERP.API.GoogleHelper.Managers
@@ -14,45 +14,20 @@ namespace AXERP.API.GoogleHelper.Managers
 
         private readonly SheetsService _sheetsService;
         private readonly ResiliencePipeline _resiliencePipeline;
+        private readonly string _spreadSheetId;
 
-        public GoogleSheetManager(SheetsService sheetsService, ResiliencePipeline resiliencePipeline)
+        public GoogleSheetManager(SheetsService sheetsService, string spreadSheetId, ResiliencePipeline resiliencePipeline)
         {
             _sheetsService = sheetsService;
+            _spreadSheetId = spreadSheetId;
             _resiliencePipeline = resiliencePipeline;
         }
 
-        private static string SheetJsonToObjectJson(IList<IList<object>> values)
-        {
-            var _keys = values[0];
-            var _values = values.Skip(1).ToList();
-
-            var rows = new List<Dictionary<string, object>>();
-            for (int i = 0; i < _values.Count; i++)
-            {
-                var row = new Dictionary<string, object>();
-                for (int key_idx = 0; key_idx < _keys.Count; key_idx++)
-                {
-                    var key = _keys[key_idx].ToString();
-
-                    // Empty trailing columns are omitted so indexes must be checked
-                    if (_values[i].Count > key_idx)
-                    {
-                        row[key] = _values[i][key_idx];
-                    }
-                }
-                rows.Add(row);
-            }
-
-            var dataJson = JsonConvert.SerializeObject(rows);
-
-            return dataJson;
-        }
-
-        public async Task<IList<IList<object>>> ReadGoogleSheetRawAsync(string spreadSheetId, string range)
+        public async Task<IList<IList<object>>> ReadGoogleSheetRawAsync(string range)
         {
             return await _resiliencePipeline.ExecuteAsync(async token =>
             {
-                GetRequest getRequest = _sheetsService.Spreadsheets.Values.Get(spreadSheetId, range);
+                GetRequest getRequest = _sheetsService.Spreadsheets.Values.Get(_spreadSheetId, range);
 
                 var getResponse = await getRequest.ExecuteAsync(token);
                 IList<IList<object>> values = getResponse.Values;
@@ -61,51 +36,70 @@ namespace AXERP.API.GoogleHelper.Managers
             });
         }
 
-        public async Task<string> ReadGoogleSheetAsJsonAsync(string spreadSheetId, string range)
+        public async Task<IEnumerable<string>> ReadHeaderAsync()
         {
-            var values = await ReadGoogleSheetRawAsync(spreadSheetId, range);
+            return await _resiliencePipeline.ExecuteAsync(async token =>
+            {
+                GetRequest request = _sheetsService.Spreadsheets.Values.Get(_spreadSheetId, "Deliveries!1:1");
+                ValueRange range = await request.ExecuteAsync(token);
 
-            var dataJson = JsonConvert.SerializeObject(values);
+                if (range.Values.Count == 0)
+                    return Enumerable.Empty<string>();
 
-            return dataJson;
+                return range.Values[0].Select(x => x.ToString() ?? string.Empty);
+            });
         }
 
-        public async Task<GenericSheetImportResult<RowType>> ReadGoogleSheetAsync<RowType>(string spreadSheetId, string range, string sheetCulture)
+        public Task<IEnumerable<AxerpCellData>> ReadColumnAsync(int columnIndex)
         {
-            var raw = await ReadGoogleSheetRawAsync(spreadSheetId, range);
-            var dataJson = SheetJsonToObjectJson(raw);
-
-            var result = new GenericSheetImportResult<RowType>
-            {
-                Data = new List<RowType>(),
-                Errors = new List<string>(),
-                InvalidRows = 0,
-                TotalRowsInSheet = raw.Count - 1 // First row is header so it doesn't count
-            };
-
-            result.Data = JsonConvert.DeserializeObject<List<RowType>>(dataJson, new JsonSerializerSettings
-            {
-                Culture = new System.Globalization.CultureInfo(sheetCulture),
-                Converters = new List<JsonConverter>
-                {
-                    new DoubleConverter(),
-                    new LongConverter()
-                },
-                Error = (obj, args) =>
-                {
-                    var error = args.ErrorContext;
-
-                    result.InvalidRows++;
-                    result.Errors.Add(error.Error.Message);
-
-                    error.Handled = true;
-                }
-            }) ?? new List<RowType>();
-
-            return result;
+            return ReadColumnAsync(SheetHelperMethods.GetExcelColumnName(columnIndex));
         }
 
-        public UpdateValuesResponse UpdateCell(string spreadSheetId, string tab, string columnm, int row, object data)
+        public async Task<IEnumerable<AxerpCellData>> ReadColumnAsync(string column)
+        {
+            return await _resiliencePipeline.ExecuteAsync(async token =>
+            {
+                SpreadsheetsResource.GetRequest request = _sheetsService.Spreadsheets.Get(_spreadSheetId);
+                request.IncludeGridData = true;
+                request.Ranges = new[] { $"Deliveries!{column}:{column}" };
+
+                Spreadsheet range = await request.ExecuteAsync(token);
+
+                var rows = range.Sheets[0].Data[0].RowData
+                    .SelectMany(x => x.Values is not null ? x.Values : Enumerable.Empty<GoogleCellData>())
+                    .Select((cell, rowIndex) => new AxerpCellData
+                    {
+                        Value = cell?.FormattedValue,
+                        Row = rowIndex + 1,
+                    })
+                    .ToArray();
+
+                return rows;
+            });
+        }
+
+        public async Task UpdateCellsAsync(IEnumerable<AxerpCellData> cells)
+        {
+            await _resiliencePipeline.ExecuteAsync(async token =>
+            {
+                BatchUpdateValuesRequest requestBody = new()
+                {
+                    ValueInputOption = "USER_ENTERED",
+                    Data = cells.Where(x => x.Column is not null && x.Row is not null)
+                        .Select(x => new ValueRange
+                        {
+                            Range = $"Deliveries!{SheetHelperMethods.GetExcelColumnName(x.Column!.Value)}{x.Row!.Value}",
+                            Values = new[] { new[] { x.Value }},
+                        })
+                        .ToArray(),
+                };
+                BatchUpdateRequest request = _sheetsService.Spreadsheets.Values.BatchUpdate(requestBody, _spreadSheetId);
+
+                await request.ExecuteAsync(token);
+            });
+        }
+
+        public async Task<UpdateValuesResponse> UpdateCellAsync(string tabName, string columnm, int row, object data)
         {
             if (row == 1)
             {
@@ -118,8 +112,8 @@ namespace AXERP.API.GoogleHelper.Managers
 
             var dataValueRange = new ValueRange();
 
-            var _tab = string.IsNullOrWhiteSpace(tab) ? string.Empty : tab + "!";
-            var range = $"{_tab}{columnm}{row}";
+            var tab = string.IsNullOrWhiteSpace(tabName) ? string.Empty : tabName + "!";
+            var range = $"{tab}{columnm}{row}";
 
             dataValueRange.Range = range;
             dataValueRange.MajorDimension = "COLUMNS";
@@ -127,33 +121,12 @@ namespace AXERP.API.GoogleHelper.Managers
             var newData = new List<object>() { data };
             dataValueRange.Values = new List<IList<object>> { newData };
 
-            var request = _sheetsService.Spreadsheets.Values.Update(dataValueRange, spreadSheetId, range);
-            request.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.RAW;
+            UpdateRequest request = _sheetsService.Spreadsheets.Values.Update(dataValueRange, _spreadSheetId, range);
+            request.ValueInputOption = UpdateRequest.ValueInputOptionEnum.RAW;
 
-            var response = request.Execute();
+            var response = await request.ExecuteAsync();
 
-            return response;
-        }
-
-        public BatchUpdateValuesResponse UpdateData(string spreadSheetId, string range, List<IList<object>> data)
-        {
-            var updateData = new List<ValueRange>();
-
-            var dataValueRange = new ValueRange();
-            dataValueRange.Range = range;
-            dataValueRange.Values = data;
-            
-            updateData.Add(dataValueRange);
-
-            var requestBody = new BatchUpdateValuesRequest();
-            requestBody.ValueInputOption = "USER_ENTERED";
-            requestBody.Data = updateData;
-
-            var request = _sheetsService.Spreadsheets.Values.BatchUpdate(requestBody, spreadSheetId);
-
-            var response = request.Execute();
-
-            return response;
+            return await _resiliencePipeline.ExecuteAsync(async token => await request.ExecuteAsync(token));
         }
 
         public void Dispose()

@@ -68,7 +68,6 @@ namespace AXERP.API.Functions.Transactions
                 _logger.LogInformation("Importing GasTransactions...");
                 _logger.LogInformation("Checking parameters...");
 
-                var sheet_id = EnvironmentHelper.TryGetParameter("BulkDeliveriesSheetDataSheetId");
                 var tab_name = EnvironmentHelper.TryGetParameter("BulkDeliveriesSheetDataGasTransactionsTab");
                 var range = EnvironmentHelper.TryGetOptionalParameter("BulkDeliveriesSheetDataGasTransactionRange");
                 var sheetCulture = Environment.GetEnvironmentVariable("SheetCulture") ?? "fr-FR";
@@ -76,7 +75,7 @@ namespace AXERP.API.Functions.Transactions
                 _logger.LogInformation("Fetching rows from GoogleSheet...");
 
                 using GoogleSheetManager sheetService = _googleSheetManagerFactory.Create();
-                var rows = await sheetService.ReadGoogleSheetRawAsync(sheet_id, $"{tab_name}{(range?.Length > 0 ? "!" : "")}{range}");
+                var rows = await sheetService.ReadGoogleSheetRawAsync($"{tab_name}{(range?.Length > 0 ? "!" : "")}{range}");
 
                 _logger.LogInformation("Google Sheet unprocessed rowcount (including header): {0}", rows.Count);
                 _logger.LogInformation("Importing GoogleSheet rows...");
@@ -113,7 +112,7 @@ namespace AXERP.API.Functions.Transactions
         [OpenApiOperation(operationId: nameof(DeleteGasTransactions), tags: new[] { "gas-transactions" })]
         [OpenApiRequestBody("application/json", typeof(DeleteTransactionRequest), Required = true)]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(string), Description = "The OK response")]
-        public async Task<IActionResult> DeleteGasTransactions(
+        public IActionResult DeleteGasTransactions(
                 [HttpTrigger(AuthorizationLevel.Anonymous, "delete")] HttpRequestData req, [FromBody] DeleteTransactionRequest data)
         {
             try

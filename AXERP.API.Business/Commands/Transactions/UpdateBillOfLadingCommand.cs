@@ -33,14 +33,13 @@ namespace AXERP.API.Business.Commands
             _googleSheetManagerFactory = googleSheetManagerFactory;
         }
 
-        private (List<string>, DateTime) UpdateSheetBillOfLadings(GoogleSheetManager sheetService, List<string> fileNames, DateTime billOfLading, IList<IList<object>> rows)
+        private async Task<(List<string>, DateTime)> UpdateSheetBillOfLadingsAsync(GoogleSheetManager sheetService, List<string> fileNames, DateTime billOfLading, IList<IList<object>> rows)
         {
             // Result
             var ids = new List<string>();
             var bol_date = billOfLading;
 
             // Env
-            var sheet_id = EnvironmentHelper.TryGetParameter("BulkDeliveriesSheetDataSheetId");
             var regexPattern = EnvironmentHelper.TryGetParameter("BlobStorePdfFileRegexPattern");
             var regexReferenceKey = EnvironmentHelper.TryGetParameter("RegexReferenceKey");
             var tab_name = EnvironmentHelper.TryGetParameter("BulkDeliveriesSheetDataGasTransactionsTab");
@@ -101,7 +100,7 @@ namespace AXERP.API.Business.Commands
                     var rawRef1 = row[ref1Idx].ToString()!.Trim();
                     if (!string.IsNullOrWhiteSpace(rawRef1) && blFileReferences.Contains(rawRef1))
                     {
-                        var result = sheetService.UpdateCell(sheet_id, tab_name, sheetBillOfLadingColumn, sheetRowNumber, billOfLadingFormatted);
+                        var result = await sheetService.UpdateCellAsync(tab_name, sheetBillOfLadingColumn, sheetRowNumber, billOfLadingFormatted);
                         blFileReferences.Remove(rawRef1);
                         ids.Add(transaction_id);
                         if (!blFileReferences.Any())
@@ -114,13 +113,12 @@ namespace AXERP.API.Business.Commands
                         }
                     }
                 }
-
                 else if (!(row.Count <= ref2Idx || row[ref2Idx] == null || string.IsNullOrWhiteSpace(row[ref2Idx].ToString())))
                 {
                     var rawRef1 = row[ref2Idx].ToString()!.Trim();
                     if (!string.IsNullOrWhiteSpace(rawRef1) && blFileReferences.Contains(rawRef1))
                     {
-                        var result = sheetService.UpdateCell(sheet_id, tab_name, sheetBillOfLadingColumn, sheetRowNumber, billOfLadingFormatted);
+                        var result = await sheetService.UpdateCellAsync(tab_name, sheetBillOfLadingColumn, sheetRowNumber, billOfLadingFormatted);
                         blFileReferences.Remove(rawRef1);
                         ids.Add(transaction_id);
                         if (!blFileReferences.Any())
@@ -139,7 +137,7 @@ namespace AXERP.API.Business.Commands
                     var rawRef1 = row[ref3Idx].ToString()!.Trim();
                     if (!string.IsNullOrWhiteSpace(rawRef1) && blFileReferences.Contains(rawRef1))
                     {
-                        var result = sheetService.UpdateCell(sheet_id, tab_name, sheetBillOfLadingColumn, sheetRowNumber, billOfLadingFormatted);
+                        var result = await sheetService.UpdateCellAsync(tab_name, sheetBillOfLadingColumn, sheetRowNumber, billOfLadingFormatted);
                         blFileReferences.Remove(rawRef1);
                         ids.Add(transaction_id);
                         if (!blFileReferences.Any())
@@ -161,29 +159,21 @@ namespace AXERP.API.Business.Commands
         {
             var res = new BaseResponse();
 
-            try
-            {
-                var sheet_id = EnvironmentHelper.TryGetParameter("BulkDeliveriesSheetDataSheetId");
-                var tab_name = EnvironmentHelper.TryGetParameter("BulkDeliveriesSheetDataGasTransactionsTab");
-                var range = EnvironmentHelper.TryGetOptionalParameter("BulkDeliveriesSheetDataGasTransactionRange");
+            var tab_name = EnvironmentHelper.TryGetParameter("BulkDeliveriesSheetDataGasTransactionsTab");
+            var range = EnvironmentHelper.TryGetOptionalParameter("BulkDeliveriesSheetDataGasTransactionRange");
 
-                using GoogleSheetManager sheetService = _googleSheetManagerFactory.Create();
+            using GoogleSheetManager sheetService = _googleSheetManagerFactory.Create();
 
-                var rows = await sheetService.ReadGoogleSheetRawAsync(sheet_id, $"{tab_name}{(range?.Length > 0 ? "!" : "")}{range}");
+            var rows = await sheetService.ReadGoogleSheetRawAsync($"{tab_name}{(range?.Length > 0 ? "!" : "")}{range}");
 
-                var bolResult = UpdateSheetBillOfLadings(sheetService, fileNames, billOfLading, rows);
+            var bolResult = await UpdateSheetBillOfLadingsAsync(sheetService, fileNames, billOfLading, rows);
 
-                WriteBackDatabase(bolResult.Item1, bolResult.Item2);
-            }
-            catch (Exception ex)
-            {
-                throw;
-            }
+            WriteBackDatabase(bolResult.Item1, bolResult.Item2);
 
             return res;
         }
 
-        public async Task<BaseResponse> Execute(List<string> fileNames)
+        public async Task<BaseResponse> ExecuteAsync(List<string> fileNames)
         {
             var res = new BaseResponse();
 
