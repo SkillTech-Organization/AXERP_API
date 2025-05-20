@@ -173,7 +173,7 @@ namespace AXERP.API.Business.Commands
             return res;
         }
 
-        public async Task<BaseResponse> Execute(List<string> fileNames)
+        public async Task<BaseResponse> ExecuteAsync(List<string> fileNames)
         {
             var res = new BaseResponse();
 

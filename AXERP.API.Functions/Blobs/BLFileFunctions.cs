@@ -202,7 +202,7 @@ namespace AXERP.API.Functions.Blobs
 
                 if (result.IsSuccess)
                 {
-                    var result_bol = await _updateBillOfLadingCommand.Execute(new List<string> { bl.FileName });
+                    var result_bol = await _updateBillOfLadingCommand.ExecuteAsync(new List<string> { bl.FileName });
                     if (result_bol.IsSuccess)
                     {
                         return new OkObjectResult(result_bol);
