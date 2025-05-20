@@ -13,7 +13,7 @@ using AXERP.API.LogHelper.Base;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
 
-namespace AXERP.API.Business.Commands
+namespace AXERP.API.Business.Commands.Blob
 {
     [ForSystem("SQL Server, Blob Storage", LogConstants.FUNCTION_BL_PROCESSING)]
     public sealed class UpdateReferencesByBlobFilesCommand : BaseAuditedClass<UpdateReferencesByBlobFilesCommand>
@@ -21,6 +21,8 @@ namespace AXERP.API.Business.Commands
         private readonly UnitOfWorkFactory _uowFactory;
         private readonly BlobManagerFactory _blobManagerFactory;
         private readonly GoogleSheetManagerFactory _sheetManagerFactory;
+
+        private readonly List<Transaction> _billOfLadingUpdated = new();
 
         public UpdateReferencesByBlobFilesCommand(
             AxerpLoggerFactory axerpLoggerFactory,
@@ -65,6 +67,8 @@ namespace AXERP.API.Business.Commands
 
             var response = await ProcessAsync(request, getBlobFilesResponse, containerHelper);
 
+            await UpdateBillOfLadingInSheetAsync();
+
             LogStatistics(response);
 
             return response;
@@ -93,8 +97,6 @@ namespace AXERP.API.Business.Commands
                 {
                     throw new Exception("Missing environment variable: RegexReferenceKey");
                 }
-
-                List<Transaction> billOfLadingUpdated = new();
 
                 using (var uow = _uowFactory.Create())
                 {
@@ -167,7 +169,7 @@ namespace AXERP.API.Business.Commands
                                     if (transaction.BillOfLading is null)
                                     {
                                         transaction.BillOfLading = DateTime.UtcNow;
-                                        billOfLadingUpdated.Add(transaction);
+                                        _billOfLadingUpdated.Add(transaction);
                                     }
                                 }
                                 uow.TransactionRepository.Update(matchingTransactions, new List<string> { nameof(Transaction.BlFileID), nameof(Transaction.BillOfLading) });
@@ -204,7 +206,6 @@ namespace AXERP.API.Business.Commands
                     }
                 }
 
-                await UpdateBillOfLadingInSheetAsync(billOfLadingUpdated);
             }
             catch (Exception ex)
             {
@@ -216,30 +217,46 @@ namespace AXERP.API.Business.Commands
             return response;
         }
 
-        private async Task UpdateBillOfLadingInSheetAsync(List<Transaction> billOfLadingUpdated)
+        private async Task UpdateBillOfLadingInSheetAsync()
         {
             using GoogleSheetManager sheetManager = _sheetManagerFactory.Create();
 
+            (int deliveryIdColumn, int billOfLadingColumn) = await GetDeliveryIdAndBillOfLadingColumnNumber(sheetManager);
+
+            HashSet<CellData> deliveryIds = (await sheetManager.ReadColumnAsync(deliveryIdColumn))
+                .ToHashSet(new CellData.CompareByValue());
+
+            IEnumerable<CellData> targetCells = GetTargetCells(billOfLadingColumn, deliveryIds);
+
+            await sheetManager.UpdateCellsAsync(targetCells);
+        }
+
+        private static async Task<(int DeliveryIdColumn, int BillOfLadingColumn)> GetDeliveryIdAndBillOfLadingColumnNumber(GoogleSheetManager sheetManager)
+        {
             var header = (await sheetManager.ReadHeaderAsync()).ToArray();
 
             var fieldNames = SheetHelperMethods.GetFieldNamesWithOrder<Delivery>(header);
 
             int deliveryIdColumn = fieldNames[nameof(Delivery.DeliveryID)] + 1;
-
-            HashSet<CellData> deliveryValues = (await sheetManager.ReadColumnAsync(deliveryIdColumn))
-                .ToHashSet(new CellData.CompareByValue());
-
             int billOfLadingColumn = fieldNames[nameof(Delivery.BillOfLading)] + 1;
 
-            List<CellData> updateableCells = new();
-            foreach (var transaction in billOfLadingUpdated)
+            return (deliveryIdColumn, billOfLadingColumn);
+        }
+
+        private IEnumerable<CellData> GetTargetCells(int billOfLadingColumn, HashSet<CellData> deliveryIds)
+        {
+            List<CellData> targetCells = new(deliveryIds.Count);
+            foreach (var transaction in _billOfLadingUpdated)
             {
                 CellData search = new() { Value = transaction.ID + transaction.IDSffx };
 
-                if (!deliveryValues.TryGetValue(search, out CellData? result))
+                if (!deliveryIds.TryGetValue(search, out CellData? result))
+                {
+                    _logger.LogWarning("Transaction not found in delivery column: {0}", search.Value);
                     continue;
+                }
 
-                updateableCells.Add(new CellData
+                targetCells.Add(new CellData
                 {
                     Column = billOfLadingColumn,
                     Row = result.Row,
@@ -247,7 +264,7 @@ namespace AXERP.API.Business.Commands
                 });
             }
 
-            await sheetManager.UpdateCellsAsync(updateableCells);
+            return targetCells;
         }
     }
 }
