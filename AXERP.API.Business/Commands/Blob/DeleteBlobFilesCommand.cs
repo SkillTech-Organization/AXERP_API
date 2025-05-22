@@ -90,6 +90,9 @@ namespace AXERP.API.Business.Commands
                         foreach (var tr in transactions)
                         {
                             tr.BlFileID = null;
+                            tr.Reference = null;
+                            tr.Reference2 = null;
+                            tr.Reference3 = null;
                         }
                         uow.TransactionRepository.Update(transactions);
                     }
