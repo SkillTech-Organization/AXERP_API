@@ -39,7 +39,7 @@ namespace AXERP.API.Business.Commands.Blob
         {
             if (result.Errors.Count == 0 && result.Warnings.Count == 0 && result.Processed.Count == 0)
             {
-                _logger.LogInformation("There are no blob files to process.");
+                _logger.LogInformation("No new file to process!");
             }
             else if (result.Errors.Count == 0 && result.Warnings.Count > 0 && result.Processed.Count == 0)
             {
