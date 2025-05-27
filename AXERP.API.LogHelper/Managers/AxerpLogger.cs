@@ -9,7 +9,7 @@ namespace AXERP.API.LogHelper.Managers
 {
     public class AxerpLogger<T> : IAxerpLogger where T : class
     {
-        private ILogger<T> _logger;
+        private readonly ILogger<T> _logger;
 
         private string _user;
         private string _system;
@@ -61,21 +61,17 @@ namespace AXERP.API.LogHelper.Managers
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static string RenderMessage(string message, object?[] args)
         {
-            var _renderedMessage = string.Empty;
-
             if (args != null && args.Length > 0)
             {
-                _renderedMessage = string.Format(
+                return string.Format(
                     message,
                     args
                 );
             }
             else
             {
-                _renderedMessage = message;
+                return message;
             }
-
-            return _renderedMessage;
         }
 
         public void BeginMeasure()
@@ -94,198 +90,198 @@ namespace AXERP.API.LogHelper.Managers
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void LogTrace(int id, string message, params object?[] args)
         {
-            string _renderedMessage = RenderMessage(message, args);
+            string renderedMessage = RenderMessage(message, args);
 
             var callerMethod = new StackFrame(1, false).GetMethod()!;
-            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
+            var functionName = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogTrace(
                 MESSAGE_TEMPLATE,
-                id, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Trace]
+                id, functionName, _system, DateTime.UtcNow, _user, renderedMessage, ResultToString[LogResults.Trace]
             );
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void LogTrace(string message, params object?[] args)
         {
-            string _renderedMessage = RenderMessage(message, args);
+            string renderedMessage = RenderMessage(message, args);
 
             var callerMethod = new StackFrame(1, false).GetMethod()!;
-            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
+            var functionName = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogTrace(
                 MESSAGE_TEMPLATE,
-                ProcessId, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Trace]
+                ProcessId, functionName, _system, DateTime.UtcNow, _user, renderedMessage, ResultToString[LogResults.Trace]
             );
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void LogInformation(int id, string message, params object?[] args)
         {
-            string _renderedMessage = RenderMessage(message, args);
+            string renderedMessage = RenderMessage(message, args);
 
             var callerMethod = new StackFrame(1, false).GetMethod()!;
-            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
+            var functionName = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogInformation(
                 MESSAGE_TEMPLATE,
-                id, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Ok]
+                id, functionName, _system, DateTime.UtcNow, _user, renderedMessage, ResultToString[LogResults.Ok]
             );
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void LogInformation(string message, params object?[] args)
         {
-            string _renderedMessage = RenderMessage(message, args);
+            string renderedMessage = RenderMessage(message, args);
 
             var callerMethod = new StackFrame(1, false).GetMethod()!;
-            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
+            var functionName = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogInformation(
                 MESSAGE_TEMPLATE,
-                ProcessId, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Ok]
+                ProcessId, functionName, _system, DateTime.UtcNow, _user, renderedMessage, ResultToString[LogResults.Ok]
             );
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void LogDebug(int id, string message, params object?[] args)
         {
-            string _renderedMessage = RenderMessage(message, args);
+            string renderedMessage = RenderMessage(message, args);
 
             var callerMethod = new StackFrame(1, false).GetMethod()!;
-            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
+            var functionName = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogDebug(
                 MESSAGE_TEMPLATE,
-                id, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Debug]
+                id, functionName, _system, DateTime.UtcNow, _user, renderedMessage, ResultToString[LogResults.Debug]
             );
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void LogDebug(string message, params object?[] args)
         {
-            string _renderedMessage = RenderMessage(message, args);
+            string renderedMessage = RenderMessage(message, args);
 
             var callerMethod = new StackFrame(1, false).GetMethod()!;
-            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
+            var functionName = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogDebug(
                 MESSAGE_TEMPLATE,
-                ProcessId, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Debug]
+                ProcessId, functionName, _system, DateTime.UtcNow, _user, renderedMessage, ResultToString[LogResults.Debug]
             );
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void LogWarning(int id, string message, params object?[] args)
         {
-            string _renderedMessage = RenderMessage(message, args);
+            string renderedMessage = RenderMessage(message, args);
 
             var callerMethod = new StackFrame(1, false).GetMethod()!;
-            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
+            var functionName = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogWarning(
                 MESSAGE_TEMPLATE,
-                id, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Warning]
+                id, functionName, _system, DateTime.UtcNow, _user, renderedMessage, ResultToString[LogResults.Warning]
             );
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void LogWarning(string message, params object?[] args)
         {
-            string _renderedMessage = RenderMessage(message, args);
+            string renderedMessage = RenderMessage(message, args);
 
             var callerMethod = new StackFrame(1, false).GetMethod()!;
-            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
+            var functionName = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogWarning(
                 MESSAGE_TEMPLATE,
-                ProcessId, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Warning]
+                ProcessId, functionName, _system, DateTime.UtcNow, _user, renderedMessage, ResultToString[LogResults.Warning]
             );
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void LogError(int id, Exception ex, string message, params object?[] args)
         {
-            string _renderedMessage = RenderMessage(message, args);
-            _renderedMessage += $" - {ex.Message}";
+            string renderedMessage = RenderMessage(message, args);
+            renderedMessage += $" - {ex.Message}";
 
             var callerMethod = new StackFrame(1, false).GetMethod()!;
-            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
+            var functionName = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogError(
                 MESSAGE_TEMPLATE,
-                id, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Error]
+                id, functionName, _system, DateTime.UtcNow, _user, renderedMessage, ResultToString[LogResults.Error]
             );
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void LogError(int id, string message, params object?[] args)
         {
-            string _renderedMessage = RenderMessage(message, args);
+            string renderedMessage = RenderMessage(message, args);
 
             var callerMethod = new StackFrame(1, false).GetMethod()!;
-            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
+            var functionName = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogError(
                 MESSAGE_TEMPLATE,
-                id, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Error]
+                id, functionName, _system, DateTime.UtcNow, _user, renderedMessage, ResultToString[LogResults.Error]
             );
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void LogError(int id, Exception ex)
         {
-            var _renderedMessage = ex.ToString();
+            var renderedMessage = ex.ToString();
 
             var callerMethod = new StackFrame(1, false).GetMethod()!;
-            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
+            var functionName = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogError(
                 MESSAGE_TEMPLATE,
-                id, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Error]
+                id, functionName, _system, DateTime.UtcNow, _user, renderedMessage, ResultToString[LogResults.Error]
             );
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void LogError(Exception ex, string message, params object?[] args)
         {
-            string _renderedMessage = RenderMessage(message, args);
-            _renderedMessage += $" - {ex.Message}";
+            string renderedMessage = RenderMessage(message, args);
+            renderedMessage += $" - {ex.Message}";
 
             var callerMethod = new StackFrame(1, false).GetMethod()!;
-            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
+            var functionName = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogError(
                 MESSAGE_TEMPLATE,
-                ProcessId, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Error]
+                ProcessId, functionName, _system, DateTime.UtcNow, _user, renderedMessage, ResultToString[LogResults.Error]
             );
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void LogError(string message, params object?[] args)
         {
-            string _renderedMessage = RenderMessage(message, args);
+            string renderedMessage = RenderMessage(message, args);
 
             var callerMethod = new StackFrame(1, false).GetMethod()!;
-            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
+            var functionName = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogError(
                 MESSAGE_TEMPLATE,
-                ProcessId, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Error]
+                ProcessId, functionName, _system, DateTime.UtcNow, _user, renderedMessage, ResultToString[LogResults.Error]
             );
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void LogError(Exception ex)
         {
-            var _renderedMessage = ex.ToString();
+            var renderedMessage = ex.ToString();
 
             var callerMethod = new StackFrame(1, false).GetMethod()!;
-            var _f = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
+            var functionName = callerMethod.GetCustomAttribute<ForFunctionAttribute>()?.FunctionName ?? _function ?? callerMethod.Name;
 
             _logger.LogError(
                 MESSAGE_TEMPLATE,
-                ProcessId, _f, _system, DateTime.UtcNow, _user, _renderedMessage, ResultToString[LogResults.Error]
+                ProcessId, functionName, _system, DateTime.UtcNow, _user, renderedMessage, ResultToString[LogResults.Error]
             );
         }
     }
