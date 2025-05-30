@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using AXERP.API.Domain.ServiceContracts.Responses.Base;
+using Microsoft.AspNetCore.Mvc;
 using System.Runtime.Serialization;
 
 namespace AXERP.API.Domain.ServiceContracts.Responses.Transactions

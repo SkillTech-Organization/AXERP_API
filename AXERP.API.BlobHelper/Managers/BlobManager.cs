@@ -3,12 +3,14 @@ using AXERP.API.BlobHelper.ServiceContracts.Responses;
 using AXERP.API.Domain;
 using AXERP.API.Domain.Models;
 using AXERP.API.Domain.ServiceContracts.Responses;
+using AXERP.API.Domain.ServiceContracts.Responses.Base;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Base;
 using AXERP.API.LogHelper.Factories;
 using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using System.Net;
 using System.Text.RegularExpressions;
 
 namespace AXERP.API.BlobHelper.Managers
@@ -206,20 +208,29 @@ namespace AXERP.API.BlobHelper.Managers
 
             _logger.LogTrace("Uploading: {0}", path);
 
-            using(var mem = new MemoryStream(file.Content))
+            try
             {
+                using var mem = new MemoryStream(file.Content);
                 var uploadResponse = await Container.UploadBlobAsync(path, mem);
 
-                var _response = uploadResponse?.GetRawResponse();
-                if (CheckError(_response, out string msg))
+                Response? rawResponse = uploadResponse?.GetRawResponse();
+                if (CheckError(rawResponse, out string msg))
                 {
                     var errorMsg = $"Could not upload: {path}. Error: {msg}";
                     response.RequestError = errorMsg;
                     _logger.LogError(errorMsg);
                 }
-            }
 
-            _logger.LogTrace("Blob successfully uploaded!");
+                _logger.LogTrace("Blob successfully uploaded!");
+            }
+            catch (RequestFailedException ex ) when (ex.ErrorCode == "BlobAlreadyExists")
+            {
+                string errorMsg = "This file(s) already uploaded!";
+                _logger.LogError(errorMsg);
+
+                response.HttpStatusCode = HttpStatusCode.BadRequest;
+                response.RequestError = errorMsg;
+            }
 
             return response;
         }

@@ -1,10 +1,10 @@
 ﻿using AXERP.API.LogHelper.Base;
 using AXERP.API.Domain.ServiceContracts.Requests;
-using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
 using AXERP.API.Domain;
+using AXERP.API.Domain.ServiceContracts.Responses.Base;
 
 namespace AXERP.API.Business.Commands
 {

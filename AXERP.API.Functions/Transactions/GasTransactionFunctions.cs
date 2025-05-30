@@ -6,6 +6,7 @@ using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Requests.Transactions;
 using AXERP.API.Domain.ServiceContracts.Responses;
+using AXERP.API.Domain.ServiceContracts.Responses.Base;
 using AXERP.API.Functions.Base;
 using AXERP.API.GoogleHelper;
 using AXERP.API.GoogleHelper.Managers;
