@@ -37,22 +37,21 @@ namespace AXERP.API.Business.Commands
         {
             // Result
             var ids = new List<string>();
-            var bol_date = billOfLading;
+            var bolDate = billOfLading;
 
             // Env
             var regexPattern = EnvironmentHelper.TryGetParameter("BlobStorePdfFileRegexPattern");
             var regexReferenceKey = EnvironmentHelper.TryGetParameter("RegexReferenceKey");
-            var tab_name = EnvironmentHelper.TryGetParameter("BulkDeliveriesSheetDataGasTransactionsTab");
-            var sheetCulture = EnvironmentHelper.TryGetParameter("SheetCulture") ?? "fr-FR";
+            var tabName = EnvironmentHelper.TryGetParameter("BulkDeliveriesSheetDataGasTransactionsTab");
 
             // Preprocess
             var headers = rows[0];
 
             // Eg. DeliveryID -> 0 (indexof Delivery ID in sheet headers)
-            var field_names = SheetHelperMethods.GetFieldNamesWithOrder<Delivery>(headers);
+            var fieldNames = SheetHelperMethods.GetFieldNamesWithOrder<Delivery>(headers);
 
-            var sheet_rows = rows.Skip(1).ToList();
-            var sheetBillOfLadingColumn = SheetHelperMethods.GetExcelColumnName(field_names[nameof(Delivery.BillOfLading)] + 1);
+            var sheetRows = rows.Skip(1).ToList();
+            var sheetBillOfLadingColumn = SheetHelperMethods.GetExcelColumnName(fieldNames[nameof(Delivery.BillOfLading)] + 1);
 
             //var billOfLadingFormatted = billOfLading.ToString("G", new CultureInfo(sheetCulture));
             var billOfLadingFormatted = billOfLading.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
@@ -71,23 +70,26 @@ namespace AXERP.API.Business.Commands
                 blFileReferences.Add(referenceName);
             }
 
-            sheet_rows = SheetHelperMethods.UntilEndOfData(sheet_rows, out int eodRowIndex);
+            sheetRows = SheetHelperMethods.UntilEndOfData(sheetRows, out int eodRowIndex);
             _logger.LogInformation("EOD marker encountered at line: {0}.", eodRowIndex - 1);
 
+            int deliveryId = fieldNames[nameof(Delivery.DeliveryID)];
+            int refBoL = fieldNames[nameof(Delivery.BillOfLading)];
+            int ref1Idx = fieldNames[nameof(Delivery.Reference)];
+            int ref2Idx = fieldNames[nameof(Delivery.Reference2)];
+            int ref3Idx = fieldNames[nameof(Delivery.Reference3)];
+
             // Updating cells
-            for (int rowIndex = 0; rowIndex < sheet_rows.Count; rowIndex++)
+            for (int rowIndex = 0; rowIndex < sheetRows.Count; rowIndex++)
             {
-                var row = sheet_rows[rowIndex];
+                var row = sheetRows[rowIndex];
 
-                var transaction_id = row[field_names[nameof(Delivery.DeliveryID)]]?.ToString();
+                if (row.Count == 0)
+                    continue;
 
-                var refBoL = field_names[nameof(Delivery.BillOfLading)];
+                var transaction_id = row[deliveryId]?.ToString();
 
-                var ref1Idx = field_names[nameof(Delivery.Reference)];
-                var ref2Idx = field_names[nameof(Delivery.Reference2)];
-                var ref3Idx = field_names[nameof(Delivery.Reference3)];
-
-                var sheetRowNumber = rowIndex + 2;
+                int sheetRowNumber = rowIndex + 2;
 
                 if (!(row.Count <= refBoL || row[refBoL] == null || string.IsNullOrWhiteSpace(row[refBoL].ToString()) || row[refBoL].ToString() == "N/A"))
                 {
@@ -100,7 +102,7 @@ namespace AXERP.API.Business.Commands
                     var rawRef1 = row[ref1Idx].ToString()!.Trim();
                     if (!string.IsNullOrWhiteSpace(rawRef1) && blFileReferences.Contains(rawRef1))
                     {
-                        var result = await sheetService.UpdateCellAsync(tab_name, sheetBillOfLadingColumn, sheetRowNumber, billOfLadingFormatted);
+                        var result = await sheetService.UpdateCellAsync(tabName, sheetBillOfLadingColumn, sheetRowNumber, billOfLadingFormatted);
                         blFileReferences.Remove(rawRef1);
                         ids.Add(transaction_id);
                         if (!blFileReferences.Any())
@@ -118,7 +120,7 @@ namespace AXERP.API.Business.Commands
                     var rawRef1 = row[ref2Idx].ToString()!.Trim();
                     if (!string.IsNullOrWhiteSpace(rawRef1) && blFileReferences.Contains(rawRef1))
                     {
-                        var result = await sheetService.UpdateCellAsync(tab_name, sheetBillOfLadingColumn, sheetRowNumber, billOfLadingFormatted);
+                        var result = await sheetService.UpdateCellAsync(tabName, sheetBillOfLadingColumn, sheetRowNumber, billOfLadingFormatted);
                         blFileReferences.Remove(rawRef1);
                         ids.Add(transaction_id);
                         if (!blFileReferences.Any())
@@ -131,13 +133,12 @@ namespace AXERP.API.Business.Commands
                         }
                     }
                 }
-
                 else if (!(row.Count <= ref3Idx || row[ref3Idx] == null || string.IsNullOrWhiteSpace(row[ref3Idx].ToString())))
                 {
                     var rawRef1 = row[ref3Idx].ToString()!.Trim();
                     if (!string.IsNullOrWhiteSpace(rawRef1) && blFileReferences.Contains(rawRef1))
                     {
-                        var result = await sheetService.UpdateCellAsync(tab_name, sheetBillOfLadingColumn, sheetRowNumber, billOfLadingFormatted);
+                        var result = await sheetService.UpdateCellAsync(tabName, sheetBillOfLadingColumn, sheetRowNumber, billOfLadingFormatted);
                         blFileReferences.Remove(rawRef1);
                         ids.Add(transaction_id);
                         if (!blFileReferences.Any())
@@ -152,7 +153,7 @@ namespace AXERP.API.Business.Commands
                 }
             }
 
-            return (ids, bol_date);
+            return (ids, bolDate);
         }
 
         private async Task<BaseResponse> WriteBackSheet(List<string> fileNames, DateTime billOfLading)
