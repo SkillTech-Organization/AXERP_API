@@ -5,7 +5,7 @@ using AXERP.API.Business.Queries;
 using AXERP.API.Domain;
 using AXERP.API.Domain.Models;
 using AXERP.API.Domain.ServiceContracts.Requests;
-using AXERP.API.Domain.ServiceContracts.Responses;
+using AXERP.API.Domain.ServiceContracts.Responses.Base;
 using AXERP.API.Domain.ServiceContracts.Responses.General;
 using AXERP.API.Functions.Base;
 using AXERP.API.LogHelper.Attributes;
@@ -168,14 +168,14 @@ namespace AXERP.API.Functions.Blobs
 
                 // get form-body        
                 var parsedFormBody = MultipartFormDataParser.ParseAsync(req.Body);
-                
+
                 if (parsedFormBody.Result.Files.Count == 0)
                 {
                     throw new Exception("File is missing from the request!");
                 }
 
                 var file = parsedFormBody.Result.Files[0];
-                
+
                 var name = file.FileName;
 
                 if (parsedFormBody.Result.Parameters.Count > 1)

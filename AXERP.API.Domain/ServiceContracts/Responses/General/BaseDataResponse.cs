@@ -1,4 +1,5 @@
 ﻿using System.Runtime.Serialization;
+using AXERP.API.Domain.ServiceContracts.Responses.Base;
 
 namespace AXERP.API.Domain.ServiceContracts.Responses.General
 {
