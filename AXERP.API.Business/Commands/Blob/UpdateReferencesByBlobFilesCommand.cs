@@ -67,7 +67,15 @@ namespace AXERP.API.Business.Commands.Blob
 
             var response = await ProcessAsync(request, getBlobFilesResponse, containerHelper);
 
-            await UpdateBillOfLadingInSheetAsync();
+            if (_billOfLadingUpdated.Count > 0)
+            {
+                await UpdateBillOfLadingInSheetAsync();
+                _logger.LogInformation("Bill of Lading updated for {0} transactions: {1}", _billOfLadingUpdated.Count, string.Join(", ", _billOfLadingUpdated.Select(x => x.ID + x.IDSffx)));
+            }
+            else
+            {
+                _logger.LogInformation("No Bill of Lading updated.");
+            }
 
             LogStatistics(response);
 
@@ -111,7 +119,7 @@ namespace AXERP.API.Business.Commands.Blob
 
                         foreach (var item in getBlobFilesResponse.Data)
                         {
-                            var blob_name = item.BlobItem.Blob.Name;
+                            var blobName = item.BlobItem.Blob.Name;
 
                             _logger.LogInformation("Querying transactions without BL File.");
 
@@ -181,7 +189,7 @@ namespace AXERP.API.Business.Commands.Blob
 
                                 await containerHelper.MoveFile(item.BlobItem, fileName, request.BlobStorageProcessedFolder);
 
-                                processed.Add(blob_name);
+                                processed.Add(blobName);
                             }
                             catch (Exception ex)
                             {
@@ -260,7 +268,8 @@ namespace AXERP.API.Business.Commands.Blob
                 {
                     Column = billOfLadingColumn,
                     Row = result.Row,
-                    Value = DateOnly.FromDateTime(transaction.BillOfLading!.Value).ToString()
+                    Value = DateOnly.FromDateTime(transaction.BillOfLading!.Value)
+                        .ToString("dd/MM/yyyy")
                 });
             }
 
