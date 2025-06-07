@@ -82,10 +82,10 @@ namespace AXERP.API.Business.Commands.Blob
 
                         if (doc != null)
                         {
-                            var _refTrans = uow.TransactionRepository
+                            var refTrans = uow.TransactionRepository
                                 .Where(nameof(Transaction.BlFileID), doc.ID);
 
-                            transactions.AddRange(_refTrans);
+                            transactions.AddRange(refTrans);
                             documents.Add(doc);
                         }
                     }
