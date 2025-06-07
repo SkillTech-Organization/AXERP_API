@@ -95,6 +95,7 @@ namespace AXERP.API.Business.Commands.Blob
                         foreach (var tr in transactions)
                         {
                             tr.BlFileID = null;
+                            tr.BillOfLading = null;
                         }
                         uow.TransactionRepository.Update(transactions);
                     }
