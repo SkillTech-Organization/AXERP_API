@@ -6,22 +6,27 @@ using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Base;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
+using Microsoft.Extensions.Configuration;
 
 namespace AXERP.API.Business.Commands
 {
     [ForSystem("Blob Storage", LogConstants.FUNCTION_BL_PROCESSING)]
-    public class DeleteBlobFilesCommand : BaseAuditedClass<DeleteBlobFilesCommand>
+    public sealed class DeleteBlobFilesCommand : BaseAuditedClass<DeleteBlobFilesCommand>
     {
-        protected readonly BlobManagerFactory _blobManagerFactory;
-        protected readonly UnitOfWorkFactory _uowFactory;
+        private readonly BlobManagerFactory _blobManagerFactory;
+        private readonly UnitOfWorkFactory _uowFactory;
+        private readonly IConfiguration _configuration;
+
 
         public DeleteBlobFilesCommand(
             AxerpLoggerFactory axerpLoggerFactory,
             BlobManagerFactory blobManagerFactory,
-            UnitOfWorkFactory uowFactory) : base(axerpLoggerFactory)
+            UnitOfWorkFactory uowFactory,
+            IConfiguration configuration) : base(axerpLoggerFactory)
         {
             _blobManagerFactory = blobManagerFactory;
             _uowFactory = uowFactory;
+            _configuration = configuration;
         }
 
         public async Task<DeleteBlobfilesResponse> Execute(DeleteBlobFilesRequest request)
@@ -52,7 +57,7 @@ namespace AXERP.API.Business.Commands
         public void DeleteFromDatabase(List<BlobFile> toDelete)
         {
             var processed = toDelete
-                .Where(x => x.Folder == EnvironmentHelper.TryGetParameter("BlobStorageProcessedFolder"))
+                .Where(x => x.Folder == _configuration.GetValue<string>("BlobStorageProcessedFolder"))
                 .ToList();
 
             if (!processed.Any())
