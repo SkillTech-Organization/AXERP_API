@@ -1,4 +1,5 @@
 ﻿using AXERP.API.BlobHelper.ServiceContracts.Requests;
+using AXERP.API.Business.Services;
 using AXERP.API.Domain;
 using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.Models;
@@ -16,28 +17,34 @@ namespace AXERP.API.Business.Commands.Blob
         private readonly BlobManagerFactory _blobManagerFactory;
         private readonly UnitOfWorkFactory _uowFactory;
         private readonly IConfiguration _configuration;
-
+        private readonly IBillOfLadingUpdater _billOfLadingUpdater;
 
         public DeleteBlobFilesCommand(
             AxerpLoggerFactory axerpLoggerFactory,
             BlobManagerFactory blobManagerFactory,
             UnitOfWorkFactory uowFactory,
-            IConfiguration configuration) : base(axerpLoggerFactory)
+            IConfiguration configuration,
+            IBillOfLadingUpdater billOfLadingUpdater) : base(axerpLoggerFactory)
         {
             _blobManagerFactory = blobManagerFactory;
             _uowFactory = uowFactory;
             _configuration = configuration;
+            _billOfLadingUpdater = billOfLadingUpdater;
         }
 
         public async Task<DeleteBlobfilesResponse> Execute(DeleteBlobFilesRequest request)
         {
             try
             {
+                var affectedTransactions = DeleteDocumentAndTransactionReferences(request.Items);
+
                 var containerHelper = _blobManagerFactory.Create();
-
-                DeleteFromDatabase(request.Items);
-
                 var response = await containerHelper.DeleteFiles(request.Items);
+
+                if (affectedTransactions.Any())
+                {
+                    await _billOfLadingUpdater.UpdateAsync(affectedTransactions, CancellationToken.None);
+                }
 
                 return response;
             }
@@ -54,7 +61,7 @@ namespace AXERP.API.Business.Commands.Blob
             }
         }
 
-        public void DeleteFromDatabase(List<BlobFile> toDelete)
+        public IEnumerable<Transaction> DeleteDocumentAndTransactionReferences(List<BlobFile> toDelete)
         {
             var filesToDelete = toDelete
                 .Where(x => x.Folder == _configuration.GetValue<string>("BlobStorageProcessedFolder"))
@@ -62,7 +69,7 @@ namespace AXERP.API.Business.Commands.Blob
 
             if (!filesToDelete.Any())
             {
-                return;
+                return Enumerable.Empty<Transaction>();
             }
 
             using (var uow = _uowFactory.Create())
@@ -108,8 +115,10 @@ namespace AXERP.API.Business.Commands.Blob
                     }
 
                     uow.CommitTransaction();
+
+                    return transactions;
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     _logger.LogError(ex);
                     uow.Rollback();
