@@ -56,11 +56,11 @@ namespace AXERP.API.Business.Commands.Blob
 
         public void DeleteFromDatabase(List<BlobFile> toDelete)
         {
-            var processed = toDelete
+            var filesToDelete = toDelete
                 .Where(x => x.Folder == _configuration.GetValue<string>("BlobStorageProcessedFolder"))
                 .ToList();
 
-            if (!processed.Any())
+            if (!filesToDelete.Any())
             {
                 return;
             }
@@ -74,19 +74,19 @@ namespace AXERP.API.Business.Commands.Blob
                     var documents = new List<Document>();
                     var transactions = new List<Transaction>();
 
-                    foreach (var d in processed)
+                    foreach (var file in filesToDelete)
                     {
-                        var _doc = uow.DocumentRepository
-                            .Where(nameof(Document.FileName), d.FileName)
+                        var doc = uow.DocumentRepository
+                            .Where(nameof(Document.FileName), file.FileName)
                             .SingleOrDefault();
 
-                        if (_doc != null)
+                        if (doc != null)
                         {
                             var _refTrans = uow.TransactionRepository
-                                .Where(nameof(Transaction.BlFileID), _doc.ID);
+                                .Where(nameof(Transaction.BlFileID), doc.ID);
 
                             transactions.AddRange(_refTrans);
-                            documents.Add(_doc);
+                            documents.Add(doc);
                         }
                     }
 
