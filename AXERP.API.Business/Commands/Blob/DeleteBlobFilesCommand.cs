@@ -8,7 +8,7 @@ using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
 using Microsoft.Extensions.Configuration;
 
-namespace AXERP.API.Business.Commands
+namespace AXERP.API.Business.Commands.Blob
 {
     [ForSystem("Blob Storage", LogConstants.FUNCTION_BL_PROCESSING)]
     public sealed class DeleteBlobFilesCommand : BaseAuditedClass<DeleteBlobFilesCommand>
