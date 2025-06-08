@@ -225,11 +225,8 @@ namespace AXERP.API.BlobHelper.Managers
             }
             catch (RequestFailedException ex ) when (ex.ErrorCode == "BlobAlreadyExists")
             {
-                string errorMsg = "This file(s) already uploaded!";
-                _logger.LogError(errorMsg);
-
                 response.HttpStatusCode = HttpStatusCode.BadRequest;
-                response.RequestError = errorMsg;
+                response.RequestError = "This file(s) already uploaded!";
             }
 
             return response;
