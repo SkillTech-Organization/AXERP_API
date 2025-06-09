@@ -1,5 +1,4 @@
 ﻿using AXERP.API.BlobHelper.ServiceContracts.Requests;
-using AXERP.API.Business.Services;
 using AXERP.API.Domain;
 using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.Models;
@@ -17,34 +16,26 @@ namespace AXERP.API.Business.Commands.Blob
         private readonly BlobManagerFactory _blobManagerFactory;
         private readonly UnitOfWorkFactory _uowFactory;
         private readonly IConfiguration _configuration;
-        private readonly IBillOfLadingUpdater _billOfLadingUpdater;
 
         public DeleteBlobFilesCommand(
             AxerpLoggerFactory axerpLoggerFactory,
             BlobManagerFactory blobManagerFactory,
             UnitOfWorkFactory uowFactory,
-            IConfiguration configuration,
-            IBillOfLadingUpdater billOfLadingUpdater) : base(axerpLoggerFactory)
+            IConfiguration configuration) : base(axerpLoggerFactory)
         {
             _blobManagerFactory = blobManagerFactory;
             _uowFactory = uowFactory;
             _configuration = configuration;
-            _billOfLadingUpdater = billOfLadingUpdater;
         }
 
         public async Task<DeleteBlobfilesResponse> Execute(DeleteBlobFilesRequest request)
         {
             try
             {
-                var affectedTransactions = DeleteDocumentAndTransactionReferences(request.Items);
+                DeleteDocumentAndTransactionReferences(request.Items);
 
                 var containerHelper = _blobManagerFactory.Create();
                 var response = await containerHelper.DeleteFiles(request.Items);
-
-                if (affectedTransactions.Any())
-                {
-                    await _billOfLadingUpdater.UpdateAsync(affectedTransactions, CancellationToken.None);
-                }
 
                 return response;
             }
@@ -61,16 +52,14 @@ namespace AXERP.API.Business.Commands.Blob
             }
         }
 
-        public IEnumerable<Transaction> DeleteDocumentAndTransactionReferences(List<BlobFile> toDelete)
+        public void DeleteDocumentAndTransactionReferences(List<BlobFile> toDelete)
         {
             var filesToDelete = toDelete
                 .Where(x => x.Folder == _configuration.GetValue<string>("BlobStorageProcessedFolder"))
                 .ToList();
 
             if (!filesToDelete.Any())
-            {
-                return Enumerable.Empty<Transaction>();
-            }
+                return;
 
             using (var uow = _uowFactory.Create())
             {
@@ -102,7 +91,6 @@ namespace AXERP.API.Business.Commands.Blob
                         foreach (var tr in transactions)
                         {
                             tr.BlFileID = null;
-                            tr.BillOfLading = null;
                         }
                         uow.TransactionRepository.Update(transactions);
                     }
@@ -115,8 +103,6 @@ namespace AXERP.API.Business.Commands.Blob
                     }
 
                     uow.CommitTransaction();
-
-                    return transactions;
                 }
                 catch (Exception ex)
                 {
