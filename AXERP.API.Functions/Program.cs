@@ -126,7 +126,6 @@ var host = new HostBuilder()
         services.AddTransient<GetGasTransactionCsvQuery>();
         services.AddTransient<GetPagedGasTransactionsQuery>();
         services.AddTransient<DownLoadBlobFileCommand>();
-        services.AddTransient<UpdateBillOfLadingCommand>();
         services.AddScoped<GoogleSheetManagerFactory>();
         services.AddTransient<IBillOfLadingUpdater, BillOfLadingUpdater>();
         services.AddResiliency();

@@ -31,7 +31,7 @@ namespace AXERP.API.Functions.Blobs
         private readonly UploadBlobFilesCommand _uploadBlobFilesCommand;
         private readonly UploadBlobFileCommand _uploadBlobFileCommand;
         private readonly DownLoadBlobFileCommand _getBlobFileCommand;
-        private readonly UpdateBillOfLadingCommand _updateBillOfLadingCommand;
+        // private readonly UpdateBillOfLadingCommand _updateBillOfLadingCommand;
 
         public const string PATH_PARAM_UPLOAD = "path";
 
@@ -42,8 +42,7 @@ namespace AXERP.API.Functions.Blobs
             UploadBlobFilesCommand uploadBlobFilesCommand,
             UploadBlobFileCommand uploadBlobFileCommand,
             UpdateReferencesByBlobFilesCommand updateReferencesByBlobFilesCommand,
-            DownLoadBlobFileCommand getBlobFileCommand,
-            UpdateBillOfLadingCommand updateBillOfLadingCommand) : base(loggerFactory)
+            DownLoadBlobFileCommand getBlobFileCommand) : base(loggerFactory)
         {
             _updateReferencesByBlobFilesCommand = updateReferencesByBlobFilesCommand;
             _listBlobFilesQuery = listBlobFilesQuery;
@@ -51,7 +50,7 @@ namespace AXERP.API.Functions.Blobs
             _uploadBlobFilesCommand = uploadBlobFilesCommand;
             _uploadBlobFileCommand = uploadBlobFileCommand;
             _getBlobFileCommand = getBlobFileCommand;
-            _updateBillOfLadingCommand = updateBillOfLadingCommand;
+            // _updateBillOfLadingCommand = updateBillOfLadingCommand;
         }
 
         /// <summary>
@@ -201,28 +200,9 @@ namespace AXERP.API.Functions.Blobs
                     BlobUploadFile = bl
                 });
 
-                if (result.IsSuccess)
-                {
-                    var result_bol = await _updateBillOfLadingCommand.ExecuteAsync(new List<string> { bl.FileName });
-                    if (result_bol.IsSuccess)
-                    {
-                        return new OkObjectResult(result_bol);
-                    }
-                    else
-                    {
-                        return new ObjectResult(result_bol)
-                        {
-                            StatusCode = (int?)result_bol.HttpStatusCode
-                        };
-                    }
-                }
-                else
-                {
-                    return new ObjectResult(result)
-                    {
-                        StatusCode = (int?)result.HttpStatusCode
-                    };
-                }
+                return result.IsSuccess
+                    ? new OkObjectResult(result)
+                    : new BadRequestObjectResult(result);
             }
             catch (Exception ex)
             {
