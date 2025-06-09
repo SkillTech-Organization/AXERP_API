@@ -6,32 +6,35 @@ using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Base;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
+using Microsoft.Extensions.Configuration;
 
-namespace AXERP.API.Business.Commands
+namespace AXERP.API.Business.Commands.Blob
 {
     [ForSystem("Blob Storage", LogConstants.FUNCTION_BL_PROCESSING)]
-    public class DeleteBlobFilesCommand : BaseAuditedClass<DeleteBlobFilesCommand>
+    public sealed class DeleteBlobFilesCommand : BaseAuditedClass<DeleteBlobFilesCommand>
     {
-        protected readonly BlobManagerFactory _blobManagerFactory;
-        protected readonly UnitOfWorkFactory _uowFactory;
+        private readonly BlobManagerFactory _blobManagerFactory;
+        private readonly UnitOfWorkFactory _uowFactory;
+        private readonly IConfiguration _configuration;
 
         public DeleteBlobFilesCommand(
             AxerpLoggerFactory axerpLoggerFactory,
             BlobManagerFactory blobManagerFactory,
-            UnitOfWorkFactory uowFactory) : base(axerpLoggerFactory)
+            UnitOfWorkFactory uowFactory,
+            IConfiguration configuration) : base(axerpLoggerFactory)
         {
             _blobManagerFactory = blobManagerFactory;
             _uowFactory = uowFactory;
+            _configuration = configuration;
         }
 
         public async Task<DeleteBlobfilesResponse> Execute(DeleteBlobFilesRequest request)
         {
             try
             {
+                DeleteDocumentAndTransactionReferences(request.Items);
+
                 var containerHelper = _blobManagerFactory.Create();
-
-                DeleteFromDatabase(request.Items);
-
                 var response = await containerHelper.DeleteFiles(request.Items);
 
                 return response;
@@ -49,16 +52,14 @@ namespace AXERP.API.Business.Commands
             }
         }
 
-        public void DeleteFromDatabase(List<BlobFile> toDelete)
+        public void DeleteDocumentAndTransactionReferences(List<BlobFile> toDelete)
         {
-            var processed = toDelete
-                .Where(x => x.Folder == EnvironmentHelper.TryGetParameter("BlobStorageProcessedFolder"))
+            var filesToDelete = toDelete
+                .Where(x => x.Folder == _configuration.GetValue<string>("BlobStorageProcessedFolder"))
                 .ToList();
 
-            if (!processed.Any())
-            {
+            if (!filesToDelete.Any())
                 return;
-            }
 
             using (var uow = _uowFactory.Create())
             {
@@ -69,19 +70,19 @@ namespace AXERP.API.Business.Commands
                     var documents = new List<Document>();
                     var transactions = new List<Transaction>();
 
-                    foreach (var d in processed)
+                    foreach (var file in filesToDelete)
                     {
-                        var _doc = uow.DocumentRepository
-                            .Where(nameof(Document.FileName), d.FileName)
+                        var doc = uow.DocumentRepository
+                            .Where(nameof(Document.FileName), file.FileName)
                             .SingleOrDefault();
 
-                        if (_doc != null)
+                        if (doc != null)
                         {
-                            var _refTrans = uow.TransactionRepository
-                                .Where(nameof(Transaction.BlFileID), _doc.ID);
+                            var refTrans = uow.TransactionRepository
+                                .Where(nameof(Transaction.BlFileID), doc.ID);
 
-                            transactions.AddRange(_refTrans);
-                            documents.Add(_doc);
+                            transactions.AddRange(refTrans);
+                            documents.Add(doc);
                         }
                     }
 
@@ -103,7 +104,7 @@ namespace AXERP.API.Business.Commands
 
                     uow.CommitTransaction();
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     _logger.LogError(ex);
                     uow.Rollback();

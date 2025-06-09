@@ -1,13 +1,11 @@
 ﻿using AXERP.API.BlobHelper.Managers;
 using AXERP.API.BlobHelper.ServiceContracts.Responses;
+using AXERP.API.Business.Services;
 using AXERP.API.Domain;
 using AXERP.API.Domain.Entities;
-using AXERP.API.Domain.Models;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
-using AXERP.API.Domain.Util;
 using AXERP.API.GoogleHelper;
-using AXERP.API.GoogleHelper.Managers;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Base;
 using AXERP.API.LogHelper.Factories;
@@ -21,6 +19,7 @@ namespace AXERP.API.Business.Commands.Blob
         private readonly UnitOfWorkFactory _uowFactory;
         private readonly BlobManagerFactory _blobManagerFactory;
         private readonly GoogleSheetManagerFactory _sheetManagerFactory;
+        private readonly IBillOfLadingUpdater _billOfLadingUpdater;
 
         private readonly List<Transaction> _billOfLadingUpdated = new();
 
@@ -28,11 +27,13 @@ namespace AXERP.API.Business.Commands.Blob
             AxerpLoggerFactory axerpLoggerFactory,
             UnitOfWorkFactory uowFactory,
             BlobManagerFactory blobManagerFactory,
-            GoogleSheetManagerFactory sheetManagerFactory) : base(axerpLoggerFactory)
+            GoogleSheetManagerFactory sheetManagerFactory,
+            IBillOfLadingUpdater billOfLadingUpdater) : base(axerpLoggerFactory)
         {
             _uowFactory = uowFactory;
             _blobManagerFactory = blobManagerFactory;
             _sheetManagerFactory = sheetManagerFactory;
+            _billOfLadingUpdater = billOfLadingUpdater;
         }
 
         public void LogStatistics(ProcessBlobFilesResponse result)
@@ -69,7 +70,7 @@ namespace AXERP.API.Business.Commands.Blob
 
             if (_billOfLadingUpdated.Count > 0)
             {
-                await UpdateBillOfLadingInSheetAsync();
+                await _billOfLadingUpdater.UpdateAsync(_billOfLadingUpdated, CancellationToken.None);
                 _logger.LogInformation("Bill of Lading updated for {0} transactions: {1}", _billOfLadingUpdated.Count, string.Join(", ", _billOfLadingUpdated.Select(x => x.ID + x.IDSffx)));
             }
             else
@@ -223,57 +224,6 @@ namespace AXERP.API.Business.Commands.Blob
             }
 
             return response;
-        }
-
-        private async Task UpdateBillOfLadingInSheetAsync()
-        {
-            using GoogleSheetManager sheetManager = _sheetManagerFactory.Create();
-
-            (int deliveryIdColumn, int billOfLadingColumn) = await GetDeliveryIdAndBillOfLadingColumnNumber(sheetManager);
-
-            HashSet<CellData> deliveryIds = (await sheetManager.ReadColumnAsync(deliveryIdColumn))
-                .ToHashSet(new CellData.CompareByValue());
-
-            IEnumerable<CellData> targetCells = GetTargetCells(billOfLadingColumn, deliveryIds);
-
-            await sheetManager.UpdateCellsAsync(targetCells);
-        }
-
-        private static async Task<(int DeliveryIdColumn, int BillOfLadingColumn)> GetDeliveryIdAndBillOfLadingColumnNumber(GoogleSheetManager sheetManager)
-        {
-            var header = (await sheetManager.ReadHeaderAsync()).ToArray();
-
-            var fieldNames = SheetHelperMethods.GetFieldNamesWithOrder<Delivery>(header);
-
-            int deliveryIdColumn = fieldNames[nameof(Delivery.DeliveryID)] + 1;
-            int billOfLadingColumn = fieldNames[nameof(Delivery.BillOfLading)] + 1;
-
-            return (deliveryIdColumn, billOfLadingColumn);
-        }
-
-        private IEnumerable<CellData> GetTargetCells(int billOfLadingColumn, HashSet<CellData> deliveryIds)
-        {
-            List<CellData> targetCells = new(deliveryIds.Count);
-            foreach (var transaction in _billOfLadingUpdated)
-            {
-                CellData search = new() { Value = transaction.ID + transaction.IDSffx };
-
-                if (!deliveryIds.TryGetValue(search, out CellData? result))
-                {
-                    _logger.LogWarning("Transaction not found in delivery column: {0}", search.Value);
-                    continue;
-                }
-
-                targetCells.Add(new CellData
-                {
-                    Column = billOfLadingColumn,
-                    Row = result.Row,
-                    Value = DateOnly.FromDateTime(transaction.BillOfLading!.Value)
-                        .ToString("dd/MM/yyyy")
-                });
-            }
-
-            return targetCells;
         }
     }
 }
