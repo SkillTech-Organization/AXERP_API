@@ -31,7 +31,6 @@ namespace AXERP.API.Functions.Blobs
         private readonly UploadBlobFilesCommand _uploadBlobFilesCommand;
         private readonly UploadBlobFileCommand _uploadBlobFileCommand;
         private readonly DownLoadBlobFileCommand _getBlobFileCommand;
-        // private readonly UpdateBillOfLadingCommand _updateBillOfLadingCommand;
 
         public const string PATH_PARAM_UPLOAD = "path";
 
@@ -50,7 +49,6 @@ namespace AXERP.API.Functions.Blobs
             _uploadBlobFilesCommand = uploadBlobFilesCommand;
             _uploadBlobFileCommand = uploadBlobFileCommand;
             _getBlobFileCommand = getBlobFileCommand;
-            // _updateBillOfLadingCommand = updateBillOfLadingCommand;
         }
 
         /// <summary>
