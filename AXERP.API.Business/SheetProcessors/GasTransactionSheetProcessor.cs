@@ -607,6 +607,16 @@ namespace AXERP.API.Business.SheetProcessors
 
                     gasTransaction.TruckCompany = row[field_idx]?.ToString();
 
+                    // TransporterName
+                    field_idx = field_names[nameof(gasTransaction.TransporterName)];
+                    if (row.Count <= field_idx)
+                    {
+                        add_transaction(gasTransaction, row);
+                        continue;
+                    }
+
+                    gasTransaction.TransporterName = row[field_idx]?.ToString();
+
                     // Add to result
 
                     add_transaction(gasTransaction, row);
