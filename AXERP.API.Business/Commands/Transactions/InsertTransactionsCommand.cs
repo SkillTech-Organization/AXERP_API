@@ -95,6 +95,13 @@ namespace AXERP.API.Business.Commands
 
                     var newSheetRows = importResult.Data.Where(x => !TransactionIds.Contains((x.DeliveryID, x.DeliveryIDSffx)));
                     var updatedSheetRows = importResult.Data.Where(x => Transactions.Any(y => x.DeliveryIDSffx == y.IDSffx && x.DeliveryID == y.ID && x.AXERPHash != y.AXERPHash));
+                    
+                    var deletedBLDate = importResult.Data
+                        .Where(imported => Transactions.Any(
+                            tr => !imported.BillOfLading.HasValue &&
+                                  (tr.BillOfLading.HasValue || tr.BlFileID.HasValue)
+                        ));
+                    
                     var deletedSheetRowIds = TransactionIds.Where(x => !sheetIds.Contains((x.Item1, x.Item2)));
 
                     res.NewRows = newSheetRows.Count();
@@ -139,7 +146,7 @@ namespace AXERP.API.Business.Commands
                      */
                     _logger.LogInformation("Updating transactions...");
 
-                    CreateOrUpdate(uow, updatedSheetRows, false);
+                    CreateOrUpdate(uow, updatedSheetRows, false, deletedBLDate);
 
                     uow.CommitTransaction();
 
@@ -196,7 +203,7 @@ namespace AXERP.API.Business.Commands
             uow.Save("delete_done");
         }
 
-        private void CreateOrUpdate(IUnitOfWork uow, IEnumerable<Delivery> sheetRows, bool create)
+        private void CreateOrUpdate(IUnitOfWork uow, IEnumerable<Delivery> sheetRows, bool create, IEnumerable<Delivery>? deletedBlDate = null)
         {
             if (!sheetRows.Any())
             {
@@ -359,6 +366,13 @@ namespace AXERP.API.Business.Commands
                             Comment = sheetRow.TruckLoadingCompanyComment
                         });
                     }
+                }
+
+                if (!create && deletedBlDate?.Count() > 0 &&
+                    deletedBlDate.Any(x => x.DeliveryID == sheetRow.DeliveryID &&
+                    x.DeliveryIDSffx == sheetRow.DeliveryIDSffx))
+                {
+                    transaction.BlFileID = null;
                 }
 
                 transactionDtos.Add(transaction);
