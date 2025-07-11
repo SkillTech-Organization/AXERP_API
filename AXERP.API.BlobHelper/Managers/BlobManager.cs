@@ -359,5 +359,33 @@ namespace AXERP.API.BlobHelper.Managers
 
             _logger.LogTrace("Blob successfully moved to other folder!");
         }
+
+        public async Task MoveFile(string sourceName, string destinationName)
+        {
+            _logger.LogTrace("Moving blob file '{0}' to folder '{1}'", sourceName, destinationName);
+
+            var sourceBlob = Container.GetBlobClient(sourceName);
+            var destinationBlob = Container.GetBlobClient(destinationName);
+
+            _logger.LogTrace("Copying between folders...");
+
+            var copyResponse = await destinationBlob.StartCopyFromUriAsync(sourceBlob.Uri);
+
+            if (copyResponse.HasValue)
+            {
+                throw new Exception(copyResponse.GetRawResponse().ReasonPhrase);
+            }
+
+            _logger.LogTrace("Deleting from original folder...");
+
+            var deleteResponse = await sourceBlob.DeleteAsync();
+
+            if (CheckError(deleteResponse, out string errorMessage))
+            {
+                throw new Exception(errorMessage);
+            }
+
+            _logger.LogTrace("Blob successfully moved to other folder!");
+        }
     }
 }
