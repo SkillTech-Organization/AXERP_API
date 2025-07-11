@@ -24,18 +24,23 @@ namespace AXERP.API.Business.Commands
         private List<Interface> Interfaces { get; set; }
         private List<string> Statuses { get; set; }
         private List<Document> Documents { get; set; }
+        private List<Document> DocumentsToDelete { get; set; }
         private List<TruckCompany> TruckCompanies { get; set; }
         private List<Entity> Entities { get; set; }
         private List<TruckCompanyToDelivery> TruckCompanyToDeliveries { get; set; }
         private List<CustomerToDelivery> CustomerToDeliveries { get; set; }
 
+        protected readonly BlobManagerFactory _blobManagerFactory;
+
         public InsertTransactionsCommand(
             AxerpLoggerFactory axerpLoggerFactory,
             UnitOfWorkFactory uowFactory,
+            BlobManagerFactory blobManagerFactory,
             IMapper mapper) : base(axerpLoggerFactory)
         {
             _uowFactory = uowFactory;
             _mapper = mapper;
+            _blobManagerFactory = blobManagerFactory;
         }
 
         public void LogStatistics(ImportGasTransactionResponse result)
@@ -78,6 +83,11 @@ namespace AXERP.API.Business.Commands
                 try
                 {
                     uow.BeginTransaction();
+
+                    /*
+                     * PREPARE
+                     */
+                    DocumentsToDelete = new List<Document>();
 
                     /*
                      * LOCAL "CACHE"
@@ -148,7 +158,17 @@ namespace AXERP.API.Business.Commands
 
                     CreateOrUpdate(uow, updatedSheetRows, false, deletedBLDate);
 
+                    /*
+                     * HANDLE DISASSOCIATED BLOB FILES (DOCUMENTS)
+                     */
+                    _logger.LogInformation("Handle disassociated blob files (document records)...");
+
+                    DeleteDisassociatedBlobFiles(uow);
+
+                    _logger.LogInformation("Comitting transactions...");
                     uow.CommitTransaction();
+
+                    MoveDisassociatedBlobFiles();
 
                     _logger.LogInformation("Sync (DataBase part) finished without errors.");
                 }
@@ -370,8 +390,10 @@ namespace AXERP.API.Business.Commands
 
                 if (!create && deletedBlDate?.Count() > 0 &&
                     deletedBlDate.Any(x => x.DeliveryID == sheetRow.DeliveryID &&
-                    x.DeliveryIDSffx == sheetRow.DeliveryIDSffx))
+                    x.DeliveryIDSffx == sheetRow.DeliveryIDSffx) &&
+                    transaction.BlFileID != null)
                 {
+                    DocumentsToDelete.Add(uow.DocumentRepository.GetById(transaction.BlFileID.Value));
                     transaction.BlFileID = null;
                 }
 
@@ -419,6 +441,41 @@ namespace AXERP.API.Business.Commands
             uow.TruckCompanyToDeliveryRepository.Update(ttdUpdate);
 
             uow.Save("update_done");
+        }
+
+        private void DeleteDisassociatedBlobFiles(IUnitOfWork uow)
+        {
+            if (DocumentsToDelete.Count == 0)
+            {
+                return;
+            }
+
+            _logger.LogInformation("Deleting disassociated {0} (BlFile) rows. Count: {1}", nameof(Document), DocumentsToDelete.Count);
+            uow.DocumentRepository.Delete(DocumentsToDelete);
+
+            uow.Save("bl_file");
+        }
+
+        private void MoveDisassociatedBlobFiles()
+        {
+            if (DocumentsToDelete.Count == 0)
+            {
+                return;
+            }
+
+            var blobHelper = _blobManagerFactory.Create();
+
+            var blobImportFolder = EnvironmentHelper.TryGetParameter("BlobStorageImportFolder");
+            var blobProcessedFolder = EnvironmentHelper.TryGetParameter("BlobStorageProcessedFolder");
+
+            _logger.LogInformation("Moving disassociated {0} (BlFile) rows to {1} folder. Count: {2}", nameof(Document), blobImportFolder, DocumentsToDelete.Count);
+
+            foreach (var doc in DocumentsToDelete)
+            {
+                var src = $"{blobProcessedFolder}/{doc.FileName}";
+                var dst = $"{blobImportFolder}/{doc.FileName}";
+                blobHelper.MoveFile(src, dst).Wait();
+            }
         }
     }
 }
