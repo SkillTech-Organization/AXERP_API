@@ -175,13 +175,18 @@ namespace AXERP.API.Business.Commands.Blob
                                 foreach (var transaction in matchingTransactions)
                                 {
                                     transaction.BlFileID = referenced.ID;
+                                    transaction.AXERPHash = "DATA_CHANGED_BillOfLading_UPDATED";
                                     if (transaction.BillOfLading is null)
                                     {
                                         transaction.BillOfLading = DateTime.UtcNow;
                                         _billOfLadingUpdated.Add(transaction);
                                     }
                                 }
-                                uow.TransactionRepository.Update(matchingTransactions, new List<string> { nameof(Transaction.BlFileID), nameof(Transaction.BillOfLading) });
+                                uow.TransactionRepository.Update(matchingTransactions, new List<string> {
+                                    nameof(Transaction.BlFileID),
+                                    nameof(Transaction.BillOfLading),
+                                    nameof(Transaction.AXERPHash)
+                                });
                                 _logger.LogInformation("Matching transactions updated.");
 
                                 _logger.LogInformation("Updating Document.");
