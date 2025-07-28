@@ -26,6 +26,8 @@ namespace AXERP.API.Domain.Interfaces.Repositories
 
         DataTable CreateDataTable<T>(IEnumerable<T> list);
 
-        void BulkCopy<T>(List<T> rows, DataRowState? state = null);
+        void BulkCopy<T>(List<T> rows, DataRowState? state = null, string? tableName = null);
+
+        void CallSp(string spName);
     }
 }
