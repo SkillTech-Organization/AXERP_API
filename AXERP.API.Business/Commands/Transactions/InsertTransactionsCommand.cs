@@ -1,15 +1,14 @@
 ﻿using AutoMapper;
-using AXERP.API.LogHelper.Base;
+using AXERP.API.Domain;
 using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.Interfaces.UnitOfWork;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.GoogleHelper.Models;
 using AXERP.API.LogHelper.Attributes;
+using AXERP.API.LogHelper.Base;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
 using System.Data;
-using AXERP.API.Domain;
-using System.Linq;
 
 namespace AXERP.API.Business.Commands
 {
@@ -105,13 +104,18 @@ namespace AXERP.API.Business.Commands
 
                     var newSheetRows = importResult.Data.Where(x => !TransactionIds.Contains((x.DeliveryID, x.DeliveryIDSffx)));
                     var updatedSheetRows = importResult.Data.Where(x => Transactions.Any(y => x.DeliveryIDSffx == y.IDSffx && x.DeliveryID == y.ID && x.AXERPHash != y.AXERPHash));
-                    
+
                     var deletedBLDate = importResult.Data
                         .Where(imported => Transactions.Any(
                             tr => !imported.BillOfLading.HasValue &&
                                   (tr.BillOfLading.HasValue || tr.BlFileID.HasValue)
                         ));
-                    
+                    var deletedBLTransactionIds = new HashSet<string>();
+                    foreach (var it in deletedBLDate)
+                    {
+                        deletedBLTransactionIds.Add(it.DeliveryID + it.DeliveryIDSffx);
+                    }
+
                     var deletedSheetRowIds = TransactionIds.Where(x => !sheetIds.Contains((x.Item1, x.Item2)));
 
                     res.NewRows = newSheetRows.Count();
@@ -156,7 +160,7 @@ namespace AXERP.API.Business.Commands
                      */
                     _logger.LogInformation("Updating transactions...");
 
-                    CreateOrUpdate(uow, updatedSheetRows, false, deletedBLDate);
+                    CreateOrUpdate(uow, updatedSheetRows, false, deletedBLTransactionIds);
 
                     /*
                      * HANDLE DISASSOCIATED BLOB FILES (DOCUMENTS)
@@ -223,13 +227,14 @@ namespace AXERP.API.Business.Commands
             uow.Save("delete_done");
         }
 
-        private void CreateOrUpdate(IUnitOfWork uow, IEnumerable<Delivery> sheetRows, bool create, IEnumerable<Delivery>? deletedBlDate = null)
+        private void CreateOrUpdate(IUnitOfWork uow, IEnumerable<Delivery> sheetRows, bool create, HashSet<string>? deletedBlDateTrIds = null)
         {
             if (!sheetRows.Any())
             {
                 return;
             }
 
+            deletedBlDateTrIds ??= new HashSet<string>();
             var transactionDtos = new List<Transaction>();
             var ctdNew = new List<CustomerToDelivery>();
             var ttdNew = new List<TruckCompanyToDelivery>();
@@ -388,12 +393,11 @@ namespace AXERP.API.Business.Commands
                     }
                 }
 
-                if (!create && deletedBlDate?.Count() > 0 &&
-                    deletedBlDate.Any(x => x.DeliveryID == sheetRow.DeliveryID &&
-                    x.DeliveryIDSffx == sheetRow.DeliveryIDSffx) &&
+                if (!create && deletedBlDateTrIds.Any() &&
+                    deletedBlDateTrIds.Contains(sheetRow.DeliveryID.ToString() + sheetRow.DeliveryIDSffx) &&
                     transaction.BlFileID != null)
                 {
-                    DocumentsToDelete.Add(uow.DocumentRepository.GetById(transaction.BlFileID.Value));
+                    DocumentsToDelete.Add(Documents.First(x => x.ID == transaction.BlFileID.Value));
                     transaction.BlFileID = null;
                 }
 
@@ -425,7 +429,24 @@ namespace AXERP.API.Business.Commands
                 _logger.LogInformation("Updating {0} rows. Count: {1}", nameof(Transaction), transactionDtos.Count);
                 _logger.LogInformation("DeliveryIDs for update: {0}", string.Join(", ", allDeliveryIds));
 
-                uow.TransactionRepository.Update(transactionDtos);
+                // uow.TransactionRepository.Update(transactionDtos);
+
+                // Load updated transactions into the staging table
+                if (transactionDtos.Count > 1000)
+                {
+                    var chunks = transactionDtos.Chunk(1000);
+                    foreach (var chunk in chunks)
+                    {
+                        uow.GenericRepository.BulkCopy<Transaction>(chunk.ToList(), null, "TransactionsStaging");
+                    }
+                }
+                else
+                {
+                    uow.GenericRepository.BulkCopy<Transaction>(transactionDtos, null, "TransactionsStaging");
+                }
+
+                // Merge staging table into normal then clear staging table
+                uow.GenericRepository.CallSp("UpdateTransactionsFromStaging");
             }
 
             _logger.LogInformation("Inserting new {0} rows. Count: {1}", nameof(CustomerToDelivery), ctdNew.Count);
