@@ -50,13 +50,13 @@ namespace AXERP.API.Persistence.Repositories
             return dataTable;
         }
 
-        public void BulkCopy<T>(List<T> rows, DataRowState? state)
+        public void BulkCopy<T>(List<T> rows, DataRowState? state, string? tableName)
         {
             DataTable data = CreateDataTable<T>(rows);
 
             using (var bulkCopy = new SqlBulkCopy(_connection, SqlBulkCopyOptions.Default, _transaction))
             {
-                bulkCopy.DestinationTableName = $"dbo.{typeof(T).GetTableName()}";
+                bulkCopy.DestinationTableName = $"dbo.{tableName ?? typeof(T).GetTableName()}";
 
                 // Without explicit mapping there can be conversion errors
                 data.Columns.Cast<DataColumn>()
@@ -65,6 +65,15 @@ namespace AXERP.API.Persistence.Repositories
                         bulkCopy.ColumnMappings.Add(new SqlBulkCopyColumnMapping(x.ColumnName, x.ColumnName)));
 
                 bulkCopy.WriteToServer(data, state ?? DataRowState.Added);
+            }
+        }
+
+        public void CallSp(string spName)
+        {
+            using(var cmd = new SqlCommand(spName, _connection, _transaction))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.ExecuteNonQuery();
             }
         }
 

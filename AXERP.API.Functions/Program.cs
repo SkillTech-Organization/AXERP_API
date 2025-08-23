@@ -1,8 +1,12 @@
 using AXERP.API.AppInsightsHelper.Managers;
 using AXERP.API.Business.Commands;
+using AXERP.API.Business.Commands.Blob;
 using AXERP.API.Business.Queries;
+using AXERP.API.Business.Services;
 using AXERP.API.Business.SheetProcessors;
 using AXERP.API.Domain.AutoMapperProfiles;
+using AXERP.API.Functions;
+using AXERP.API.GoogleHelper;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -122,7 +126,9 @@ var host = new HostBuilder()
         services.AddTransient<GetGasTransactionCsvQuery>();
         services.AddTransient<GetPagedGasTransactionsQuery>();
         services.AddTransient<DownLoadBlobFileCommand>();
-        services.AddTransient<UpdateBillOfLadingCommand>();
+        services.AddScoped<GoogleSheetManagerFactory>();
+        services.AddTransient<IBillOfLadingUpdater, BillOfLadingUpdater>();
+        services.AddResiliency();
     })
     // Source: https://learn.microsoft.com/en-us/azure/azure-functions/dotnet-isolated-process-guide?tabs=windows#application-insights
     // Quote: "However, by default, the Application Insights SDK adds a logging filter that instructs the logger to capture only warnings and more severe logs. If you want to disable this behavior, remove the filter rule as part of service configuration"
@@ -130,8 +136,9 @@ var host = new HostBuilder()
     {
         logging.Services.Configure<LoggerFilterOptions>(options =>
         {
-            LoggerFilterRule defaultRule = options.Rules.FirstOrDefault(rule => rule.ProviderName
-                == "Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider");
+            LoggerFilterRule? defaultRule = options.Rules
+                .FirstOrDefault(rule => rule.ProviderName == "Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider");
+
             if (defaultRule is not null)
             {
                 options.Rules.Remove(defaultRule);

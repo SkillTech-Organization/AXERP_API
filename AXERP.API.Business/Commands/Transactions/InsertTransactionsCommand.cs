@@ -1,15 +1,14 @@
 ﻿using AutoMapper;
-using AXERP.API.LogHelper.Base;
+using AXERP.API.Domain;
 using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.Interfaces.UnitOfWork;
 using AXERP.API.Domain.ServiceContracts.Responses;
 using AXERP.API.GoogleHelper.Models;
 using AXERP.API.LogHelper.Attributes;
+using AXERP.API.LogHelper.Base;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
 using System.Data;
-using AXERP.API.Domain;
-using System.Linq;
 
 namespace AXERP.API.Business.Commands
 {
@@ -24,18 +23,23 @@ namespace AXERP.API.Business.Commands
         private List<Interface> Interfaces { get; set; }
         private List<string> Statuses { get; set; }
         private List<Document> Documents { get; set; }
+        private List<Document> DocumentsToDelete { get; set; }
         private List<TruckCompany> TruckCompanies { get; set; }
         private List<Entity> Entities { get; set; }
         private List<TruckCompanyToDelivery> TruckCompanyToDeliveries { get; set; }
         private List<CustomerToDelivery> CustomerToDeliveries { get; set; }
 
+        protected readonly BlobManagerFactory _blobManagerFactory;
+
         public InsertTransactionsCommand(
             AxerpLoggerFactory axerpLoggerFactory,
             UnitOfWorkFactory uowFactory,
+            BlobManagerFactory blobManagerFactory,
             IMapper mapper) : base(axerpLoggerFactory)
         {
             _uowFactory = uowFactory;
             _mapper = mapper;
+            _blobManagerFactory = blobManagerFactory;
         }
 
         public void LogStatistics(ImportGasTransactionResponse result)
@@ -80,6 +84,11 @@ namespace AXERP.API.Business.Commands
                     uow.BeginTransaction();
 
                     /*
+                     * PREPARE
+                     */
+                    DocumentsToDelete = new List<Document>();
+
+                    /*
                      * LOCAL "CACHE"
                      */
                     _logger.LogInformation("Querying data for processing. Transactions, entities...");
@@ -95,6 +104,18 @@ namespace AXERP.API.Business.Commands
 
                     var newSheetRows = importResult.Data.Where(x => !TransactionIds.Contains((x.DeliveryID, x.DeliveryIDSffx)));
                     var updatedSheetRows = importResult.Data.Where(x => Transactions.Any(y => x.DeliveryIDSffx == y.IDSffx && x.DeliveryID == y.ID && x.AXERPHash != y.AXERPHash));
+
+                    var deletedBLDate = importResult.Data
+                        .Where(imported => Transactions.Any(
+                            tr => !imported.BillOfLading.HasValue &&
+                                  (tr.BillOfLading.HasValue || tr.BlFileID.HasValue)
+                        ));
+                    var deletedBLTransactionIds = new HashSet<string>();
+                    foreach (var it in deletedBLDate)
+                    {
+                        deletedBLTransactionIds.Add(it.DeliveryID + it.DeliveryIDSffx);
+                    }
+
                     var deletedSheetRowIds = TransactionIds.Where(x => !sheetIds.Contains((x.Item1, x.Item2)));
 
                     res.NewRows = newSheetRows.Count();
@@ -139,9 +160,19 @@ namespace AXERP.API.Business.Commands
                      */
                     _logger.LogInformation("Updating transactions...");
 
-                    CreateOrUpdate(uow, updatedSheetRows, false);
+                    CreateOrUpdate(uow, updatedSheetRows, false, deletedBLTransactionIds);
 
+                    /*
+                     * HANDLE DISASSOCIATED BLOB FILES (DOCUMENTS)
+                     */
+                    _logger.LogInformation("Handle disassociated blob files (document records)...");
+
+                    DeleteDisassociatedBlobFiles(uow);
+
+                    _logger.LogInformation("Comitting transactions...");
                     uow.CommitTransaction();
+
+                    MoveDisassociatedBlobFiles();
 
                     _logger.LogInformation("Sync (DataBase part) finished without errors.");
                 }
@@ -196,13 +227,14 @@ namespace AXERP.API.Business.Commands
             uow.Save("delete_done");
         }
 
-        private void CreateOrUpdate(IUnitOfWork uow, IEnumerable<Delivery> sheetRows, bool create)
+        private void CreateOrUpdate(IUnitOfWork uow, IEnumerable<Delivery> sheetRows, bool create, HashSet<string>? deletedBlDateTrIds = null)
         {
             if (!sheetRows.Any())
             {
                 return;
             }
 
+            deletedBlDateTrIds ??= new HashSet<string>();
             var transactionDtos = new List<Transaction>();
             var ctdNew = new List<CustomerToDelivery>();
             var ttdNew = new List<TruckCompanyToDelivery>();
@@ -321,24 +353,12 @@ namespace AXERP.API.Business.Commands
 
                 if (sheetCustomer != null)
                 {
-                    if (!isCustomerNew)
+                    var u = CustomerToDeliveries.FirstOrDefault(x => x.DeliveryID == sheetRow.DeliveryID && x.DeliveryIDSffx == sheetRow.DeliveryIDSffx);
+                    if (u != null)
                     {
-                        var u = CustomerToDeliveries.FirstOrDefault(x => x.DeliveryID == sheetRow.DeliveryID && x.DeliveryIDSffx == sheetRow.DeliveryIDSffx);
-                        if (u != null)
-                        {
-                            u.Comment = sheetRow.CustomerNote;
-                            ctdUpdate.Add(u);
-                        }
-                        else
-                        {
-                            ctdNew.Add(new CustomerToDelivery
-                            {
-                                DeliveryID = transaction.ID,
-                                DeliveryIDSffx = transaction.IDSffx,
-                                CustomerID = sheetCustomer.ID,
-                                Comment = sheetRow.CustomerNote
-                            });
-                        }
+                        u.Comment = sheetRow.CustomerNote;
+                        u.CustomerID = sheetCustomer.ID;
+                        ctdUpdate.Add(u);
                     }
                     else
                     {
@@ -354,24 +374,12 @@ namespace AXERP.API.Business.Commands
 
                 if (sheetTruckCompany != null)
                 {
-                    if (!isTruckCompanyNew)
+                    var u = TruckCompanyToDeliveries.FirstOrDefault(x => x.DeliveryID == sheetRow.DeliveryID && x.DeliveryIDSffx == sheetRow.DeliveryIDSffx);
+                    if (u != null)
                     {
-                        var u = TruckCompanyToDeliveries.FirstOrDefault(x => x.DeliveryID == sheetRow.DeliveryID && x.DeliveryIDSffx == sheetRow.DeliveryIDSffx);
-                        if (u != null)
-                        {
-                            u.Comment = sheetRow.TruckLoadingCompanyComment;
-                            ttdUpdate.Add(u);
-                        }
-                        else
-                        {
-                            ttdNew.Add(new TruckCompanyToDelivery
-                            {
-                                DeliveryID = transaction.ID,
-                                DeliveryIDSffx = transaction.IDSffx,
-                                TruckCompanyID = sheetTruckCompany.ID,
-                                Comment = sheetRow.TruckLoadingCompanyComment
-                            });
-                        }
+                        u.Comment = sheetRow.TruckLoadingCompanyComment;
+                        u.TruckCompanyID = sheetTruckCompany.ID;
+                        ttdUpdate.Add(u);
                     }
                     else
                     {
@@ -385,6 +393,14 @@ namespace AXERP.API.Business.Commands
                     }
                 }
 
+                if (!create && deletedBlDateTrIds.Any() &&
+                    deletedBlDateTrIds.Contains(sheetRow.DeliveryID.ToString() + sheetRow.DeliveryIDSffx) &&
+                    transaction.BlFileID != null)
+                {
+                    DocumentsToDelete.Add(Documents.First(x => x.ID == transaction.BlFileID.Value));
+                    transaction.BlFileID = null;
+                }
+
                 transactionDtos.Add(transaction);
             }
 
@@ -395,14 +411,42 @@ namespace AXERP.API.Business.Commands
                 _logger.LogInformation("Inserting new {0} rows. Count: {1}", nameof(Transaction), transactionDtos.Count);
                 _logger.LogInformation("DeliveryIDs for create: {0}", string.Join(", ", allDeliveryIds));
 
-                uow.GenericRepository.BulkCopy<Transaction>(transactionDtos);
+                if (transactionDtos.Count > 1000)
+                {
+                    var chunks = transactionDtos.Chunk(1000);
+                    foreach (var chunk in chunks)
+                    {
+                        uow.GenericRepository.BulkCopy<Transaction>(chunk.ToList());
+                    }
+                }
+                else
+                {
+                    uow.GenericRepository.BulkCopy<Transaction>(transactionDtos);
+                }
             }
             else
             {
                 _logger.LogInformation("Updating {0} rows. Count: {1}", nameof(Transaction), transactionDtos.Count);
                 _logger.LogInformation("DeliveryIDs for update: {0}", string.Join(", ", allDeliveryIds));
 
-                uow.TransactionRepository.Update(transactionDtos);
+                // uow.TransactionRepository.Update(transactionDtos);
+
+                // Load updated transactions into the staging table
+                if (transactionDtos.Count > 1000)
+                {
+                    var chunks = transactionDtos.Chunk(1000);
+                    foreach (var chunk in chunks)
+                    {
+                        uow.GenericRepository.BulkCopy<Transaction>(chunk.ToList(), null, "TransactionsStaging");
+                    }
+                }
+                else
+                {
+                    uow.GenericRepository.BulkCopy<Transaction>(transactionDtos, null, "TransactionsStaging");
+                }
+
+                // Merge staging table into normal then clear staging table
+                uow.GenericRepository.CallSp("UpdateTransactionsFromStaging");
             }
 
             _logger.LogInformation("Inserting new {0} rows. Count: {1}", nameof(CustomerToDelivery), ctdNew.Count);
@@ -418,6 +462,41 @@ namespace AXERP.API.Business.Commands
             uow.TruckCompanyToDeliveryRepository.Update(ttdUpdate);
 
             uow.Save("update_done");
+        }
+
+        private void DeleteDisassociatedBlobFiles(IUnitOfWork uow)
+        {
+            if (DocumentsToDelete.Count == 0)
+            {
+                return;
+            }
+
+            _logger.LogInformation("Deleting disassociated {0} (BlFile) rows. Count: {1}", nameof(Document), DocumentsToDelete.Count);
+            uow.DocumentRepository.Delete(DocumentsToDelete);
+
+            uow.Save("bl_file");
+        }
+
+        private void MoveDisassociatedBlobFiles()
+        {
+            if (DocumentsToDelete.Count == 0)
+            {
+                return;
+            }
+
+            var blobHelper = _blobManagerFactory.Create();
+
+            var blobImportFolder = EnvironmentHelper.TryGetParameter("BlobStorageImportFolder");
+            var blobProcessedFolder = EnvironmentHelper.TryGetParameter("BlobStorageProcessedFolder");
+
+            _logger.LogInformation("Moving disassociated {0} (BlFile) rows to {1} folder. Count: {2}", nameof(Document), blobImportFolder, DocumentsToDelete.Count);
+
+            foreach (var doc in DocumentsToDelete)
+            {
+                var src = $"{blobProcessedFolder}/{doc.FileName}";
+                var dst = $"{blobImportFolder}/{doc.FileName}";
+                blobHelper.MoveFile(src, dst).Wait();
+            }
         }
     }
 }

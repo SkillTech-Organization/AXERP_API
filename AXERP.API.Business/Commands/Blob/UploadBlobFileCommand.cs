@@ -1,11 +1,11 @@
 ﻿using AXERP.API.BlobHelper.ServiceContracts.Requests;
 using AXERP.API.Domain;
-using AXERP.API.Domain.ServiceContracts.Responses;
+using AXERP.API.Domain.ServiceContracts.Responses.Base;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Base;
 using AXERP.API.LogHelper.Factories;
 
-namespace AXERP.API.Business.Commands
+namespace AXERP.API.Business.Commands.Blob
 {
     [ForSystem("Blob Storage", LogConstants.FUNCTION_BL_PROCESSING)]
     public class UploadBlobFileCommand : BaseAuditedClass<UploadBlobFileCommand>

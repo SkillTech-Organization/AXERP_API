@@ -17,6 +17,10 @@ namespace AXERP.API.Domain.Entities
 
         public DateTime? DateDelivered { get; set; }
 
+        public string PurchaseContract { get; set; }
+
+        public double? QtyDeliveredInKg { get; set; }
+
         public string SalesContractID { get; set; }
 
         public string SalesStatusID { get; set; }
@@ -71,6 +75,8 @@ namespace AXERP.API.Domain.Entities
         public string? Reference2 { get; set; }
 
         public string? Reference3 { get; set; }
+
+        public string TransporterName { get; set; }
 
         public int? BlFileID { get; set; }
 

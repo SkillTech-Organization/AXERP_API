@@ -1,9 +1,11 @@
 using AXERP.API.BlobHelper.ServiceContracts.Requests;
 using AXERP.API.Business.Commands;
+using AXERP.API.Business.Commands.Blob;
 using AXERP.API.Business.Queries;
 using AXERP.API.Domain;
 using AXERP.API.Domain.Models;
-using AXERP.API.Domain.ServiceContracts.Responses;
+using AXERP.API.Domain.ServiceContracts.Requests;
+using AXERP.API.Domain.ServiceContracts.Responses.Base;
 using AXERP.API.Domain.ServiceContracts.Responses.General;
 using AXERP.API.Functions.Base;
 using AXERP.API.LogHelper.Attributes;
@@ -29,7 +31,6 @@ namespace AXERP.API.Functions.Blobs
         private readonly UploadBlobFilesCommand _uploadBlobFilesCommand;
         private readonly UploadBlobFileCommand _uploadBlobFileCommand;
         private readonly DownLoadBlobFileCommand _getBlobFileCommand;
-        private readonly UpdateBillOfLadingCommand _updateBillOfLadingCommand;
 
         public const string PATH_PARAM_UPLOAD = "path";
 
@@ -40,8 +41,7 @@ namespace AXERP.API.Functions.Blobs
             UploadBlobFilesCommand uploadBlobFilesCommand,
             UploadBlobFileCommand uploadBlobFileCommand,
             UpdateReferencesByBlobFilesCommand updateReferencesByBlobFilesCommand,
-            DownLoadBlobFileCommand getBlobFileCommand,
-            UpdateBillOfLadingCommand updateBillOfLadingCommand) : base(loggerFactory)
+            DownLoadBlobFileCommand getBlobFileCommand) : base(loggerFactory)
         {
             _updateReferencesByBlobFilesCommand = updateReferencesByBlobFilesCommand;
             _listBlobFilesQuery = listBlobFilesQuery;
@@ -49,7 +49,6 @@ namespace AXERP.API.Functions.Blobs
             _uploadBlobFilesCommand = uploadBlobFilesCommand;
             _uploadBlobFileCommand = uploadBlobFileCommand;
             _getBlobFileCommand = getBlobFileCommand;
-            _updateBillOfLadingCommand = updateBillOfLadingCommand;
         }
 
         /// <summary>
@@ -166,14 +165,14 @@ namespace AXERP.API.Functions.Blobs
 
                 // get form-body        
                 var parsedFormBody = MultipartFormDataParser.ParseAsync(req.Body);
-                
+
                 if (parsedFormBody.Result.Files.Count == 0)
                 {
                     throw new Exception("File is missing from the request!");
                 }
 
                 var file = parsedFormBody.Result.Files[0];
-                
+
                 var name = file.FileName;
 
                 if (parsedFormBody.Result.Parameters.Count > 1)
@@ -199,28 +198,9 @@ namespace AXERP.API.Functions.Blobs
                     BlobUploadFile = bl
                 });
 
-                if (result.IsSuccess)
-                {
-                    var result_bol = await _updateBillOfLadingCommand.Execute(new List<string> { bl.FileName });
-                    if (result_bol.IsSuccess)
-                    {
-                        return new OkObjectResult(result_bol);
-                    }
-                    else
-                    {
-                        return new ObjectResult(result_bol)
-                        {
-                            StatusCode = (int?)result_bol.HttpStatusCode
-                        };
-                    }
-                }
-                else
-                {
-                    return new ObjectResult(result)
-                    {
-                        StatusCode = (int?)result.HttpStatusCode
-                    };
-                }
+                return result.IsSuccess
+                    ? new OkObjectResult(result)
+                    : new BadRequestObjectResult(result);
             }
             catch (Exception ex)
             {
@@ -260,7 +240,7 @@ namespace AXERP.API.Functions.Blobs
                 }
 
                 _updateReferencesByBlobFilesCommand.SetLoggerProcessData(UserName, id: _logger.ProcessId);
-                var result = await _updateReferencesByBlobFilesCommand.Execute(new Domain.ServiceContracts.Requests.ProcessBlobFilesRequest
+                var result = await _updateReferencesByBlobFilesCommand.ExecuteAsync(new ProcessBlobFilesRequest
                 {
                     BlobStorageImportFolder = blobImportFolder,
                     BlobStorageProcessedFolder = blobProcessedFolder,

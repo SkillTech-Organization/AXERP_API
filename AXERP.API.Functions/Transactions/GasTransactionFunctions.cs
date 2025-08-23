@@ -1,4 +1,3 @@
-using AutoMapper;
 using AXERP.API.Business.Commands;
 using AXERP.API.Business.Queries;
 using AXERP.API.Business.SheetProcessors;
@@ -7,7 +6,9 @@ using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Requests.Transactions;
 using AXERP.API.Domain.ServiceContracts.Responses;
+using AXERP.API.Domain.ServiceContracts.Responses.Base;
 using AXERP.API.Functions.Base;
+using AXERP.API.GoogleHelper;
 using AXERP.API.GoogleHelper.Managers;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Factories;
@@ -32,7 +33,7 @@ namespace AXERP.API.Functions.Transactions
         private readonly DeleteTransactionsCommand _deleteTransactionsCommand;
         private readonly GetGasTransactionCsvQuery _getGasTransactionCsvQuery;
         private readonly GetPagedGasTransactionsQuery _getPagedGasTransactionsQuery;
-        private readonly IMapper _mapper;
+        private readonly GoogleSheetManagerFactory _googleSheetManagerFactory;
 
         public GasTransactionFunctions(
             AxerpLoggerFactory loggerFactory,
@@ -42,15 +43,15 @@ namespace AXERP.API.Functions.Transactions
             DeleteTransactionsCommand deleteTransactionsCommand,
             GetGasTransactionCsvQuery getGasTransactionCsvQuery,
             GetPagedGasTransactionsQuery getPagedGasTransactionsQuery,
-            IMapper mapper) : base(loggerFactory)
+            GoogleSheetManagerFactory googleSheetManagerFactory) : base(loggerFactory)
         {
             _gasTransactionSheetProcessor = gasTransactionSheetProcessor;
             _unitOfWorkFactory = unitOfWorkFactory;
-            _mapper = mapper;
             _insertTransactionsCommand = insertTransactionsCommand;
             _deleteTransactionsCommand = deleteTransactionsCommand;
             _getGasTransactionCsvQuery = getGasTransactionCsvQuery;
             _getPagedGasTransactionsQuery = getPagedGasTransactionsQuery;
+            _googleSheetManagerFactory = googleSheetManagerFactory;
         }
 
         /// <summary>
@@ -68,17 +69,14 @@ namespace AXERP.API.Functions.Transactions
                 _logger.LogInformation("Importing GasTransactions...");
                 _logger.LogInformation("Checking parameters...");
 
-                var credentialsJson = EnvironmentHelper.TryGetParameter("GoogleCredentials");
-
-                var sheet_id = EnvironmentHelper.TryGetParameter("BulkDeliveriesSheetDataSheetId");
                 var tab_name = EnvironmentHelper.TryGetParameter("BulkDeliveriesSheetDataGasTransactionsTab");
                 var range = EnvironmentHelper.TryGetOptionalParameter("BulkDeliveriesSheetDataGasTransactionRange");
                 var sheetCulture = Environment.GetEnvironmentVariable("SheetCulture") ?? "fr-FR";
 
                 _logger.LogInformation("Fetching rows from GoogleSheet...");
 
-                var sheetService = new GoogleSheetManager(credentials: credentialsJson, format: CredentialsFormats.Text);
-                var rows = await sheetService.ReadGoogleSheetRaw(sheet_id, $"{tab_name}{(range?.Length > 0 ? "!" : "")}{range}");
+                using GoogleSheetManager sheetService = _googleSheetManagerFactory.Create();
+                var rows = await sheetService.ReadGoogleSheetRawAsync($"{tab_name}{(range?.Length > 0 ? "!" : "")}{range}");
 
                 _logger.LogInformation("Google Sheet unprocessed rowcount (including header): {0}", rows.Count);
                 _logger.LogInformation("Importing GoogleSheet rows...");
@@ -115,7 +113,7 @@ namespace AXERP.API.Functions.Transactions
         [OpenApiOperation(operationId: nameof(DeleteGasTransactions), tags: new[] { "gas-transactions" })]
         [OpenApiRequestBody("application/json", typeof(DeleteTransactionRequest), Required = true)]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(string), Description = "The OK response")]
-        public async Task<IActionResult> DeleteGasTransactions(
+        public IActionResult DeleteGasTransactions(
                 [HttpTrigger(AuthorizationLevel.Anonymous, "delete")] HttpRequestData req, [FromBody] DeleteTransactionRequest data)
         {
             try

@@ -1,37 +1,46 @@
 ﻿using AXERP.API.BlobHelper.Managers;
 using AXERP.API.BlobHelper.ServiceContracts.Responses;
+using AXERP.API.Business.Services;
 using AXERP.API.Domain;
 using AXERP.API.Domain.Entities;
 using AXERP.API.Domain.ServiceContracts.Requests;
 using AXERP.API.Domain.ServiceContracts.Responses;
+using AXERP.API.GoogleHelper;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Base;
 using AXERP.API.LogHelper.Factories;
 using AXERP.API.Persistence.Factories;
-using Transaction = AXERP.API.Domain.Entities.Transaction;
 
-namespace AXERP.API.Business.Commands
+namespace AXERP.API.Business.Commands.Blob
 {
     [ForSystem("SQL Server, Blob Storage", LogConstants.FUNCTION_BL_PROCESSING)]
-    public class UpdateReferencesByBlobFilesCommand : BaseAuditedClass<UpdateReferencesByBlobFilesCommand>
+    public sealed class UpdateReferencesByBlobFilesCommand : BaseAuditedClass<UpdateReferencesByBlobFilesCommand>
     {
         private readonly UnitOfWorkFactory _uowFactory;
-        protected readonly BlobManagerFactory _blobManagerFactory;
+        private readonly BlobManagerFactory _blobManagerFactory;
+        private readonly GoogleSheetManagerFactory _sheetManagerFactory;
+        private readonly IBillOfLadingUpdater _billOfLadingUpdater;
+
+        private readonly List<Transaction> _billOfLadingUpdated = new();
 
         public UpdateReferencesByBlobFilesCommand(
             AxerpLoggerFactory axerpLoggerFactory,
             UnitOfWorkFactory uowFactory,
-            BlobManagerFactory blobManagerFactory) : base(axerpLoggerFactory)
+            BlobManagerFactory blobManagerFactory,
+            GoogleSheetManagerFactory sheetManagerFactory,
+            IBillOfLadingUpdater billOfLadingUpdater) : base(axerpLoggerFactory)
         {
             _uowFactory = uowFactory;
             _blobManagerFactory = blobManagerFactory;
+            _sheetManagerFactory = sheetManagerFactory;
+            _billOfLadingUpdater = billOfLadingUpdater;
         }
 
         public void LogStatistics(ProcessBlobFilesResponse result)
         {
             if (result.Errors.Count == 0 && result.Warnings.Count == 0 && result.Processed.Count == 0)
             {
-                _logger.LogInformation("There are no blob files to process.");
+                _logger.LogInformation("No new file to process!");
             }
             else if (result.Errors.Count == 0 && result.Warnings.Count > 0 && result.Processed.Count == 0)
             {
@@ -51,20 +60,30 @@ namespace AXERP.API.Business.Commands
             }
         }
 
-        public async Task<ProcessBlobFilesResponse> Execute(ProcessBlobFilesRequest request)
+        public async Task<ProcessBlobFilesResponse> ExecuteAsync(ProcessBlobFilesRequest request)
         {
             var containerHelper = _blobManagerFactory.Create();
 
             var getBlobFilesResponse = await containerHelper.GetFiles(request.BlobStorageImportFolder, request.BlobStorePdfFileRegexPattern);
 
-            var response = await Process(request, getBlobFilesResponse, containerHelper);
+            var response = await ProcessAsync(request, getBlobFilesResponse, containerHelper);
+
+            if (_billOfLadingUpdated.Count > 0)
+            {
+                await _billOfLadingUpdater.UpdateAsync(_billOfLadingUpdated, CancellationToken.None);
+                _logger.LogInformation("Bill of Lading updated for {0} transactions: {1}", _billOfLadingUpdated.Count, string.Join(", ", _billOfLadingUpdated.Select(x => x.ID + x.IDSffx)));
+            }
+            else
+            {
+                _logger.LogInformation("No Bill of Lading updated.");
+            }
 
             LogStatistics(response);
 
             return response;
         }
 
-        private async Task<ProcessBlobFilesResponse> Process(ProcessBlobFilesRequest request, GetBlobFilesResponse data, BlobManager containerHelper)
+        private async Task<ProcessBlobFilesResponse> ProcessAsync(ProcessBlobFilesRequest request, GetBlobFilesResponse getBlobFilesResponse, BlobManager containerHelper)
         {
             var response = new ProcessBlobFilesResponse
             {
@@ -73,12 +92,12 @@ namespace AXERP.API.Business.Commands
                 Warnings = new List<string>()
             };
 
-            if (data.Data.Count == 0)
+            if (getBlobFilesResponse.Data.Count == 0)
             {
                 return response;
             }
 
-            _logger.LogInformation("Processing blob files. Amount of processable files found: {0}", data.Data.Count);
+            _logger.LogInformation("Processing blob files. Amount of processable files found: {0}", getBlobFilesResponse.Data.Count);
 
             try
             {
@@ -99,20 +118,19 @@ namespace AXERP.API.Business.Commands
 
                         uow.BeginTransaction();
 
-                        foreach (var item in data.Data)
+                        foreach (var item in getBlobFilesResponse.Data)
                         {
-
-                            var blob_name = item.BlobItem.Blob.Name;
+                            var blobName = item.BlobItem.Blob.Name;
 
                             _logger.LogInformation("Querying transactions without BL File.");
 
-                            var transactrions = uow.TransactionRepository.Where(nameof(Transaction.BlFileID), null);
-                            if (transactrions == null)
+                            var transactions = uow.TransactionRepository.Where(nameof(Transaction.BlFileID), null);
+                            if (transactions == null)
                             {
                                 throw new Exception("Query transactions without BL File failed!");
                             }
 
-                            _logger.LogInformation("Transactions without BL File: {0}", transactrions.Count());
+                            _logger.LogInformation("Transactions without BL File: {0}", transactions.Count);
 
                             try
                             {
@@ -147,17 +165,28 @@ namespace AXERP.API.Business.Commands
 
                                 // Updating transactions without a bl file
                                 // Order of priority: Reference > Reference2 > Reference3
-                                var matchingTransactions = transactrions
+                                var matchingTransactions = transactions
                                     .Where(x => x.Reference == referenceName ||
                                                 x.Reference2 == referenceName ||
-                                                x.Reference3 == referenceName);
+                                                x.Reference3 == referenceName)
+                                    .ToArray();
 
-                                _logger.LogInformation("Matching transactions: {0}", matchingTransactions.Count());
+                                _logger.LogInformation("Matching transactions: {0}", matchingTransactions.Length);
                                 foreach (var transaction in matchingTransactions)
                                 {
                                     transaction.BlFileID = referenced.ID;
+                                    transaction.AXERPHash = "DATA_CHANGED_BillOfLading_UPDATED";
+                                    if (transaction.BillOfLading is null)
+                                    {
+                                        transaction.BillOfLading = DateTime.UtcNow;
+                                        _billOfLadingUpdated.Add(transaction);
+                                    }
                                 }
-                                uow.TransactionRepository.Update(matchingTransactions, new List<string> { nameof(Transaction.BlFileID) });
+                                uow.TransactionRepository.Update(matchingTransactions, new List<string> {
+                                    nameof(Transaction.BlFileID),
+                                    nameof(Transaction.BillOfLading),
+                                    nameof(Transaction.AXERPHash)
+                                });
                                 _logger.LogInformation("Matching transactions updated.");
 
                                 _logger.LogInformation("Updating Document.");
@@ -166,7 +195,7 @@ namespace AXERP.API.Business.Commands
 
                                 await containerHelper.MoveFile(item.BlobItem, fileName, request.BlobStorageProcessedFolder);
 
-                                processed.Add(blob_name);
+                                processed.Add(blobName);
                             }
                             catch (Exception ex)
                             {
@@ -184,12 +213,13 @@ namespace AXERP.API.Business.Commands
 
                         _logger.LogInformation("All blob files processed.");
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         uow.Rollback();
                         throw;
                     }
                 }
+
             }
             catch (Exception ex)
             {

@@ -27,23 +27,17 @@ namespace AXERP.API.Domain.Util
 
         public static Dictionary<string, int> GetFieldNamesWithOrder<T>(IList<object> headers)
         {
-            var field_names = new Dictionary<string, int>();
+            var fieldNames = new Dictionary<string, int>();
             foreach (var property in typeof(T).GetProperties())
             {
                 var jsonAttribute = property.GetCustomAttribute<JsonPropertyAttribute>(true);
                 if (jsonAttribute != null)
                 {
                     var propertyName = jsonAttribute.PropertyName;
-                    field_names[property.Name] = headers.IndexOf(propertyName ?? property.Name);
+                    fieldNames[property.Name] = headers.IndexOf(propertyName ?? property.Name);
                 }
             }
-            return field_names;
-        }
-
-        public static int GetFieldNameIndex<T>(string fieldName)
-        {
-            var prop = typeof(T).GetProperties().First(x => x.Name == fieldName);
-            return typeof(T).GetProperties().ToList().IndexOf(prop);
+            return fieldNames;
         }
 
         /// <summary>

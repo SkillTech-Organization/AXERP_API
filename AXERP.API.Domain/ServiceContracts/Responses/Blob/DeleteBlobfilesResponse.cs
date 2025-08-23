@@ -1,5 +1,5 @@
 ﻿using AXERP.API.Domain.Models;
-using AXERP.API.Domain.ServiceContracts.Responses;
+using AXERP.API.Domain.ServiceContracts.Responses.Base;
 using System.Runtime.Serialization;
 
 namespace AXERP.API.BlobHelper.ServiceContracts.Requests

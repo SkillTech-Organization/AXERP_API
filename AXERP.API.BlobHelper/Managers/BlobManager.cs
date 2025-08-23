@@ -3,12 +3,14 @@ using AXERP.API.BlobHelper.ServiceContracts.Responses;
 using AXERP.API.Domain;
 using AXERP.API.Domain.Models;
 using AXERP.API.Domain.ServiceContracts.Responses;
+using AXERP.API.Domain.ServiceContracts.Responses.Base;
 using AXERP.API.LogHelper.Attributes;
 using AXERP.API.LogHelper.Base;
 using AXERP.API.LogHelper.Factories;
 using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using System.Net;
 using System.Text.RegularExpressions;
 
 namespace AXERP.API.BlobHelper.Managers
@@ -206,20 +208,26 @@ namespace AXERP.API.BlobHelper.Managers
 
             _logger.LogTrace("Uploading: {0}", path);
 
-            using(var mem = new MemoryStream(file.Content))
+            try
             {
+                using var mem = new MemoryStream(file.Content);
                 var uploadResponse = await Container.UploadBlobAsync(path, mem);
 
-                var _response = uploadResponse?.GetRawResponse();
-                if (CheckError(_response, out string msg))
+                Response? rawResponse = uploadResponse?.GetRawResponse();
+                if (CheckError(rawResponse, out string msg))
                 {
                     var errorMsg = $"Could not upload: {path}. Error: {msg}";
                     response.RequestError = errorMsg;
                     _logger.LogError(errorMsg);
                 }
-            }
 
-            _logger.LogTrace("Blob successfully uploaded!");
+                _logger.LogTrace("Blob successfully uploaded!");
+            }
+            catch (RequestFailedException ex ) when (ex.ErrorCode == "BlobAlreadyExists")
+            {
+                response.HttpStatusCode = HttpStatusCode.BadRequest;
+                response.RequestError = "This file(s) already uploaded!";
+            }
 
             return response;
         }
@@ -330,6 +338,34 @@ namespace AXERP.API.BlobHelper.Managers
 
             var sourceBlob = Container.GetBlobClient(blob.Blob.Name);
             var destinationBlob = Container.GetBlobClient($"{destinationFolder}/{destinationName}");
+
+            _logger.LogTrace("Copying between folders...");
+
+            var copyResponse = await destinationBlob.StartCopyFromUriAsync(sourceBlob.Uri);
+
+            if (copyResponse.HasValue)
+            {
+                throw new Exception(copyResponse.GetRawResponse().ReasonPhrase);
+            }
+
+            _logger.LogTrace("Deleting from original folder...");
+
+            var deleteResponse = await sourceBlob.DeleteAsync();
+
+            if (CheckError(deleteResponse, out string errorMessage))
+            {
+                throw new Exception(errorMessage);
+            }
+
+            _logger.LogTrace("Blob successfully moved to other folder!");
+        }
+
+        public async Task MoveFile(string sourceName, string destinationName)
+        {
+            _logger.LogTrace("Moving blob file '{0}' to folder '{1}'", sourceName, destinationName);
+
+            var sourceBlob = Container.GetBlobClient(sourceName);
+            var destinationBlob = Container.GetBlobClient(destinationName);
 
             _logger.LogTrace("Copying between folders...");
 
