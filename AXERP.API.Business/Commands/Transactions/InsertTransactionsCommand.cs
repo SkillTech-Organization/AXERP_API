@@ -88,6 +88,8 @@ namespace AXERP.API.Business.Commands
                      */
                     DocumentsToDelete = new List<Document>();
 
+                    var doTestDelete = EnvironmentHelper.TryGetOptionalParameter("TestTransactionDeletionRandomly") == "true";
+
                     /*
                      * LOCAL "CACHE"
                      */
@@ -98,6 +100,26 @@ namespace AXERP.API.Business.Commands
                     /*
                      * FILTER NEW / UPDATED / DELETED DATA
                      */
+
+                    // Deletion test with random records
+                    var _dataSize = importResult.Data.Count;
+                    if (doTestDelete && _dataSize > 0)
+                    {
+                        _logger.LogWarning($"Record deletion test enabled! ");
+
+                        var rng = new Random();
+                        var deleteCount = _dataSize / 3;
+                        var _deletedIds = new List<string>();
+                        for (int i = 0; i < deleteCount; i++)
+                        {
+                            var idx = rng.Next(0, deleteCount);
+                            _deletedIds.Add(importResult.Data[idx].DeliveryID.ToString() + importResult.Data[idx].DeliveryIDSffx);
+                            importResult.Data.RemoveAt(idx);
+                        }
+
+                        _logger.LogWarning("Test delete record ids: " + string.Join(", ", _deletedIds));
+                    }
+
                     var sheetIds = importResult.Data.Select(x => (x.DeliveryID, x.DeliveryIDSffx));
 
                     _logger.LogInformation("Selecting and counting imported rows for CREATE, UPDATE and DELETE.");
@@ -162,10 +184,14 @@ namespace AXERP.API.Business.Commands
 
                     CreateOrUpdate(uow, updatedSheetRows, false, deletedBLTransactionIds);
 
+                    _logger.LogInformation("Refreshing data for processing. Transactions, entities...");
+                    RefreshBusinessDataCache(uow);
+
                     /*
                      * HANDLE DISASSOCIATED BLOB FILES (DOCUMENTS)
                      */
                     _logger.LogInformation("Handle disassociated blob files (document records)...");
+                    _logger.LogInformation("Files with more than 1 associated Transaction won't be deleted!");
 
                     DeleteDisassociatedBlobFiles(uow);
 
@@ -400,6 +426,12 @@ namespace AXERP.API.Business.Commands
                     DocumentsToDelete.Add(Documents.First(x => x.ID == transaction.BlFileID.Value));
                     transaction.BlFileID = null;
                 }
+                //var d = Documents.FirstOrDefault(x => x.ID == transaction?.BlFileID);
+                //if (d != null)
+                //{
+                //    DocumentsToDelete.Add(Documents.FirstOrDefault(x => x.ID == transaction?.BlFileID));
+                //    transaction.BlFileID = null;
+                //}
 
                 transactionDtos.Add(transaction);
             }
@@ -470,6 +502,16 @@ namespace AXERP.API.Business.Commands
             {
                 return;
             }
+
+            var skip = new List<int>();
+            foreach (var file in DocumentsToDelete)
+            {
+                var _referenceCount = Transactions.Count(x => x.BlFileID == file.ID);
+                skip.Add(file.ID);
+            }
+
+            _logger.LogInformation("Following BlFile ids are associated with more than 1 Transaction, these files won't be deleted: " + string.Join(", ", skip));
+            DocumentsToDelete.RemoveAll(x => skip.Contains(x.ID));
 
             _logger.LogInformation("Deleting disassociated {0} (BlFile) rows. Count: {1}", nameof(Document), DocumentsToDelete.Count);
             uow.DocumentRepository.Delete(DocumentsToDelete);
