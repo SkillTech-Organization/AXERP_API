@@ -507,7 +507,10 @@ namespace AXERP.API.Business.Commands
             foreach (var file in DocumentsToDelete)
             {
                 var _referenceCount = Transactions.Count(x => x.BlFileID == file.ID);
-                skip.Add(file.ID);
+                if (_referenceCount > 1)
+                {
+                    skip.Add(file.ID);
+                }
             }
 
             _logger.LogInformation("Following BlFile ids are associated with more than 1 Transaction, these files won't be deleted: " + string.Join(", ", skip));
