@@ -65,8 +65,14 @@ namespace AXERP.API.Business.Commands.Blob
             var containerHelper = _blobManagerFactory.Create();
 
             var getBlobFilesResponse = await containerHelper.GetFiles(request.BlobStorageImportFolder, request.BlobStorePdfFileRegexPattern);
+            var getProcessedBlobFilesResponse = await containerHelper.GetFiles(request.BlobStorageProcessedFolder, request.BlobStorePdfFileRegexPattern);
 
             var response = await ProcessAsync(request, getBlobFilesResponse, containerHelper);
+            var response2 = await ProcessAsync(request, getProcessedBlobFilesResponse, containerHelper, true);
+
+            response.Processed.AddRange(response2.Processed);
+            response.Errors.AddRange(response2.Errors);
+            response.Warnings.AddRange(response2.Warnings);
 
             if (_billOfLadingUpdated.Count > 0)
             {
@@ -83,7 +89,7 @@ namespace AXERP.API.Business.Commands.Blob
             return response;
         }
 
-        private async Task<ProcessBlobFilesResponse> ProcessAsync(ProcessBlobFilesRequest request, GetBlobFilesResponse getBlobFilesResponse, BlobManager containerHelper)
+        private async Task<ProcessBlobFilesResponse> ProcessAsync(ProcessBlobFilesRequest request, GetBlobFilesResponse getBlobFilesResponse, BlobManager containerHelper, bool reprocess = false)
         {
             var response = new ProcessBlobFilesResponse
             {
@@ -97,7 +103,14 @@ namespace AXERP.API.Business.Commands.Blob
                 return response;
             }
 
-            _logger.LogInformation("Processing blob files. Amount of processable files found: {0}", getBlobFilesResponse.Data.Count);
+            if (!reprocess)
+            {
+                _logger.LogInformation("Processing blob files. Amount of processable files found: {0}", getBlobFilesResponse.Data.Count);
+            }
+            else
+            {
+                _logger.LogInformation("Reprocessing imported blob files. Amount of processable files found: {0}", getBlobFilesResponse.Data.Count);
+            }
 
             try
             {
@@ -140,7 +153,8 @@ namespace AXERP.API.Business.Commands.Blob
                                 _logger.LogInformation("Processing: {0}", fileName);
 
                                 var referenced = entities.FirstOrDefault(x => x.Name?.Trim() == referenceName);
-                                if (referenced != null && !string.IsNullOrWhiteSpace(referenced.FileName))
+                                var reprocessable = !reprocess || (reprocess && referenced.ProcessedAt != null);
+                                if (referenced != null && !string.IsNullOrWhiteSpace(referenced.FileName) && reprocessable)
                                 {
                                     var msg = $"Blob file '{fileName}' was already processed at {referenced.ProcessedAt}.";
                                     _logger.LogWarning(msg);
@@ -193,7 +207,10 @@ namespace AXERP.API.Business.Commands.Blob
                                 uow.DocumentRepository.Update(referenced);
                                 _logger.LogInformation("Document updated.");
 
-                                await containerHelper.MoveFile(item.BlobItem, fileName, request.BlobStorageProcessedFolder);
+                                if (!reprocess)
+                                {
+                                    await containerHelper.MoveFile(item.BlobItem, fileName, request.BlobStorageProcessedFolder);
+                                }
 
                                 processed.Add(blobName);
                             }

@@ -28,6 +28,7 @@ namespace AXERP.API.Business.Commands
         private List<Entity> Entities { get; set; }
         private List<TruckCompanyToDelivery> TruckCompanyToDeliveries { get; set; }
         private List<CustomerToDelivery> CustomerToDeliveries { get; set; }
+        private List<Document> BlobFilesToReset { get; set; }
 
         protected readonly BlobManagerFactory _blobManagerFactory;
 
@@ -87,6 +88,7 @@ namespace AXERP.API.Business.Commands
                      * PREPARE
                      */
                     DocumentsToDelete = new List<Document>();
+                    BlobFilesToReset = new List<Document>();
 
                     var doTestDelete = EnvironmentHelper.TryGetOptionalParameter("TestTransactionDeletionRandomly") == "true";
 
@@ -194,6 +196,12 @@ namespace AXERP.API.Business.Commands
                     _logger.LogInformation("Files with more than 1 associated Transaction won't be deleted!");
 
                     DeleteDisassociatedBlobFiles(uow);
+
+                    /*
+                     * RESET CHOSEN BLFILES TO A PROCESSABLE STATE
+                     */
+                    _logger.LogInformation("Resetting blob files...");
+                    ResetBLFiles(uow);
 
                     _logger.LogInformation("Comitting transactions...");
                     uow.CommitTransaction();
@@ -419,6 +427,31 @@ namespace AXERP.API.Business.Commands
                     }
                 }
 
+                // Szükséges BLFile reset ellenőrzése
+                if (create)
+                {
+                    bool documentIsInDb3 = newRef2 != null && !string.IsNullOrWhiteSpace(newRef2.FileName);
+                    bool documentIsInDb2 = newRef2 != null && !string.IsNullOrWhiteSpace(newRef2.FileName);
+                    bool documentIsInDb = newRef != null && !string.IsNullOrWhiteSpace(newRef.FileName);
+
+                    if (documentIsInDb3)
+                    {
+                        newRef3!.ProcessedAt = null;
+                        BlobFilesToReset.Add(newRef3!);
+                    }
+                    if (documentIsInDb2)
+                    {
+                        newRef2!.ProcessedAt = null;
+                        BlobFilesToReset.Add(newRef2!);
+                    }
+                    if (documentIsInDb)
+                    {
+                        newRef!.ProcessedAt = null;
+                        BlobFilesToReset.Add(newRef!);
+                    }
+                }
+
+                // Szükséges BLFile törlés ellenőrzése
                 if (!create && deletedBlDateTrIds.Any() &&
                     deletedBlDateTrIds.Contains(sheetRow.DeliveryID.ToString() + sheetRow.DeliveryIDSffx) &&
                     transaction.BlFileID != null)
@@ -542,6 +575,24 @@ namespace AXERP.API.Business.Commands
                 var dst = $"{blobImportFolder}/{doc.FileName}";
                 blobHelper.MoveFile(src, dst).Wait();
             }
+        }
+
+        private void ResetBLFiles(IUnitOfWork uow)
+        {
+            if (BlobFilesToReset.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var bl in BlobFilesToReset)
+            {
+                bl.ProcessedAt = null;
+            }
+
+            _logger.LogInformation("Resetting {0} (BlFile) rows to a processable state. Count: {1}", nameof(Document), DocumentsToDelete.Count);
+            uow.DocumentRepository.Update(BlobFilesToReset);
+
+            uow.Save("bl_file");
         }
     }
 }
