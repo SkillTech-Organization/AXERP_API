@@ -153,7 +153,7 @@ namespace AXERP.API.Business.Commands.Blob
                                 _logger.LogInformation("Processing: {0}", fileName);
 
                                 var referenced = entities.FirstOrDefault(x => x.Name?.Trim() == referenceName);
-                                var reprocessable = !reprocess || (reprocess && referenced.ProcessedAt != null);
+                                var reprocessable = !reprocess || (reprocess && referenced?.ProcessedAt != null);
                                 if (referenced != null && !string.IsNullOrWhiteSpace(referenced.FileName) && reprocessable)
                                 {
                                     var msg = $"Blob file '{fileName}' was already processed at {referenced.ProcessedAt}.";
