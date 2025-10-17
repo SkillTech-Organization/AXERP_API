@@ -450,15 +450,25 @@ namespace AXERP.API.Business.Commands
                         BlobFilesToReset.Add(newRef!);
                     }
                 }
+                // BlFileID betöltése, ha import előtt is volt - és nem új a rekord
+                else
+                {
+                    var currentTransaction = Transactions.FirstOrDefault(x => x.ID == transaction.ID && x.IDSffx == transaction.IDSffx);
+                    if (currentTransaction != null)
+                    {
+                        // Így update esetén nem fogja véletlenül kitörölni a BLFile összeköttetést
+                        transaction.BlFileID = currentTransaction.BlFileID;
+                    }
+                }
 
                 // Szükséges BLFile törlés ellenőrzése
-                if (!create && deletedBlDateTrIds.Any() &&
-                    deletedBlDateTrIds.Contains(sheetRow.DeliveryID.ToString() + sheetRow.DeliveryIDSffx) &&
-                    transaction.BlFileID != null)
-                {
-                    DocumentsToDelete.Add(Documents.First(x => x.ID == transaction.BlFileID.Value));
-                    transaction.BlFileID = null;
-                }
+                //if (!create && deletedBlDateTrIds.Any() &&
+                //    deletedBlDateTrIds.Contains(sheetRow.DeliveryID.ToString() + sheetRow.DeliveryIDSffx) &&
+                //    transaction.BlFileID != null)
+                //{
+                //    DocumentsToDelete.Add(Documents.First(x => x.ID == transaction.BlFileID.Value));
+                //    transaction.BlFileID = null;
+                //}
                 //var d = Documents.FirstOrDefault(x => x.ID == transaction?.BlFileID);
                 //if (d != null)
                 //{
