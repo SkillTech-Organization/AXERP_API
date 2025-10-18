@@ -454,7 +454,7 @@ namespace AXERP.API.Business.Commands
                 else
                 {
                     var currentTransaction = Transactions.FirstOrDefault(x => x.ID == transaction.ID && x.IDSffx == transaction.IDSffx);
-                    if (currentTransaction != null)
+                    if (currentTransaction != null && transaction.BillOfLading.HasValue)
                     {
                         // Így update esetén nem fogja véletlenül kitörölni a BLFile összeköttetést
                         transaction.BlFileID = currentTransaction.BlFileID;
