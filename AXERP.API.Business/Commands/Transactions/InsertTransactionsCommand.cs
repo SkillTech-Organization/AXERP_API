@@ -28,6 +28,7 @@ namespace AXERP.API.Business.Commands
         private List<Entity> Entities { get; set; }
         private List<TruckCompanyToDelivery> TruckCompanyToDeliveries { get; set; }
         private List<CustomerToDelivery> CustomerToDeliveries { get; set; }
+        private List<Document> BlobFilesToReset { get; set; }
 
         protected readonly BlobManagerFactory _blobManagerFactory;
 
@@ -87,6 +88,7 @@ namespace AXERP.API.Business.Commands
                      * PREPARE
                      */
                     DocumentsToDelete = new List<Document>();
+                    BlobFilesToReset = new List<Document>();
 
                     var doTestDelete = EnvironmentHelper.TryGetOptionalParameter("TestTransactionDeletionRandomly") == "true";
 
@@ -194,6 +196,12 @@ namespace AXERP.API.Business.Commands
                     _logger.LogInformation("Files with more than 1 associated Transaction won't be deleted!");
 
                     DeleteDisassociatedBlobFiles(uow);
+
+                    /*
+                     * RESET CHOSEN BLFILES TO A PROCESSABLE STATE
+                     */
+                    _logger.LogInformation("Resetting blob files...");
+                    ResetBLFiles(uow);
 
                     _logger.LogInformation("Comitting transactions...");
                     uow.CommitTransaction();
@@ -313,10 +321,10 @@ namespace AXERP.API.Business.Commands
                 }
 
                 var newRef3 = Documents.FirstOrDefault(x => x.Name == sheetRow.Reference3);
-                if (newRef3 != null && !string.IsNullOrWhiteSpace(newRef3.FileName))
-                {
-                    transaction.BlFileID = newRef3.ID;
-                }
+                //if (newRef3 != null && !string.IsNullOrWhiteSpace(newRef3.FileName))
+                //{
+                //    transaction.BlFileID = newRef3.ID;
+                //}
                 if (newRef3 == null && !string.IsNullOrWhiteSpace(sheetRow.Reference3) && !Documents.Any(x => x.Name == sheetRow.Reference3))
                 {
                     newRef3 = uow.DocumentRepository.Add(new Document { Name = sheetRow.Reference3 });
@@ -324,10 +332,10 @@ namespace AXERP.API.Business.Commands
                 }
 
                 var newRef2 = Documents.FirstOrDefault(x => x.Name == sheetRow.Reference2);
-                if (newRef2 != null && !string.IsNullOrWhiteSpace(newRef2.FileName))
-                {
-                    transaction.BlFileID = newRef2.ID;
-                }
+                //if (newRef2 != null && !string.IsNullOrWhiteSpace(newRef2.FileName))
+                //{
+                //    transaction.BlFileID = newRef2.ID;
+                //}
                 if (newRef2 == null && !string.IsNullOrWhiteSpace(sheetRow.Reference2) && !Documents.Any(x => x.Name == sheetRow.Reference2))
                 {
                     newRef2 = uow.DocumentRepository.Add(new Document { Name = sheetRow.Reference2 });
@@ -335,10 +343,10 @@ namespace AXERP.API.Business.Commands
                 }
 
                 var newRef = Documents.FirstOrDefault(x => x.Name == sheetRow.Reference);
-                if (newRef != null && !string.IsNullOrWhiteSpace(newRef.FileName))
-                {
-                    transaction.BlFileID = newRef.ID;
-                }
+                //if (newRef != null && !string.IsNullOrWhiteSpace(newRef.FileName))
+                //{
+                //    transaction.BlFileID = newRef.ID;
+                //}
                 if (newRef == null && !string.IsNullOrWhiteSpace(sheetRow.Reference) && !Documents.Any(x => x.Name == sheetRow.Reference))
                 {
                     newRef = uow.DocumentRepository.Add(new Document { Name = sheetRow.Reference });
@@ -419,13 +427,48 @@ namespace AXERP.API.Business.Commands
                     }
                 }
 
-                if (!create && deletedBlDateTrIds.Any() &&
-                    deletedBlDateTrIds.Contains(sheetRow.DeliveryID.ToString() + sheetRow.DeliveryIDSffx) &&
-                    transaction.BlFileID != null)
+                // Szükséges BLFile reset ellenőrzése
+                if (create)
                 {
-                    DocumentsToDelete.Add(Documents.First(x => x.ID == transaction.BlFileID.Value));
-                    transaction.BlFileID = null;
+                    bool documentIsInDb3 = newRef2 != null && !string.IsNullOrWhiteSpace(newRef2.FileName);
+                    bool documentIsInDb2 = newRef2 != null && !string.IsNullOrWhiteSpace(newRef2.FileName);
+                    bool documentIsInDb = newRef != null && !string.IsNullOrWhiteSpace(newRef.FileName);
+
+                    if (documentIsInDb3)
+                    {
+                        newRef3!.ProcessedAt = null;
+                        BlobFilesToReset.Add(newRef3!);
+                    }
+                    if (documentIsInDb2)
+                    {
+                        newRef2!.ProcessedAt = null;
+                        BlobFilesToReset.Add(newRef2!);
+                    }
+                    if (documentIsInDb)
+                    {
+                        newRef!.ProcessedAt = null;
+                        BlobFilesToReset.Add(newRef!);
+                    }
                 }
+                // BlFileID betöltése, ha import előtt is volt - és nem új a rekord
+                else
+                {
+                    var currentTransaction = Transactions.FirstOrDefault(x => x.ID == transaction.ID && x.IDSffx == transaction.IDSffx);
+                    if (currentTransaction != null && transaction.BillOfLading.HasValue)
+                    {
+                        // Így update esetén nem fogja véletlenül kitörölni a BLFile összeköttetést
+                        transaction.BlFileID = currentTransaction.BlFileID;
+                    }
+                }
+
+                // Szükséges BLFile törlés ellenőrzése
+                //if (!create && deletedBlDateTrIds.Any() &&
+                //    deletedBlDateTrIds.Contains(sheetRow.DeliveryID.ToString() + sheetRow.DeliveryIDSffx) &&
+                //    transaction.BlFileID != null)
+                //{
+                //    DocumentsToDelete.Add(Documents.First(x => x.ID == transaction.BlFileID.Value));
+                //    transaction.BlFileID = null;
+                //}
                 //var d = Documents.FirstOrDefault(x => x.ID == transaction?.BlFileID);
                 //if (d != null)
                 //{
@@ -542,6 +585,24 @@ namespace AXERP.API.Business.Commands
                 var dst = $"{blobImportFolder}/{doc.FileName}";
                 blobHelper.MoveFile(src, dst).Wait();
             }
+        }
+
+        private void ResetBLFiles(IUnitOfWork uow)
+        {
+            if (BlobFilesToReset.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var bl in BlobFilesToReset)
+            {
+                bl.ProcessedAt = null;
+            }
+
+            _logger.LogInformation("Resetting {0} (BlFile) rows to a processable state. Count: {1}", nameof(Document), DocumentsToDelete.Count);
+            uow.DocumentRepository.Update(BlobFilesToReset);
+
+            uow.Save("bl_file");
         }
     }
 }
