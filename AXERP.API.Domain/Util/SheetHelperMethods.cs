@@ -34,7 +34,7 @@ namespace AXERP.API.Domain.Util
                 if (jsonAttribute != null)
                 {
                     var propertyName = jsonAttribute.PropertyName;
-                    fieldNames[property.Name] = headers.IndexOf(propertyName ?? property.Name);
+                    fieldNames[property.Name] = headers.Select(x => x?.ToString()?.Trim()).ToList().IndexOf(propertyName ?? property.Name);
                 }
             }
             return fieldNames;
